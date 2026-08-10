@@ -1,0 +1,12 @@
+{
+  "name": "mobile-match",
+  "version": "1.0.0",
+  "description": "App de leitura e estudo bíblico construído com **Kotlin Multiplatform + Compose Multiplatform**, rodando em Android e iOS a partir de um único codebase.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

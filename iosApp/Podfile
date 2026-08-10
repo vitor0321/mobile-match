@@ -1,0 +1,47 @@
+platform :ios, '18.2'
+
+target 'iosApp' do
+  use_frameworks! :linkage => :static
+  pod 'FirebaseCore'
+  pod 'FirebaseAuth'
+  pod 'FirebaseFirestore'
+  pod 'FirebaseFunctions'
+  pod 'Google-Mobile-Ads-SDK'
+  pod 'GoogleSignIn'
+  pod 'PurchasesHybridCommon', '17.55.1'
+  pod 'RevenueCat', '5.67.1'
+end
+
+post_install do |installer|
+  secrets_path = File.join(File.dirname(__FILE__), 'Secrets.xcconfig')
+  admob_app_id = 'ca-app-pub-3940256099942544~1458002511'
+  admob_banner_unit_id = 'ca-app-pub-3940256099942544/2934735716'
+
+  if File.exist?(secrets_path)
+    File.readlines(secrets_path).each do |line|
+      app_match = line.strip.match(/^ADMOB_APP_ID\s*=\s*(.+)$/)
+      admob_app_id = app_match[1].strip if app_match
+
+      banner_match = line.strip.match(/^ADMOB_BANNER_UNIT_ID\s*=\s*(.+)$/)
+      admob_banner_unit_id = banner_match[1].strip if banner_match
+    end
+  end
+
+  test_admob_app_id = 'ca-app-pub-3940256099942544~1458002511'
+  test_admob_banner_unit_id = 'ca-app-pub-3940256099942544/2934735716'
+
+  installer.aggregate_targets.each do |aggregate_target|
+    aggregate_target.xcconfigs.each do |config_name, config_file|
+      if config_name.to_s.downcase == 'debug'
+        config_file.attributes['ADMOB_APP_ID'] = test_admob_app_id
+        config_file.attributes['ADMOB_BANNER_UNIT_ID'] = test_admob_banner_unit_id
+      else
+        config_file.attributes['ADMOB_APP_ID'] = admob_app_id
+        config_file.attributes['ADMOB_BANNER_UNIT_ID'] = admob_banner_unit_id
+      end
+
+      xcconfig_path = aggregate_target.xcconfig_path(config_name)
+      config_file.save_as(Pathname.new(xcconfig_path))
+    end
+  end
+end

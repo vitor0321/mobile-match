@@ -1,0 +1,71 @@
+*.iml
+.kotlin
+.gradle
+.agent
+.firebender
+**/build/
+xcuserdata
+!src/**/build/
+local.properties
+iosApp/Secrets.xcconfig
+.idea
+.DS_Store
+captures
+.externalNativeBuild
+.cxx
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+node_modules/
+*.iml
+.kotlin
+.gradle
+**/build/
+xcuserdata
+!src/**/build/
+local.properties
+.idea
+.DS_Store
+captures
+.externalNativeBuild
+.cxx
+*.jks
+*.pem
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+
+# ─── Android Secrets ──────────────────────────────────────────────────────────
+# Keystore e certificados — NUNCA versionar
+*.jks
+*.keystore
+*.pem
+*.p12
+
+# ─── Firebase ─────────────────────────────────────────────────────────────────
+# Contêm API keys e project IDs do Firebase
+app/google-services.json
+iosApp/iosApp/GoogleService-Info.plist
+
+# ─── iOS Secrets ──────────────────────────────────────────────────────────────
+# Arquivo de segredos local — nunca versionar
+iosApp/Configuration/Secrets.xcconfig
+iosApp/iosApp/Configuration/Secrets.xcconfig
+
+# ─── CocoaPods ────────────────────────────────────────────────────────────────
+# Pasta gerada pelo `pod install` (contém tokens injetados pelo post_install)
+iosApp/Pods/
+iosApp/Podfile.lock
+
+# ─── KMP Kotlin/Native Cocoapods ──────────────────────────────────────────────
+# Podspecs gerados automaticamente pelo plugin kotlin("native.cocoapods")
+app/AppMan.podspec
+core/core.podspec
+products/identity/*.podspec
+

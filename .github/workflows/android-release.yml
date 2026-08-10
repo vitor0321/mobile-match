@@ -1,0 +1,294 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish_to_play:
+        description: Publish the generated AAB to Google Play
+        required: true
+        default: false
+        type: boolean
+      track:
+        description: Google Play track
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      status:
+        description: Google Play release status
+        required: true
+        default: draft
+        type: choice
+        options:
+          - completed
+          - draft
+          - halted
+          - inProgress
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      APP_PACKAGE_NAME: com.walcker.match.app
+      RELEASE_AAB_PATH: app/build/outputs/bundle/release/app-release.aab
+      RELEASE_APK_PATH: app/build/outputs/apk/release/app-release.apk
+      RELEASE_MAPPING_PATH: app/build/outputs/mapping/release/mapping.txt
+      TAG_RELEASE_TRACK: production
+      RELEASE_STATUS: completed
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release settings
+        id: release_settings
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "publish_to_play=${{ github.event.inputs.publish_to_play }}" >> "$GITHUB_OUTPUT"
+            echo "track=${{ github.event.inputs.track }}" >> "$GITHUB_OUTPUT"
+            echo "status=${{ github.event.inputs.status }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish_to_play=true" >> "$GITHUB_OUTPUT"
+            echo "track=${TAG_RELEASE_TRACK}" >> "$GITHUB_OUTPUT"
+            echo "status=${RELEASE_STATUS}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate release secrets
+        env:
+          ADMOB_ANDROID_APP_ID: ${{ secrets.ADMOB_ANDROID_APP_ID }}
+          ADMOB_ANDROID_BANNER_UNIT_ID: ${{ secrets.ADMOB_ANDROID_BANNER_UNIT_ID }}
+          ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PUBLISH_TO_PLAY: ${{ steps.release_settings.outputs.publish_to_play }}
+        run: |
+          required_secrets=(
+            ADMOB_ANDROID_APP_ID
+            ADMOB_ANDROID_BANNER_UNIT_ID
+            ANDROID_KEYSTORE_BASE64
+            ANDROID_KEY_ALIAS
+            ANDROID_KEY_PASSWORD
+            ANDROID_STORE_PASSWORD
+          )
+
+          if [ "$PUBLISH_TO_PLAY" = "true" ]; then
+            required_secrets+=(PLAY_SERVICE_ACCOUNT_JSON)
+          fi
+
+          for secret_name in "${required_secrets[@]}"; do
+            if [ -z "${!secret_name}" ]; then
+              echo "${secret_name} secret is required" >&2
+              exit 1
+            fi
+          done
+
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON_BASE64" ] && [ ! -f app/google-services.json ]; then
+            echo "ANDROID_GOOGLE_SERVICES_JSON_BASE64 secret is required when app/google-services.json is not committed" >&2
+            exit 1
+          fi
+
+      - name: Decode Android keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-release.jks"
+
+      - name: Create local.properties
+        env:
+          ADMOB_ANDROID_APP_ID: ${{ secrets.ADMOB_ANDROID_APP_ID }}
+          ADMOB_ANDROID_BANNER_UNIT_ID: ${{ secrets.ADMOB_ANDROID_BANNER_UNIT_ID }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          {
+            echo "ADMOB_APP_ID=${ADMOB_ANDROID_APP_ID}"
+            echo "ADMOB_BANNER_UNIT_ID=${ADMOB_ANDROID_BANNER_UNIT_ID}"
+            echo "release.keyAlias=${ANDROID_KEY_ALIAS}"
+            echo "release.keyPassword=${ANDROID_KEY_PASSWORD}"
+            echo "release.storeFile=${RUNNER_TEMP}/android-release.jks"
+            echo "release.storePassword=${ANDROID_STORE_PASSWORD}"
+          } > local.properties
+
+      - name: Create google-services.json
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          mkdir -p app
+
+          if [ -n "$ANDROID_GOOGLE_SERVICES_JSON_BASE64" ]; then
+            printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+            echo "Using google-services.json from ANDROID_GOOGLE_SERVICES_JSON_BASE64"
+          elif [ -f app/google-services.json ]; then
+            echo "Using committed app/google-services.json"
+          else
+            echo "google-services.json is missing" >&2
+            exit 1
+          fi
+
+      - name: Build release artifacts
+        run: |
+          set -o pipefail
+          chmod +x ./gradlew
+          ./gradlew :app:bundleRelease :app:assembleRelease --no-configuration-cache --stacktrace --console=plain 2>&1 | tee "$RUNNER_TEMP/android-release-build.log"
+
+      - name: Show Gradle failure context
+        if: failure()
+        run: |
+          if [ -f "$RUNNER_TEMP/android-release-build.log" ]; then
+            echo "=== Extracted Gradle error markers ==="
+            grep -nE '(^FAILURE:|^BUILD FAILED|^\* What went wrong:|^Execution failed for task|^Caused by:|^e:|^error:|^R8: Missing class|^Missing classes detected while running R8)' "$RUNNER_TEMP/android-release-build.log" | tail -n 200 || true
+
+            echo "=== Last 200 lines of Gradle log ==="
+            tail -n 200 "$RUNNER_TEMP/android-release-build.log"
+          fi
+
+      - name: Detect Gradle build log
+        if: always()
+        id: gradle_log
+        run: |
+          if [ -f "$RUNNER_TEMP/android-release-build.log" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify release outputs
+        run: |
+          required_files=(
+            "$RELEASE_AAB_PATH"
+            "$RELEASE_APK_PATH"
+            "$RELEASE_MAPPING_PATH"
+          )
+
+          for file_path in "${required_files[@]}"; do
+            if [ ! -f "$file_path" ]; then
+              echo "Missing expected release output: $file_path" >&2
+              exit 1
+            fi
+          done
+
+      - name: Inspect Google Play publisher identity
+        if: steps.release_settings.outputs.publish_to_play == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          RELEASE_TRACK: ${{ steps.release_settings.outputs.track }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          raw = os.environ["PLAY_SERVICE_ACCOUNT_JSON"]
+          data = json.loads(raw)
+          email = data.get("client_email", "")
+          project = data.get("project_id", "")
+
+          if not email:
+              raise SystemExit("PLAY_SERVICE_ACCOUNT_JSON is missing client_email")
+
+          local, _, domain = email.partition("@")
+          masked_local = local[:3] + "***" if len(local) > 3 else "***"
+          masked_email = masked_local + ("@" + domain if domain else "")
+
+          print(f"Google Play package: {os.environ['APP_PACKAGE_NAME']}")
+          print(f"Google Play track: {os.environ['RELEASE_TRACK']}")
+          print(f"Google service account: {masked_email}")
+          if project:
+              print(f"Google Cloud project: {project}")
+          PY
+
+      - name: Upload Gradle build log
+        if: always() && steps.gradle_log.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-gradle-log
+          path: ${{ runner.temp }}/android-release-build.log
+          if-no-files-found: ignore
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-artifacts
+          path: |
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+
+      - name: Publish GitHub release assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/apk/release/*.apk
+
+      - name: Publish to Google Play
+        if: steps.release_settings.outputs.publish_to_play == 'true'
+        id: publish_play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.APP_PACKAGE_NAME }}
+          releaseFiles: ${{ env.RELEASE_AAB_PATH }}
+          mappingFile: ${{ env.RELEASE_MAPPING_PATH }}
+          track: ${{ steps.release_settings.outputs.track }}
+          status: ${{ steps.release_settings.outputs.status }}
+
+      - name: Show Google Play permission diagnostics
+        if: failure() && steps.publish_play.outcome == 'failure'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          RELEASE_TRACK: ${{ steps.release_settings.outputs.track }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          data = json.loads(os.environ["PLAY_SERVICE_ACCOUNT_JSON"])
+          email = data.get("client_email", "unknown")
+
+          print("Google Play upload failed after build succeeded.")
+          print(f"Package: {os.environ['APP_PACKAGE_NAME']}")
+          print(f"Track: {os.environ['RELEASE_TRACK']}")
+          print(f"Service account: {email}")
+          print("")
+          print("Checklist:")
+          print("1. Google Play Console > Setup > API access: confirm this service account is linked.")
+          print("2. Users and permissions: grant this service account access to the app com.walcker.match.app.")
+          print("3. App permissions: include at least Release to production/internal testing and manage releases.")
+          print("4. If the app is not created in Play Console yet, create it first with the same package name.")
+          print("5. If you reused a JSON from another app, ensure the same service account email has access to this app too.")
+          PY
+

@@ -1,0 +1,8 @@
+package com.walcker.match.navigator
+
+import cafe.adriel.voyager.core.screen.Screen
+
+public interface MatchDestination {
+    fun bookList(): Screen
+    fun favorites(): Screen
+}

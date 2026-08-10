@@ -1,0 +1,11 @@
+// Secrets são carregados de um arquivo gitignored (ver Secrets.xcconfig.example)
+#include? "../Secrets.xcconfig"
+
+TEAM_ID=
+
+PRODUCT_NAME=Bible Match
+PRODUCT_BUNDLE_IDENTIFIER=org.walcker.match.Match$(TEAM_ID)
+BUNDLE_DISPLAY_NAME=Match
+
+CURRENT_PROJECT_VERSION=26.8.0
+MARKETING_VERSION=26.8.0

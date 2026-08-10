@@ -1,0 +1,23 @@
+{
+  "name": "match-functions",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test:unit": "vitest run --config vitest.config.ts --project unit",
+    "test:emulator": "firebase --config ../firebase.json emulators:exec --project match-ci --only auth,firestore,functions \"npm run test:rules\"", 
+    "test:rules": "vitest run --config vitest.config.ts --project rules",
+    "test": "npm run build && npm run test:unit && npm run test:emulator",
+    "deploy": "firebase deploy --only functions,firestore:rules"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
