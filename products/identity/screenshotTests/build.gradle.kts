@@ -1,5 +1,5 @@
-import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.tasks.testing.Test
+import io.netty.buffer.ByteBufUtil.isAccessible
+import org.gradle.internal.component.external.descriptor.MavenScope
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.lang.reflect.Proxy
@@ -20,8 +20,8 @@ android {
     compileSdk = 35
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     defaultConfig {
@@ -31,7 +31,7 @@ android {
 
     kotlin {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_11
+            jvmTarget = JvmTarget.JVM_21
         }
     }
 }
@@ -76,7 +76,7 @@ afterEvaluate {
                 when (method.name) {
                     "generateReport" -> null
                     "toString" -> "NoOpTestReporter"
-                    "hashCode" -> System.identityHashCode(proxy)
+                    "hashCode" -> MavenScope.System.identityHashCode(proxy)
                     "equals" -> proxy === args?.firstOrNull()
                     else -> null
                 }

@@ -10,7 +10,7 @@ plugins {
 kotlin {
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
     iosArm64()
@@ -22,6 +22,7 @@ kotlin {
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.screenmodel)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.lyricist.core)
 
             implementation(libs.compose.foundation)
@@ -36,6 +37,8 @@ kotlin {
         androidMain.dependencies {
             api(libs.play.services.ads)
             implementation(libs.koin.android)
+            implementation(libs.play.services.location)
+            implementation(libs.kotlinx.coroutines.play.services)
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.analytics)
             implementation(libs.firebase.crashlytics)
@@ -51,8 +54,8 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 

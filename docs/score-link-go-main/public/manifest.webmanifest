@@ -1,0 +1,12 @@
+{
+  "name": "Vaga — jogos com vaga aberta",
+  "short_name": "Vaga",
+  "description": "Encontre partidas de futebol e futsal com vagas abertas perto de você.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b140f",
+  "theme_color": "#0b140f",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}

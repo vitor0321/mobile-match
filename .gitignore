@@ -2,6 +2,8 @@
 .kotlin
 .gradle
 .agent
+.claude
+.docs
 .firebender
 **/build/
 xcuserdata
@@ -69,3 +71,4 @@ app/AppMan.podspec
 core/core.podspec
 products/identity/*.podspec
 
+/docs/

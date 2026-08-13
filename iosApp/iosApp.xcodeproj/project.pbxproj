@@ -13,7 +13,7 @@
 /* Begin PBXFileReference section */
 		46252BB194E9CF6396BEF62F /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
 		4C714A3CDEEA0E008D53B1F2 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		A70FAB952E4E19056FDBF0D2 /* Bible Match Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bible Match Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A70FAB952E4E19056FDBF0D2 /* Match Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Match Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B863D79505E1275D72673D3C /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -71,7 +71,7 @@
 		66D88E09635A94AD5BC7D569 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A70FAB952E4E19056FDBF0D2 /* Bible Match Dev.app */,
+				A70FAB952E4E19056FDBF0D2 /* Match Dev.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -116,7 +116,7 @@
 			);
 			name = iosApp;
 			productName = iosApp;
-			productReference = A70FAB952E4E19056FDBF0D2 /* Bible Match Dev.app */;
+			productReference = A70FAB952E4E19056FDBF0D2 /* Match Dev.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

@@ -3,14 +3,13 @@ package com.walcker.match.app
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.withFrameNanos
-import com.walcker.bible.features.ui.entrypoint.BibleEntrypoint
-import com.walcker.match.cedar.CedarTheme
+import androidx.compose.ui.Modifier
 import com.walcker.match.cedar.CedarLoadingIndicator
+import com.walcker.match.cedar.CedarTheme
 
 @Composable
 internal fun App(onFirstFrameRendered: (() -> Unit)? = null) {
@@ -32,7 +31,7 @@ internal fun App(onFirstFrameRendered: (() -> Unit)? = null) {
                 CedarLoadingIndicator()
             }
         } else {
-            BibleEntrypoint()
+
         }
     }
 }
