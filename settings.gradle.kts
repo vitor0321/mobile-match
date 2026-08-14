@@ -34,6 +34,7 @@ plugins {
 
 include(":app")
 include(":core")
+include(":firestore")
 include(":navigator")
 include(":cedarDS")
 include(":products:identity")
