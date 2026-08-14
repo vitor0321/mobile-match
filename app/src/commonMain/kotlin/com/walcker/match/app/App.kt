@@ -31,7 +31,7 @@ internal fun App(onFirstFrameRendered: (() -> Unit)? = null) {
                 CedarLoadingIndicator()
             }
         } else {
-
+            MatchScaffold()
         }
     }
 }

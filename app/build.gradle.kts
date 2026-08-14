@@ -62,6 +62,7 @@ kotlin {
             api(projects.core)
             api(projects.navigator)
             implementation(projects.cedarDS)
+            implementation(projects.firestore)
             implementation(projects.products.identity)
             implementation(projects.products.games)
         }
