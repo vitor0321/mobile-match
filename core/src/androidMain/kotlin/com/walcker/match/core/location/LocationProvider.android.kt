@@ -11,15 +11,17 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
 import com.walcker.match.core.geo.Coordinates
+import com.walcker.match.core.navigation.CurrentActivityHolder
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.time.Duration.Companion.seconds
 
 internal actual fun createLocationProvider(): LocationProvider =
     AndroidLocationProvider(
-        application = com.walcker.match.core.di.CurrentActivityHolder.application
+        application = CurrentActivityHolder().application
             ?: error("Application context not available; ensure CurrentActivityHolder is initialized"),
     )
 
@@ -58,37 +60,34 @@ private class AndroidLocationProvider(
         }
 
     @Suppress("MissingPermission")
-    private suspend fun getFreshLocation(): android.location.Location =
-        suspendCancellableCoroutine { cont ->
-            val cts = CancellationTokenSource()
-            cont.invokeOnCancellation { cts.cancel() }
+    private suspend fun getFreshLocation(): android.location.Location {
+        val result = withTimeoutOrNull(15.seconds) {
+            suspendCancellableCoroutine { cont ->
+                val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
+                    .setMaxUpdates(1)
+                    .build()
 
-            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
-                .setMaxUpdates(1)
-                .build()
-
-            val callback = object : LocationCallback() {
-                override fun onLocationResult(result: LocationResult) {
-                    fusedClient.removeLocationUpdates(this)
-                    val loc = result.lastLocation
-                    if (loc != null) {
-                        cont.resume(loc)
-                    } else {
-                        cont.resumeWithException(LocationError.Timeout)
+                val callback = object : LocationCallback() {
+                    override fun onLocationResult(result: LocationResult) {
+                        fusedClient.removeLocationUpdates(this)
+                        val loc = result.lastLocation
+                        if (loc != null) {
+                            cont.resume(loc)
+                        } else {
+                            cont.resumeWithException(LocationError.Timeout)
+                        }
                     }
                 }
-            }
 
-            fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+                fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
 
-            // Timeout: if no location within 15 seconds, cancel.
-            cts.token.invokeOnCompletion {
-                if (cont.isActive) {
+                cont.invokeOnCancellation {
                     fusedClient.removeLocationUpdates(callback)
-                    cont.resumeWithException(LocationError.Timeout)
                 }
             }
         }
+        return result ?: throw LocationError.Timeout
+    }
 
     // The permission flow needs to launch a system dialog through the Activity.
     // CurrentActivityHolder provides the current Activity reference.

@@ -12,11 +12,11 @@ public fun formatBRLCents(cents: Int): String {
         val builder = StringBuilder()
         var remaining = value
         while (remaining >= 1000) {
-            builder.insert(0, ".${"%03d".format(remaining % 1000)}")
+            builder.insert(0, ".${(remaining % 1000).toString().padStart(3, '0')}")
             remaining /= 1000
         }
         builder.insert(0, remaining.toString())
         builder.toString()
     }
-    return "R$ ${reaisStr},${"%02d".format(centavos)}"
+    return "R$ ${reaisStr},${centavos.toString().padStart(2, '0')}"
 }

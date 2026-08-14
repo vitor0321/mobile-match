@@ -6,7 +6,6 @@ import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "
 const projectId = "match-ci";
 const functionsBaseUrl = `http://127.0.0.1:5001/${projectId}/southamerica-east1`;
 const authUrl = "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key";
-const secretMarker = "SHOULD_NEVER_APPEAR_IN_A_FUNCTION_RESPONSE";
 
 let testEnvironment: RulesTestEnvironment;
 let idToken: string;
@@ -50,92 +49,72 @@ afterAll(async () => {
   await testEnvironment.cleanup();
 });
 
-describe("callable functions", () => {
-  it("rejects unauthenticated requests without leaking sensitive data", async () => {
-    const response = await call("deleteAccount", {}, null);
-    const body = await response.text();
-
-    expect(response.status).toBe(401);
-    expect(body).toContain("UNAUTHENTICATED");
-    expect(body).not.toContain(secretMarker);
-  });
-
-  it("rejects malformed authenticated AI payloads before generation", async () => {
-    const response = await call("getVerseExplanation", {verseText: secretMarker});
-    const body = await response.text();
-
-    expect(response.status).toBe(400);
-    expect(body).toContain("INVALID_ARGUMENT");
-    expect(body).not.toContain(secretMarker);
-  });
-
-  it("returns a cached AI explanation without invoking an external generator", async () => {
-    const verseRef = "João 3:16-NVI";
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "verse_explanations", verseRef), {
-        ...versePayload(),
-        verseRef,
-        explanation: "Cached explanation",
-      });
-    });
-
-    const response = await call("getVerseExplanation", versePayload());
-    const body = await response.json() as {result: {explanation: string; verseRef: string}};
-
-    expect(response.ok).toBe(true);
-    expect(body.result).toEqual({
-      ...versePayload(),
-      verseRef,
-      explanation: "Cached explanation",
-    });
-  });
-
-  it("enforces the AI rate limit before a cache miss can reach the generator", async () => {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "ai_rate_limits", uid), {
-        count: 20,
-        windowStartedAt: new Date(),
-      });
-    });
-
-    const response = await call("getVerseExplanation", versePayload());
-    const body = await response.text();
-
-    expect(response.status).toBe(429);
-    expect(body).toContain("RESOURCE_EXHAUSTED");
-    expect(body).not.toContain(secretMarker);
-  });
-
-  it("deletes only the authenticated users data and remains idempotent", async () => {
-    const otherUid = "other-user";
+describe("onUserCreate", () => {
+  it("provisions the public profile, the private doc and a free subscription", async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
-      await setDoc(doc(database, "users", uid), {profile: true});
-      await setDoc(doc(database, "users", uid, "favorites", "john-3-16"), {verseRef: "João 3:16"});
-      await setDoc(doc(database, "users", otherUid), {profile: true});
-      await setDoc(doc(database, "ai_rate_limits", uid), {count: 1});
-    });
 
-    expect((await call("deleteAccount", {})).ok).toBe(true);
-    expect((await call("deleteAccount", {})).ok).toBe(true);
+      const profile = await waitForDoc(() => getDoc(doc(database, "profiles", uid)));
+      expect(profile.data()).toMatchObject({
+        rating: 5,
+        ratingCount: 0,
+        matchesPlayed: 0,
+        isBanned: false,
+      });
 
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      const database = context.firestore();
-      expect((await getDoc(doc(database, "users", uid))).exists()).toBe(false);
-      expect((await getDoc(doc(database, "users", otherUid))).exists()).toBe(true);
-      expect((await getDoc(doc(database, "ai_rate_limits", uid))).exists()).toBe(false);
+      const privateData = await getDoc(doc(database, "profiles", uid, "private", "data"));
+      expect(privateData.exists()).toBe(true);
+      expect(privateData.data()).toMatchObject({isAvailable: false});
+
+      const subscription = await getDoc(doc(database, "users", uid, "subscription", "current"));
+      expect(subscription.data()).toMatchObject({plan: "free", status: "active"});
     });
   });
 });
 
-function versePayload() {
-  return {
-    verseText: "Porque Deus amou o mundo",
-    bookName: "João",
-    chapterNumber: 3,
-    verseNumber: 16,
-    translation: "NVI",
-  };
+describe("deleteAccount", () => {
+  it("rejects unauthenticated requests", async () => {
+    const response = await call("deleteAccount", {}, null);
+    expect(response.status).toBe(401);
+    expect(await response.text()).toContain("UNAUTHENTICATED");
+  });
+
+  it("rejects a non-empty payload", async () => {
+    const response = await call("deleteAccount", {unexpected: true});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("INVALID_ARGUMENT");
+  });
+
+  it("deletes only the caller's data and stays idempotent", async () => {
+    const otherUid = "other-user";
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "profiles", uid), {fullName: "Eu"});
+      await setDoc(doc(database, "profiles", uid, "private", "data"), {phone: "+5511999999999"});
+      await setDoc(doc(database, "users", uid, "notifications", "n1"), {type: "new_match"});
+      await setDoc(doc(database, "profiles", otherUid), {fullName: "Outro"});
+    });
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      expect((await getDoc(doc(database, "profiles", uid))).exists()).toBe(false);
+      expect((await getDoc(doc(database, "profiles", uid, "private", "data"))).exists()).toBe(false);
+      expect((await getDoc(doc(database, "users", uid, "notifications", "n1"))).exists()).toBe(false);
+      expect((await getDoc(doc(database, "profiles", otherUid))).exists()).toBe(true);
+    });
+  });
+});
+
+async function waitForDoc<T>(read: () => Promise<T & {exists(): boolean}>): Promise<T> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const snapshot = await read();
+    if (snapshot.exists()) return snapshot;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  throw new Error("Document was not provisioned within the timeout.");
 }
 
 function call(name: string, data: unknown, token: string | null = idToken): Promise<Response> {

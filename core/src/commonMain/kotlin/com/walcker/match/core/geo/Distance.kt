@@ -34,7 +34,7 @@ public fun formatDistance(km: Double): String {
     if (km < 1.0) {
         val meters = (km * 1000).roundToInt()
         // Round meters to the nearest 10 to match the MVP's coarser display.
-        val rounded = (meters / 10) * 10
+        val rounded = (meters.toDouble() / 10).roundToInt() * 10
         return "$rounded m"
     }
     val oneDecimal = ((km * 10).roundToInt() / 10.0)

@@ -16,8 +16,8 @@ public fun buildPixPayload(
     description: String? = null,
 ): String {
     val merchantAccount =
-        tlv("00", "br.gov.bcb.pix") +
-            tlv("01", key.trim()) +
+        tlv("00", "br.gov.bcb.pix".uppercase()) +
+            tlv("01", key.trim().uppercase()) +
             (description?.let { tlv("02", sanitize(it, 40)) } ?: "")
 
     val payload =
@@ -25,7 +25,7 @@ public fun buildPixPayload(
             tlv("26", merchantAccount) +
             tlv("52", "0000") +
             tlv("53", "986") +
-            if (amountCents > 0) tlv("54", formatAmount(amountCents)) else "" +
+            (if (amountCents > 0) tlv("54", formatAmount(amountCents)) else "") +
             tlv("58", "BR") +
             tlv("59", sanitize(merchant.ifBlank { "RECEBEDOR" }, 25).ifBlank { "RECEBEDOR" }) +
             tlv("60", sanitize(city, 15).ifBlank { "SAO PAULO" }) +
@@ -42,7 +42,7 @@ public fun buildPixPayload(
 private fun formatAmount(cents: Int): String {
     val reais = cents / 100
     val centavos = cents % 100
-    return "$reais.${"%02d".format(centavos)}"
+    return "$reais.${centavos.toString().padStart(2, '0')}"
 }
 
 /**

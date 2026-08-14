@@ -7,8 +7,14 @@ import java.lang.ref.WeakReference
 
 public class CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     private var currentActivityRef: WeakReference<Activity>? = null
+    public var application: Application? = null
+        private set
 
     public fun currentActivity(): Activity? = currentActivityRef?.get()
+
+    public fun setApplication(app: Application) {
+        this.application = app
+    }
 
     override fun onActivityResumed(activity: Activity) {
         currentActivityRef = WeakReference(activity)

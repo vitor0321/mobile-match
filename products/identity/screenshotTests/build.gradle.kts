@@ -1,8 +1,5 @@
-import io.netty.buffer.ByteBufUtil.isAccessible
-import org.gradle.internal.component.external.descriptor.MavenScope
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.lang.reflect.Proxy
 
 fun Any.findDeclaredMethodRecursively(methodName: String) = generateSequence(javaClass) { it.superclass }
     .flatMap { it.declaredMethods.asSequence() }
@@ -62,30 +59,6 @@ tasks.withType<KotlinCompile>().configureEach {
             ?.invoke(this) as? ConfigurableFileCollection
 
         friendPaths?.from(friendArtifacts)
-    }
-}
-
-afterEvaluate {
-    tasks.withType<Test>().configureEach {
-        if (name == "testDebugUnitTest" || name == "testReleaseUnitTest") {
-            val reporterInterface = Class.forName("org.gradle.api.internal.tasks.testing.report.TestReporter")
-            val noOpReporter = Proxy.newProxyInstance(
-                reporterInterface.classLoader,
-                arrayOf(reporterInterface),
-            ) { proxy, method, args ->
-                when (method.name) {
-                    "generateReport" -> null
-                    "toString" -> "NoOpTestReporter"
-                    "hashCode" -> MavenScope.System.identityHashCode(proxy)
-                    "equals" -> proxy === args?.firstOrNull()
-                    else -> null
-                }
-            }
-
-            findDeclaredMethodRecursively("setTestReporter")
-                ?.apply { isAccessible = true }
-                ?.invoke(this, noOpReporter)
-        }
     }
 }
 

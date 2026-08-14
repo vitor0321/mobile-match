@@ -18,6 +18,10 @@
     "firebase-functions": "^6.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "@types/node": "^22.20.1",
+    "firebase-tools": "^13.35.1",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.7"
   }
 }

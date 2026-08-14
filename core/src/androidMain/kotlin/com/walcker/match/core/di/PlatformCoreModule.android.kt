@@ -17,8 +17,10 @@ internal actual val platformCoreModule: Module = module {
     }
     single<CrashReporter>(createdAtStart = true) { FirebaseCrashReporter() }
     single(createdAtStart = true) {
+        val app = androidContext() as Application
         CurrentActivityHolder().also { holder ->
-            (androidContext() as Application).registerActivityLifecycleCallbacks(holder)
+            holder.setApplication(app)
+            app.registerActivityLifecycleCallbacks(holder)
         }
     }
 }
