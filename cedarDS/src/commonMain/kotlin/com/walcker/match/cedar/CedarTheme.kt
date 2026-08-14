@@ -16,25 +16,25 @@ import androidx.compose.ui.unit.sp
 
 internal object CedarColors {
     // Green brand — light
-    val GreenPrimaryLight            = Color(0xFF3A9A2C)
-    val GreenOnPrimaryLight          = Color(0xFFE8F5E6)
-    val GreenPrimaryContainerLight   = Color(0xFFE8F5E6)
-    val GreenOnPrimaryContainerLight = Color(0xFF1F6117)
+    val GreenPrimaryLight            = Color(0xFF06C167)
+    val GreenOnPrimaryLight          = Color(0xFFFFFFFF)
+    val GreenPrimaryContainerLight   = Color(0xFFE6F7EF)
+    val GreenOnPrimaryContainerLight = Color(0xFF002D1B)
 
     // Green brand — dark
-    val GreenPrimaryDark             = Color(0xFF5DB54F)
-    val GreenOnPrimaryDark           = Color(0xFF0C2E08)
-    val GreenPrimaryContainerDark    = Color(0xFF132110)
-    val GreenOnPrimaryContainerDark  = Color(0xFFC3E6BE)
+    val GreenPrimaryDark             = Color(0xFF06C167)
+    val GreenOnPrimaryDark           = Color(0xFF000000)
+    val GreenPrimaryContainerDark    = Color(0xFF003A24)
+    val GreenOnPrimaryContainerDark  = Color(0xFFF6CF2A)
 
     // Gold accent (both modes)
-    val Gold = Color(0xFFC9A84C)
+    val Gold = Color(0xFFEEEEEE)
 
     // Error
-    val ErrorBgLight     = Color(0xFFFAEAEA)
-    val ErrorStrokeLight = Color(0xFFC94040)
-    val ErrorBgDark      = Color(0xFF2E1515)
-    val ErrorStrokeDark  = Color(0xFFE05555)
+    val ErrorBgLight     = Color(0xFFFFFDEB)
+    val ErrorStrokeLight = Color(0xFFFDA291)
+    val ErrorBgDark      = Color(0xFFF3A1D1B)
+    val ErrorStrokeDark  = Color(0xFFFDA291)
 }
 
 // ─── Color schemes ────────────────────────────────────────────────────────────
@@ -44,20 +44,26 @@ private val LightColorScheme = lightColorScheme(
     onPrimary              = CedarColors.GreenOnPrimaryLight,
     primaryContainer       = CedarColors.GreenPrimaryContainerLight,
     onPrimaryContainer     = CedarColors.GreenOnPrimaryContainerLight,
+
     secondary              = CedarColors.Gold,
-    onSecondary            = Color(0xFF2C2B26),
-    secondaryContainer     = Color(0xFFF5EDD0),
-    onSecondaryContainer   = Color(0xFF3A2F0A),
-    background             = Color(0xFFF9F6EE),
-    onBackground           = Color(0xFF2C2B26),
-    surface                = Color.White,
-    onSurface              = Color(0xFF2C2B26),
-    surfaceVariant         = Color(0xFFE7F5E3),
-    onSurfaceVariant       = Color(0xFF55534C),
-    outline                = Color(0xFFEDE8D8),
-    outlineVariant         = Color(0xFFD9D1BC),
+    onSecondary            = Color(0xFF000000),
+    secondaryContainer     = Color(0xFFEEEEEE),
+    onSecondaryContainer   = Color(0xFF000000),
+
+    background             = Color(0xFFFFFFFF),
+    onBackground           = Color(0xFF000000),
+
+    surface                = Color(0xFFFFFFFF),
+    onSurface              = Color(0xFF000000),
+
+    surfaceVariant         = Color(0xFFEEEEEE),
+    onSurfaceVariant       = Color(0xFFB6B6B6),
+
+    outline                = Color(0xFFE0E0E0),
+    outlineVariant         = Color(0xFFEEEEEE),
+
     error                  = CedarColors.ErrorStrokeLight,
-    onError                = Color.White,
+    onError                = Color(0xFFFFFFFF),
     errorContainer         = CedarColors.ErrorBgLight,
     onErrorContainer       = CedarColors.ErrorStrokeLight,
 )
@@ -67,20 +73,26 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary              = CedarColors.GreenOnPrimaryDark,
     primaryContainer       = CedarColors.GreenPrimaryContainerDark,
     onPrimaryContainer     = CedarColors.GreenOnPrimaryContainerDark,
+
     secondary              = CedarColors.Gold,
-    onSecondary            = Color(0xFF0C2E08),
-    secondaryContainer     = Color(0xFF2A2008),
-    onSecondaryContainer   = Color(0xFFD4A840),
-    background             = Color(0xFF0F1A0D),
-    onBackground           = Color(0xFFE8F5E6),
-    surface                = Color(0xFF1A2618),
-    onSurface              = Color(0xFFE8F5E6),
-    surfaceVariant         = Color(0xFF243421),
-    onSurfaceVariant       = Color(0xFF5F7A5A),
-    outline                = Color(0xFF2D4229),
-    outlineVariant         = Color(0xFF1F3A1A),
+    onSecondary            = Color(0xFF000000),
+    secondaryContainer     = Color(0xFF1C1C1C),
+    onSecondaryContainer   = Color(0xFFEEEEEE),
+
+    background             = Color(0xFF000000),
+    onBackground           = Color(0xFFEEEEEE),
+
+    surface                = Color(0xFF1C1C1C),
+    onSurface              = Color(0xFFEEEEEE),
+
+    surfaceVariant         = Color(0xFF2A2A2A),
+    onSurfaceVariant       = Color(0xFFB6B6B6),
+
+    outline                = Color(0xFF3A3A3A),
+    outlineVariant         = Color(0xFF2A2A2A),
+
     error                  = CedarColors.ErrorStrokeDark,
-    onError                = Color(0xFF2E1515),
+    onError                = Color(0xFFFFFFFF),
     errorContainer         = CedarColors.ErrorBgDark,
     onErrorContainer       = CedarColors.ErrorStrokeDark,
 )

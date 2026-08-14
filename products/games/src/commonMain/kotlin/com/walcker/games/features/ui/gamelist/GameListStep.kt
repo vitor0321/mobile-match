@@ -10,17 +10,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,19 +27,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.strings.GameListStrings
+import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.MatchCard
+import com.walcker.match.cedar.components.SportChip
 import kotlinx.collections.immutable.ImmutableList
 
 /**
- * "TENHO 2 VAGAS" -> o aplicativo procura -> "QUEM QUER JOGAR?"
+ * Home screen of the games product.
  *
- * Tela inicial do produto: lista as partidas com vagas em aberto na região do
- * jogador. TODO: trocar TopAppBar por MatchTopBar do cedarDS e as strings
- * hardcoded por Lyricist, seguindo o padrão de products/identity.
+ * Shows open matches with sport chips filter, radius slider, and
+ * pull-to-refresh. Delegates strings to Lyricist (ETAPA9).
  */
 internal class GameListStep : Screen {
 
@@ -50,6 +54,7 @@ internal class GameListStep : Screen {
         val stepModel = koinScreenModel<GameListStepModel>()
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
+        val strings = rememberGamesStrings().strings.gameList
 
         LaunchedEffect(Unit) {
             stepModel.effects.collect { effect ->
@@ -61,93 +66,130 @@ internal class GameListStep : Screen {
         }
 
         Scaffold(
-            topBar = { TopAppBar(title = { Text("Vagas abertas") }) },
+            topBar = {
+                CedarTopBar(
+                    title = strings.title,
+                    subtitle = strings.subtitle,
+                )
+            },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
-            when {
-                state.isLoading -> LoadingContent(Modifier.fillMaxSize().padding(padding))
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                if (state.preferencesLoaded) {
+                    FilterBar(
+                        strings = strings,
+                        selectedSport = state.selectedSport,
+                        radiusKm = state.radiusKm,
+                        onSelectSport = { stepModel.onEvent(GameListEvents.SelectSport(it)) },
+                        onRadiusChange = { stepModel.onEvent(GameListEvents.SetRadius(it)) },
+                    )
+                }
+                when {
+                    state.isLoading && state.games.isEmpty() ->
+                        LoadingContent(Modifier.fillMaxSize())
 
-                state.errorMessage != null -> MessageContent(
-                    message = state.errorMessage.orEmpty(),
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                )
+                    state.errorMessage != null && state.games.isEmpty() ->
+                        EmptyState(
+                            message = state.errorMessage.orEmpty(),
+                            modifier = Modifier.fillMaxSize(),
+                        )
 
-                state.games.isEmpty() -> MessageContent(
-                    message = "Nenhuma vaga aberta na sua região agora.",
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                )
+                    state.games.isEmpty() ->
+                        EmptyState(
+                            message = strings.emptyMessage,
+                            modifier = Modifier.fillMaxSize(),
+                        )
 
-                else -> GameList(
-                    games = state.games,
-                    onJoin = { stepModel.onEvent(GameListEvents.JoinGame(it)) },
-                    contentPadding = padding,
+                    else -> GameList(
+                        strings = strings,
+                        games = state.games,
+                        onJoin = { stepModel.onEvent(GameListEvents.JoinGame(it)) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterBar(
+    strings: GameListStrings,
+    selectedSport: Sport?,
+    radiusKm: Double,
+    onSelectSport: (Sport?) -> Unit,
+    onRadiusChange: (Double) -> Unit,
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item {
+                SportChip(
+                    label = strings.allSportsChip,
+                    selected = selectedSport == null,
+                    onClick = { onSelectSport(null) },
                 )
             }
+            items(items = Sport.values().toList()) { sport ->
+                SportChip(
+                    label = sport.label,
+                    selected = selectedSport == sport,
+                    onClick = { onSelectSport(sport) },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = strings.radiusLabel(radiusKm.toInt()),
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(end = 12.dp),
+            )
+            Slider(
+                value = radiusKm.toFloat(),
+                onValueChange = { onRadiusChange(it.toDouble()) },
+                valueRange = GameListState.MIN_RADIUS_KM.toFloat()..GameListState.MAX_RADIUS_KM.toFloat(),
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
 
 @Composable
 private fun GameList(
+    strings: GameListStrings,
     games: ImmutableList<Game>,
     onJoin: (String) -> Unit,
-    contentPadding: PaddingValues,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = contentPadding.calculateTopPadding() + 12.dp,
-            bottom = 12.dp,
-            start = 16.dp,
-            end = 16.dp,
-        ),
+        contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(items = games, key = { it.id }) { game ->
-            GameCard(game = game, onJoin = { onJoin(game.id) })
-        }
-    }
-}
-
-@Composable
-private fun GameCard(
-    game: Game,
-    onJoin: () -> Unit,
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = game.sport.label.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
+            val playersLabel = strings.playersAndSlots(
+                game.confirmedPlayers,
+                game.totalPlayers,
+                game.openSlots,
+                if (game.openSlots == 1) "vaga" else "vagas",
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "${game.venueName} · ${game.neighborhood}",
-                style = MaterialTheme.typography.bodyMedium,
+            MatchCard(
+                sportLabel = game.sport.label,
+                venueName = game.venueName,
+                neighborhood = game.neighborhood,
+                startsAtSeconds = game.startsAtSeconds,
+                confirmedPlayers = game.confirmedPlayers,
+                totalPlayers = game.totalPlayers,
+                openSlots = game.openSlots,
+                pricePerPlayer = game.pricePerPlayer,
+                joinButtonLabel = strings.joinButton,
+                playersAndSlotsLabel = playersLabel,
+                perPlayerLabel = game.pricePerPlayer?.let { strings.perPlayer(it) },
+                onJoinClick = { onJoin(game.id) },
             )
-            Text(
-                text = game.startsAt,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = "${game.confirmedPlayers}/${game.totalPlayers} jogadores · " +
-                    "${game.openSlots} ${if (game.openSlots == 1) "vaga" else "vagas"}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            game.pricePerPlayer?.let { price ->
-                Text(
-                    text = "$price por jogador",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                Button(onClick = onJoin) { Text("ENTRAR NO JOGO") }
-            }
         }
     }
 }
@@ -160,16 +202,5 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun MessageContent(message: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = message, style = MaterialTheme.typography.bodyLarge)
     }
 }

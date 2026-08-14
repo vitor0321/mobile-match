@@ -8,4 +8,5 @@ import cafe.adriel.voyager.core.screen.Screen
  */
 interface GamesDestination {
     fun gameList(): Screen
+    fun search(): Screen
 }

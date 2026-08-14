@@ -16,14 +16,22 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
+    // Enable ObjC name interop on all platforms
+    sourceSets.all {
+        languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.firestore)
             implementation(projects.navigator)
             implementation(projects.cedarDS)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+
+            implementation(libs.lyricist.core)
 
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.screenmodel)
@@ -36,6 +44,9 @@ kotlin {
             implementation(libs.compose.components.resources)
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
+
+            implementation(libs.datastore.preferences)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -63,11 +63,7 @@ private fun AuthenticatedShell() {
         ) {
             when (selectedTab) {
                 0 -> Navigator(screen = gamesDestination.gameList())
-                1 -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) { Text("Search — Coming in Phase 1") }
-
+                1 -> Navigator(screen = gamesDestination.search())
                 2 -> Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,

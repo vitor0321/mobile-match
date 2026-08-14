@@ -1,5 +1,6 @@
 package com.walcker.match.core.datetime
 
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -15,7 +16,7 @@ import kotlinx.datetime.toLocalDateTime
  */
 public fun formatWhen(
     starts: Instant,
-    now: Instant,
+    now: Instant = getCurrentTime(),
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): String {
     val startLocal = starts.toLocalDateTime(timeZone)
@@ -30,6 +31,25 @@ public fun formatWhen(
         else -> "${startLocal.dayOfMonth.pad2()}/${startLocal.monthNumber.pad2()} · $time"
     }
 }
+
+/**
+ * Convenience overload that takes a Firestore-style epoch-seconds Long.
+ */
+public fun formatWhen(
+    startsAtSeconds: Long,
+    now: Instant = getCurrentTime(),
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): String = formatWhen(
+    starts = Instant.fromEpochSeconds(startsAtSeconds),
+    now = now,
+    timeZone = timeZone,
+)
+
+/**
+ * Platform-agnostic way to get the current time.
+ * Uses expect/actual for platform-specific implementation.
+ */
+internal expect fun getCurrentTime(): Instant
 
 private fun LocalDateTime.isSameDayAs(other: LocalDateTime): Boolean =
     year == other.year && monthNumber == other.monthNumber && dayOfMonth == other.dayOfMonth
