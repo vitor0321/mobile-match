@@ -18,9 +18,9 @@ internal fun initKoin(
         coreModules +
             identityModule +
             firestoreModule +
-            gamesModule,
-        // Phase 1: Add playerModule, notificationsModule as they become available
+            gamesModule +
+            notificationsModule,
+        // Phase 3+: Add playerModule as it becomes available
         // playerModule,
-        // notificationsModule,
     )
 }

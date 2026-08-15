@@ -6,6 +6,7 @@ target 'iosApp' do
   pod 'FirebaseAuth'
   pod 'FirebaseFirestore'
   pod 'FirebaseFunctions'
+  pod 'Firebase/Messaging'
   pod 'Google-Mobile-Ads-SDK'
   pod 'GoogleSignIn'
   pod 'PurchasesHybridCommon', '17.55.1'

@@ -130,6 +130,7 @@ firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "play-services-ads" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 google-identity-googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }

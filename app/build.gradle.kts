@@ -48,6 +48,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.koin.android)
+            implementation(libs.firebase.messaging)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
