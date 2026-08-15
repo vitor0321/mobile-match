@@ -27,6 +27,7 @@ kotlin {
             implementation(projects.firestore)
             implementation(projects.navigator)
             implementation(projects.cedarDS)
+            implementation(projects.products.identity)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)

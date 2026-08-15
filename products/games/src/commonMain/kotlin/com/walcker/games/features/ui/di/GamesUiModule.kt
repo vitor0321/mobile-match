@@ -1,6 +1,9 @@
 package com.walcker.games.features.ui.di
 
+import com.walcker.games.features.ui.creatematch.CreateMatchStepModel
 import com.walcker.games.features.ui.gamelist.GameListStepModel
+import com.walcker.games.features.ui.mymatches.MyMatchesStepModel
+import com.walcker.games.features.ui.playerprofile.PlayerProfileStepModel
 import com.walcker.games.features.ui.search.SearchStepModel
 import org.koin.dsl.module
 
@@ -17,6 +20,27 @@ internal val gamesUiModule = module {
         SearchStepModel(
             repository = get(),
             joinGame = get(),
+            stringsHolder = get(),
+        )
+    }
+    factory {
+        CreateMatchStepModel(
+            createMatch = get(),
+            stringsHolder = get(),
+        )
+    }
+    factory {
+        MyMatchesStepModel(
+            getMyMatches = get(),
+            cancelMatch = get(),
+            leaveMatch = get(),
+            stringsHolder = get(),
+        )
+    }
+    factory {
+        PlayerProfileStepModel(
+            sessionHolder = get(),
+            getMyMatches = get(),
             stringsHolder = get(),
         )
     }

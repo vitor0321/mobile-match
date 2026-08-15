@@ -1,6 +1,7 @@
 package com.walcker.games.features.data.source
 
 import com.walcker.games.features.data.mapper.toGame
+import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.match.core.geo.Coordinates
 import com.walcker.match.core.geo.boundsForRadius
@@ -38,6 +39,48 @@ internal class FirestoreGameSource(
         // TODO: Implement callable to joinMatch
         // This will be a Cloud Function callable that handles transactional join
         throw NotImplementedError("joinMatch callable not yet implemented")
+    }
+
+    override suspend fun createMatch(request: CreateMatchRequest): String {
+        // Map CreateMatchRequest to Firestore document data (without ID, will be generated)
+        val data = mapOf(
+            "sport" to request.sport.name,
+            "venueName" to request.venueName,
+            "neighborhood" to request.neighborhood,
+            "city" to request.city,
+            "address" to request.address,
+            "lat" to request.lat,
+            "lng" to request.lng,
+            "geohash" to request.geohash,
+            "startsAtSeconds" to request.startsAtSeconds,
+            "durationMin" to request.durationMin,
+            "confirmedPlayers" to 1, // Organizer is the first player
+            "totalPlayers" to request.totalPlayers,
+            "pricePerPlayer" to request.pricePerPlayer,
+            "status" to "OPEN",
+            "organizerName" to "Anonymous", // TODO: Get from SessionHolder
+            "organizerId" to "user123", // TODO: Get from SessionHolder
+            "organizerRating" to 4.5, // TODO: Get from user profile
+            "participants" to listOf("user123"), // Organizer is auto-added
+        )
+
+        // Add the document (Firestore auto-generates the ID)
+        return firestore.collection("matches").add(data).getOrThrow()
+    }
+
+    override suspend fun matchesForUser(userId: String): List<Game> {
+        // Firestore `array-contains` lets us query matches where userId appears
+        // in the denormalized `participants` array. We do not constrain by status
+        // here — the use case decides active vs past.
+        return firestore
+            .collection("matches")
+            .query()
+            .where("participants", "array-contains", userId)
+            .orderBy("startsAtSeconds")
+            .get()
+            .getOrNull()
+            ?.mapNotNull { snapshot -> snapshot.toGame() }
+            ?: emptyList()
     }
 
     private suspend fun queryNearbyMatches(

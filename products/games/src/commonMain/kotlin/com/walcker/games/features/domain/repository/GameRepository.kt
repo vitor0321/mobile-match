@@ -1,7 +1,14 @@
 package com.walcker.games.features.domain.repository
 
+import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.MatchRole
 import kotlinx.coroutines.flow.Flow
+
+internal data class MyMatch(
+    val game: Game,
+    val role: MatchRole,
+)
 
 internal interface GameRepository {
     /**
@@ -28,4 +35,31 @@ internal interface GameRepository {
     suspend fun openGames(): Result<List<Game>>
 
     suspend fun joinGame(gameId: String): Result<Unit>
+
+    /**
+     * Creates a new match in Firestore.
+     *
+     * Returns the generated match ID on success.
+     */
+    suspend fun createMatch(request: CreateMatchRequest): Result<String>
+
+    /**
+     * Returns matches the user has organized or joined, tagged with [MatchRole].
+     *
+     * Active = startsAtSeconds is in the future and status is OPEN or FULL.
+     * Past = startsAtSeconds is in the past or status is FINISHED/CANCELLED.
+     */
+    suspend fun getMyMatches(userId: String): Result<List<MyMatch>>
+
+    /**
+     * Cancels a match. Stub: returns PermissionDenied until Cloud Function
+     * callable is wired up.
+     */
+    suspend fun cancelMatch(gameId: String): Result<Unit>
+
+    /**
+     * Leaves a match. Stub: returns PermissionDenied until Cloud Function
+     * callable is wired up.
+     */
+    suspend fun leaveMatch(gameId: String): Result<Unit>
 }

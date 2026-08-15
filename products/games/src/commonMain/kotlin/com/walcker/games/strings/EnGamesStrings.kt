@@ -7,4 +7,7 @@ import com.walcker.match.core.strings.Locales
 internal val EnGamesStrings = GamesStrings(
     gameList = gameListStringsEn,
     search = searchStringsEn,
+    myMatches = myMatchesStringsEn,
+    createMatch = createMatchStringsEn,
+    playerProfile = playerProfileStringsEn,
 )

@@ -33,7 +33,7 @@ internal fun DocumentSnapshot.toGame(): Game? {
         Game(
             id = id,
             sport = sport,
-            venueName = getString("venue") ?: return null,
+            venueName = getString("venueName") ?: return null,
             neighborhood = getString("neighborhood") ?: return null,
             city = getString("city") ?: return null,
             address = getString("address") ?: return null,
@@ -54,6 +54,9 @@ internal fun DocumentSnapshot.toGame(): Game? {
             status = getString("status")
                 ?.let { runCatching { MatchStatus.valueOf(it.uppercase()) }.getOrNull() }
                 ?: MatchStatus.OPEN,
+            participants = (getList("participants") as? List<*>)
+                ?.filterIsInstance<String>()
+                ?: emptyList(),
         )
     } catch (e: Exception) {
         null
@@ -68,6 +71,7 @@ internal fun DocumentSnapshot.toGame(): Game? {
  * This handles both shapes.
  */
 private fun DocumentSnapshot.readStartsAtSeconds(): Long? {
+    getLong("startsAtSeconds")?.let { return it }
     getLong("startsAt")?.let { return it }
 
     val tsMap = getMap("startsAt")

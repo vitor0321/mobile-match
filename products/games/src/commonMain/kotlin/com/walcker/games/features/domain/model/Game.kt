@@ -27,12 +27,25 @@ internal data class Game(
     val organizerId: String,
     val organizerRating: Double,
     val status: MatchStatus = MatchStatus.OPEN,
+    /**
+     * User IDs that have joined the match. Includes the organizer.
+     * Empty list means only the organizer is in.
+     */
+    val participants: List<String> = emptyList(),
 ) {
     val openSlots: Int
         get() = (totalPlayers - confirmedPlayers).coerceAtLeast(0)
 
     val hasOpenSlots: Boolean
         get() = openSlots > 0
+}
+
+/**
+ * Role do usuário logado em relação a uma partida.
+ */
+internal enum class MatchRole {
+    ORGANIZER,
+    PARTICIPANT,
 }
 
 /**

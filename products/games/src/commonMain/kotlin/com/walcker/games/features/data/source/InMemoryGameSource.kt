@@ -1,9 +1,11 @@
 package com.walcker.games.features.data.source
 
+import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.Sport
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.random.Random
 
 /**
  * Fonte temporária, em memória, para o app rodar antes do backend existir.
@@ -26,6 +28,39 @@ internal class InMemoryGameSource : GameSource {
                     game
                 }
             }
+        }
+    }
+
+    override suspend fun createMatch(request: CreateMatchRequest): String {
+        val matchId = "match_${Random.nextInt(10000)}"
+        val organizerId = "user_anon"
+        val newGame = Game(
+            id = matchId,
+            sport = request.sport,
+            venueName = request.venueName,
+            neighborhood = request.neighborhood,
+            city = request.city,
+            address = request.address,
+            lat = request.lat,
+            lng = request.lng,
+            geohash = request.geohash,
+            startsAtSeconds = request.startsAtSeconds,
+            durationMin = request.durationMin,
+            confirmedPlayers = 1, // Organizer
+            totalPlayers = request.totalPlayers,
+            pricePerPlayer = request.pricePerPlayer,
+            organizerName = "Anonymous",
+            organizerId = organizerId,
+            organizerRating = 4.0,
+            participants = listOf(organizerId),
+        )
+        games.update { it + newGame }
+        return matchId
+    }
+
+    override suspend fun matchesForUser(userId: String): List<Game> {
+        return games.value.filter { game ->
+            game.organizerId == userId || userId in game.participants
         }
     }
 

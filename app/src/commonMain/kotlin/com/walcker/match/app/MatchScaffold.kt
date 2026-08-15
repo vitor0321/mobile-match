@@ -64,20 +64,9 @@ private fun AuthenticatedShell() {
             when (selectedTab) {
                 0 -> Navigator(screen = gamesDestination.gameList())
                 1 -> Navigator(screen = gamesDestination.search())
-                2 -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) { Text("Create — Coming in Phase 1") }
-
-                3 -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) { Text("MyMatches — Coming in Phase 1") }
-
-                4 -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) { Text("Profile — Coming in Phase 1") }
+                2 -> Navigator(screen = gamesDestination.create())
+                3 -> Navigator(screen = gamesDestination.myMatches())
+                4 -> Navigator(screen = gamesDestination.playerProfile())
             }
         }
 
