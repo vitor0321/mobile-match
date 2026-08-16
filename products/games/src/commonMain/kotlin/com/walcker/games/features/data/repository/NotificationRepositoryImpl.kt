@@ -22,4 +22,22 @@ internal class NotificationRepositoryImpl(
             source.getNotificationHistory(userId, limit)
         }
     }
+
+    override suspend fun markNotificationAsRead(
+        userId: String,
+        notificationId: String,
+    ): Result<Unit> {
+        return runCatching {
+            source.markNotificationAsRead(userId, notificationId)
+        }
+    }
+
+    override suspend fun deleteNotification(
+        userId: String,
+        notificationId: String,
+    ): Result<Unit> {
+        return runCatching {
+            source.deleteNotification(userId, notificationId)
+        }
+    }
 }

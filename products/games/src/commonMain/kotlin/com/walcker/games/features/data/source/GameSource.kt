@@ -13,4 +13,9 @@ internal interface GameSource {
      * Server is expected to merge organizer + participants.
      */
     suspend fun matchesForUser(userId: String): List<Game>
+
+    /**
+     * Fetches a single game by ID from Firestore.
+     */
+    suspend fun getGameById(gameId: String): Game
 }

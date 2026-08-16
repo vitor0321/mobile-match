@@ -29,4 +29,26 @@ internal interface NotificationRepository {
         userId: String,
         limit: Int,
     ): Result<List<NotificationHistoryItem>>
+
+    /**
+     * Marks a notification as read in Firestore.
+     *
+     * @param userId ID of the user
+     * @param notificationId ID of the notification to mark as read
+     */
+    suspend fun markNotificationAsRead(
+        userId: String,
+        notificationId: String,
+    ): Result<Unit>
+
+    /**
+     * Deletes a notification from Firestore.
+     *
+     * @param userId ID of the user
+     * @param notificationId ID of the notification to delete
+     */
+    suspend fun deleteNotification(
+        userId: String,
+        notificationId: String,
+    ): Result<Unit>
 }

@@ -64,6 +64,11 @@ internal class InMemoryGameSource : GameSource {
         }
     }
 
+    override suspend fun getGameById(gameId: String): Game {
+        return games.value.firstOrNull { it.id == gameId }
+            ?: throw IllegalStateException("Game with id '$gameId' not found")
+    }
+
     private companion object {
         // Current time: ~Aug 14 2026 15:00 UTC, so +3 hours = ~18:00 São Paulo time
         // Use Unix timestamp for "today at 20:00" (1723663200 = ~Aug 15 2026 01:00 UTC = Aug 15 04:00 SP)

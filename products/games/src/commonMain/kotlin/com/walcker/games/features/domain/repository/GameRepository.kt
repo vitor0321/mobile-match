@@ -62,4 +62,11 @@ internal interface GameRepository {
      * callable is wired up.
      */
     suspend fun leaveMatch(gameId: String): Result<Unit>
+
+    /**
+     * Fetches a single game/match by ID from Firestore.
+     *
+     * Used to load match details when navigating from notifications or other deep links.
+     */
+    suspend fun getGameById(gameId: String): Result<Game>
 }

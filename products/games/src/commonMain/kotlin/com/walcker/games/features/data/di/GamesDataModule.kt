@@ -27,6 +27,12 @@ import com.walcker.games.features.domain.usecase.UpdatePushTokenUseCase
 import com.walcker.games.features.domain.usecase.UpdatePushTokenUseCaseImpl
 import com.walcker.games.features.domain.usecase.GetNotificationHistoryUseCase
 import com.walcker.games.features.domain.usecase.GetNotificationHistoryUseCaseImpl
+import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
+import com.walcker.games.features.domain.usecase.GetGameByIdUseCaseImpl
+import com.walcker.games.features.domain.usecase.MarkNotificationAsReadUseCase
+import com.walcker.games.features.domain.usecase.MarkNotificationAsReadUseCaseImpl
+import com.walcker.games.features.domain.usecase.DeleteNotificationUseCase
+import com.walcker.games.features.domain.usecase.DeleteNotificationUseCaseImpl
 import com.walcker.match.firestore.FirestoreClient
 import org.koin.dsl.module
 
@@ -54,4 +60,7 @@ internal val gamesDataModule = module {
     factory<LeaveMatchUseCase> { LeaveMatchUseCaseImpl(repository = get()) }
     factory<UpdatePushTokenUseCase> { UpdatePushTokenUseCaseImpl(notificationRepository = get()) }
     factory<GetNotificationHistoryUseCase> { GetNotificationHistoryUseCaseImpl(repository = get()) }
+    factory<GetGameByIdUseCase> { GetGameByIdUseCaseImpl(repository = get()) }
+    factory<MarkNotificationAsReadUseCase> { MarkNotificationAsReadUseCaseImpl(repository = get()) }
+    factory<DeleteNotificationUseCase> { DeleteNotificationUseCaseImpl(repository = get()) }
 }

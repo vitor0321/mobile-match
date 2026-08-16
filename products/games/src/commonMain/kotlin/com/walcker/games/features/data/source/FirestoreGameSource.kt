@@ -138,5 +138,14 @@ internal class FirestoreGameSource(
             ?.mapNotNull { snapshot -> snapshot.toGame() }
             ?: emptyList()
     }
+
+    override suspend fun getGameById(gameId: String): Game {
+        return firestore
+            .document("matches/$gameId")
+            .get()
+            .getOrNull()
+            ?.toGame()
+            ?: throw IllegalStateException("Match not found: $gameId")
+    }
 }
 

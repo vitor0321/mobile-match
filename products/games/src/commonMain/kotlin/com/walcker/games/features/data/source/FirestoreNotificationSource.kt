@@ -45,6 +45,23 @@ internal class FirestoreNotificationSource(
             }
             ?: emptyList()
     }
+
+    override suspend fun markNotificationAsRead(
+        userId: String,
+        notificationId: String,
+    ) {
+        firestore.document("users/$userId/notificationHistory/$notificationId").update(
+            data = mapOf("isRead" to true),
+        ).getOrThrow()
+    }
+
+    override suspend fun deleteNotification(
+        userId: String,
+        notificationId: String,
+    ) {
+        firestore.document("users/$userId/notificationHistory/$notificationId").delete()
+            .getOrThrow()
+    }
 }
 
 internal expect fun getPlatformName(): String

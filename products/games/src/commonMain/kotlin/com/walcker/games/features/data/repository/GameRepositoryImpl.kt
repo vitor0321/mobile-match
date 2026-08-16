@@ -86,4 +86,12 @@ internal class GameRepositoryImpl(
             GamesError.PermissionDenied(message = "Sair da partida ainda não está disponível.")
         )
     }
+
+    override suspend fun getGameById(gameId: String): Result<Game> {
+        return runCatching {
+            source.getGameById(gameId)
+        }.recoverCatching { error ->
+            throw error.toGamesError()
+        }
+    }
 }

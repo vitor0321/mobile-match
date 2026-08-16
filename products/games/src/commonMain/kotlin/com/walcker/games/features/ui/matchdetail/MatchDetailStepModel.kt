@@ -4,6 +4,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.repository.GameRepository
+import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +35,7 @@ internal sealed interface MatchDetailEvent {
  * Fetches and displays a single match's details.
  */
 internal class MatchDetailStepModel(
-    private val gameRepository: GameRepository,
+    private val getGameById: GetGameByIdUseCase,
     private val stringsHolder: GamesStringsHolder,
     private val matchId: String,
 ) : ScreenModel {
@@ -59,10 +60,17 @@ internal class MatchDetailStepModel(
         screenModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
 
-            // TODO Phase 3-ETAPA3: Fetch from repository using matchId
-            // For now, return empty to structure the UI properly.
-            // When GetGameByIdUseCase is implemented, call it here.
-            _state.update { it.copy(isLoading = false, match = null) }
+            val result = getGameById(matchId)
+            result.onSuccess { game ->
+                _state.update { it.copy(isLoading = false, match = game) }
+            }.onFailure { error ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Unknown error loading match details",
+                    )
+                }
+            }
         }
     }
 }

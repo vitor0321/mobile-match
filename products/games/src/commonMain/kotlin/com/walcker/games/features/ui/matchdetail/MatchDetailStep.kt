@@ -27,7 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
-import com.walcker.games.features.domain.repository.GameRepository
+import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.rememberGamesStrings
 import org.koin.compose.koinInject
@@ -40,12 +40,12 @@ internal class MatchDetailStep(val matchId: String) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val gameRepository: GameRepository = koinInject()
+        val getGameById: GetGameByIdUseCase = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
 
         val stepModel = remember {
             MatchDetailStepModel(
-                gameRepository = gameRepository,
+                getGameById = getGameById,
                 stringsHolder = stringsHolder,
                 matchId = matchId,
             )
