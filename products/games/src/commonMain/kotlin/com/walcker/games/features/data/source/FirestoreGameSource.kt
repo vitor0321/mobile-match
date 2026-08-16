@@ -3,6 +3,7 @@ package com.walcker.games.features.data.source
 import com.walcker.games.features.data.mapper.toGame
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.geo.Coordinates
 import com.walcker.match.core.geo.boundsForRadius
 import com.walcker.match.core.geo.distanceKm
@@ -10,6 +11,7 @@ import com.walcker.match.firestore.FirestoreClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 
 /**
  * Queries Firestore for open matches within a given radius, ordered by distance.
@@ -24,6 +26,7 @@ import kotlinx.coroutines.coroutineScope
  */
 internal class FirestoreGameSource(
     private val firestore: FirestoreClient,
+    private val sessionHolder: SessionHolder,
 ) : GameSource {
 
     override suspend fun openGames(): List<Game> {
@@ -42,6 +45,14 @@ internal class FirestoreGameSource(
     }
 
     override suspend fun createMatch(request: CreateMatchRequest): String {
+        // Resolve the organizer (current authenticated user). If there is no
+        // session we cannot attribute the match, so we refuse rather than
+        // write a document owned by a placeholder id.
+        val session = sessionHolder.currentUser.first()
+            ?: throw IllegalStateException("Cannot create match: no authenticated user")
+        val organizerId = session.uid
+        val organizerName = session.displayName ?: "Anonymous"
+
         // Map CreateMatchRequest to Firestore document data (without ID, will be generated)
         val data = mapOf(
             "sport" to request.sport.name,
@@ -58,10 +69,10 @@ internal class FirestoreGameSource(
             "totalPlayers" to request.totalPlayers,
             "pricePerPlayer" to request.pricePerPlayer,
             "status" to "OPEN",
-            "organizerName" to "Anonymous", // TODO: Get from SessionHolder
-            "organizerId" to "user123", // TODO: Get from SessionHolder
+            "organizerName" to organizerName,
+            "organizerId" to organizerId,
             "organizerRating" to 4.5, // TODO: Get from user profile
-            "participants" to listOf("user123"), // Organizer is auto-added
+            "participants" to listOf(organizerId), // Organizer is auto-added
         )
 
         // Add the document (Firestore auto-generates the ID)

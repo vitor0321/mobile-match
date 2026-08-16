@@ -1,5 +1,6 @@
 package com.walcker.identity.features.data.di
 
+import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.ProStateHolder
 import com.walcker.identity.api.SessionHolder
 import com.walcker.identity.features.data.billing.BillingClient
@@ -14,6 +15,7 @@ import com.walcker.identity.features.data.remote.createAppleAuthSource
 import com.walcker.identity.features.data.remote.createFirebaseAuthSource
 import com.walcker.identity.features.data.repository.AccountDeletionRepositoryImpl
 import com.walcker.identity.features.data.repository.AuthRepositoryImpl
+import com.walcker.identity.features.data.service.LogoutServiceImpl
 import com.walcker.identity.features.data.session.SessionHolderImpl
 import com.walcker.identity.features.data.usecase.SignUseCaseImpl
 import com.walcker.identity.features.domain.billing.BillingRepository
@@ -56,6 +58,7 @@ internal val identityDataModule = module {
         )
     }
     factory<SignUseCase> { SignUseCaseImpl(authRepository = get()) }
+    single<LogoutService> { LogoutServiceImpl(signUseCase = get()) }
     factory<ProfileAccountUseCase> {
         ProfileAccountUseCaseImpl(
             proStateHolder = get(),

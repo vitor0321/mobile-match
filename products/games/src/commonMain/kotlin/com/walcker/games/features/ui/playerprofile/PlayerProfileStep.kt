@@ -120,6 +120,23 @@ internal class PlayerProfileStep : Screen {
                 }
 
                 Spacer(Modifier.weight(1f))
+
+                // Settings section with logout
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "Configurações",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    OutlinedButton(
+                        onClick = { model.onEvent(PlayerProfileEvent.LogoutRequested) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Fazer logout")
+                    }
+                }
             }
         }
     }

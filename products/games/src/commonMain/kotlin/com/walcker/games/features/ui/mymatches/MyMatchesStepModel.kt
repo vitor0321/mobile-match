@@ -8,10 +8,12 @@ import com.walcker.games.features.domain.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.usecase.LeaveMatchUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.identity.api.SessionHolder
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -21,6 +23,7 @@ internal class MyMatchesStepModel(
     private val cancelMatch: CancelMatchUseCase,
     private val leaveMatch: LeaveMatchUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val sessionHolder: SessionHolder,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(MyMatchesState())
@@ -28,12 +31,6 @@ internal class MyMatchesStepModel(
 
     private val _effects = Channel<MyMatchesEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
-
-    /**
-     * Stub for now: real app reads from SessionHolder. Keeping it as a constant
-     * keeps the screen functional during E2E and unit-style verification.
-     */
-    private val currentUserId = "user_vitor"
 
     init {
         refresh()
@@ -52,8 +49,18 @@ internal class MyMatchesStepModel(
     private fun refresh() {
         screenModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
+
+            val session = sessionHolder.currentUser.first()
+            if (session == null) {
+                // Not logged in: show an empty state instead of querying for a
+                // hardcoded user. The auth gate usually prevents this, but keep
+                // the defensive branch so the screen degrades gracefully.
+                _state.update { it.copy(isLoading = false, active = emptyList(), past = emptyList()) }
+                return@launch
+            }
+
             val nowSeconds = getCurrentEpochSeconds()
-            getMyMatches(currentUserId, nowSeconds)
+            getMyMatches(session.uid, nowSeconds)
                 .onSuccess { matches ->
                     _state.update {
                         it.copy(

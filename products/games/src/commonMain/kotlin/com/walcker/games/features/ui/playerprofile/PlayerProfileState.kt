@@ -12,4 +12,5 @@ internal data class PlayerProfileState(
 internal sealed interface PlayerProfileEvent {
     data object Refresh : PlayerProfileEvent
     data object DismissError : PlayerProfileEvent
+    data object LogoutRequested : PlayerProfileEvent
 }

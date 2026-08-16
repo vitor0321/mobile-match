@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.error.GamesError
 import com.walcker.games.features.domain.usecase.GetMyMatchesUseCase
 import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.SessionHolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ internal class PlayerProfileStepModel(
     private val sessionHolder: SessionHolder,
     private val getMyMatches: GetMyMatchesUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val logoutService: LogoutService,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(PlayerProfileState())
@@ -42,6 +44,21 @@ internal class PlayerProfileStepModel(
                 }
             }
             PlayerProfileEvent.DismissError -> _state.update { it.copy(errorMessage = null) }
+            PlayerProfileEvent.LogoutRequested -> logout()
+        }
+    }
+
+    private fun logout() {
+        screenModelScope.launch {
+            logoutService.logout()
+                .onSuccess {
+                    // Logout succeeded. The MatchScaffold will detect
+                    // isAuthenticated=false and show the login screen.
+                }
+                .onFailure { error ->
+                    val message = error.message ?: "Erro ao fazer logout"
+                    _state.update { it.copy(errorMessage = message) }
+                }
         }
     }
 

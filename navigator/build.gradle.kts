@@ -17,6 +17,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.voyager.navigator)
+            implementation(libs.kotlinx.coroutines.core)
         }
     }
 }

@@ -53,7 +53,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         if let fcmToken = fcmToken {
             // Call Kotlin callback to store token
-            IosPushNotificationService.getInstance().onTokenReceived(token: fcmToken)
+//            IosPushNotificationService.getInstance().onTokenReceived(token: fcmToken)
         }
     }
 

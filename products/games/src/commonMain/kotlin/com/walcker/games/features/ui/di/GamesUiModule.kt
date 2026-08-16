@@ -27,6 +27,8 @@ internal val gamesUiModule = module {
         CreateMatchStepModel(
             createMatch = get(),
             stringsHolder = get(),
+            sessionHolder = get(),
+            tabCoordinator = get(),
         )
     }
     factory {
@@ -35,6 +37,7 @@ internal val gamesUiModule = module {
             cancelMatch = get(),
             leaveMatch = get(),
             stringsHolder = get(),
+            sessionHolder = get(),
         )
     }
     factory {
@@ -42,6 +45,7 @@ internal val gamesUiModule = module {
             sessionHolder = get(),
             getMyMatches = get(),
             stringsHolder = get(),
+            logoutService = get(),
         )
     }
 }

@@ -6,24 +6,35 @@ import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.usecase.CreateMatchUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.match.core.geo.Coordinates
+import com.walcker.match.core.geo.encodeGeoHash
+import com.walcker.match.navigator.MainTab
+import com.walcker.match.navigator.TabCoordinator
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 internal class CreateMatchStepModel(
     private val createMatch: CreateMatchUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val sessionHolder: com.walcker.identity.api.SessionHolder,
+    private val tabCoordinator: TabCoordinator,
 ) : ScreenModel {
 
     private val strings get() = stringsHolder.resolveStringsOrDefault().gameList
+
+    // TODO Phase 3: replace with real LocationProvider. For now hardcoded to SP center.
+    private val defaultLat = -23.5505
+    private val defaultLng = -46.6333
+
+    private val defaultGeohash: String
+        get() = encodeGeoHash(Coordinates(defaultLat, defaultLng))
 
     private val _state = MutableStateFlow(CreateMatchState())
     val state: StateFlow<CreateMatchState> = _state.asStateFlow()
@@ -79,15 +90,23 @@ internal class CreateMatchStepModel(
                         (currentState.selectedTime!!.first * 3600L) +
                         (currentState.selectedTime.second * 60L)
 
+                // Ensure the user is logged in. Without a session we cannot scope
+                // the new match to the right user document.
+                val session = sessionHolder.currentUser.first()
+                if (session == null) {
+                    _effects.send(CreateMatchEffect.ShowMessage(strings.joinError))
+                    return@launch
+                }
+
                 val request = CreateMatchRequest(
                     sport = currentState.selectedSport!!,
                     venueName = currentState.venueName,
                     neighborhood = currentState.neighborhood,
                     city = currentState.city,
                     address = currentState.address,
-                    lat = -23.5505, // TODO: Get from SessionHolder or LocationProvider
-                    lng = -46.6333, // TODO: Get from SessionHolder or LocationProvider
-                    geohash = "abc123", // TODO: Compute geohash from lat/lng
+                    lat = defaultLat, // TODO Phase 3: integrate LocationProvider
+                    lng = defaultLng, // TODO Phase 3: integrate LocationProvider
+                    geohash = defaultGeohash,
                     startsAtSeconds = startSeconds,
                     durationMin = currentState.durationMin,
                     totalPlayers = currentState.totalPlayers,
@@ -98,6 +117,8 @@ internal class CreateMatchStepModel(
                     .onSuccess { matchId ->
                         _effects.send(CreateMatchEffect.ShowMessage(strings.joinSuccess))
                         _effects.send(CreateMatchEffect.NavigateToMyMatches(matchId))
+                        // Ask the navigation shell to switch to the My Matches tab.
+                        tabCoordinator.requestTab(MainTab.MyMatches)
                     }
                     .onFailure { error ->
                         _effects.send(CreateMatchEffect.ShowMessage(error.message ?: strings.joinError))

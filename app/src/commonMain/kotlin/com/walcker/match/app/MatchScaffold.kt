@@ -9,6 +9,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,8 @@ import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarLoadingIndicator
 import com.walcker.match.navigator.GamesDestination
 import com.walcker.match.navigator.IdentityDestination
+import com.walcker.match.navigator.MainTab
+import com.walcker.match.navigator.TabCoordinator
 import org.koin.compose.koinInject
 
 /**
@@ -28,7 +31,8 @@ import org.koin.compose.koinInject
  *
  * - If not authenticated: shows login screen from IdentityDestination
  * - If authenticated: shows tabbed navigation with 5 tabs (Home, Search, Create, MyMatches, Profile)
- * - Simple state-based tab switching with bottom bar
+ * - Simple state-based tab switching with bottom bar; any Screen can ask to
+ *   switch via the shared [TabCoordinator].
  */
 @Composable
 internal fun MatchScaffold() {
@@ -51,7 +55,15 @@ private fun LoginShell() {
 @Composable
 private fun AuthenticatedShell() {
     val gamesDestination = koinInject<GamesDestination>()
+    val tabCoordinator = koinInject<TabCoordinator>()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(0) }
+
+    // Listen for cross-screen tab requests (e.g. "after creating a match, switch
+    // to My Matches"). The shell owns the selected tab so this is the one place
+    // that needs to react.
+    LaunchedEffect(tabCoordinator) {
+        tabCoordinator.tabs.collect { tab -> setSelectedTab(tab.index) }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Main content area
@@ -62,11 +74,11 @@ private fun AuthenticatedShell() {
                 .background(MaterialTheme.colorScheme.background),
         ) {
             when (selectedTab) {
-                0 -> Navigator(screen = gamesDestination.gameList())
-                1 -> Navigator(screen = gamesDestination.search())
-                2 -> Navigator(screen = gamesDestination.create())
-                3 -> Navigator(screen = gamesDestination.myMatches())
-                4 -> Navigator(screen = gamesDestination.playerProfile())
+                MainTab.Home.index -> Navigator(screen = gamesDestination.gameList())
+                MainTab.Search.index -> Navigator(screen = gamesDestination.search())
+                MainTab.Create.index -> Navigator(screen = gamesDestination.create())
+                MainTab.MyMatches.index -> Navigator(screen = gamesDestination.myMatches())
+                MainTab.PlayerProfile.index -> Navigator(screen = gamesDestination.playerProfile())
             }
         }
 

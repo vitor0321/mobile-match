@@ -29,7 +29,7 @@ import com.walcker.match.firestore.FirestoreClient
 import org.koin.dsl.module
 
 internal val gamesDataModule = module {
-    single<GameSource> { FirestoreGameSource(firestore = get<FirestoreClient>()) }
+    single<GameSource> { FirestoreGameSource(firestore = get<FirestoreClient>(), sessionHolder = get()) }
     single<GamesPreferences> {
         GamesPreferences(dataStore = get<GamesPlatformServices>().gamesPreferencesDataStore())
     }
