@@ -2,12 +2,13 @@ package com.walcker.games.features.data.source
 
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import kotlinx.coroutines.flow.Flow
 
 internal interface GameSource {
     suspend fun openGames(): List<Game>
-    suspend fun joinGame(gameId: String)
+    suspend fun joinGame(gameId: String): JoinMatchOutcome
     suspend fun createMatch(request: CreateMatchRequest): String
 
     /**

@@ -4,7 +4,7 @@ import com.walcker.games.features.data.mapper.toGame
 import com.walcker.games.features.data.mapper.toParticipant
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
-import com.walcker.games.features.domain.model.Participant
+import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.geo.Coordinates
@@ -44,10 +44,40 @@ internal class FirestoreGameSource(
         return queryNearbyMatches(userLocation, radiusKm)
     }
 
-    override suspend fun joinGame(gameId: String) {
-        // TODO: Implement callable to joinMatch
-        // This will be a Cloud Function callable that handles transactional join
-        throw NotImplementedError("joinMatch callable not yet implemented")
+    override suspend fun joinGame(gameId: String): JoinMatchOutcome {
+        // Calls the `joinMatch` Cloud Function which:
+        // 1. Validates slot availability and match status
+        // 2. Adds user to participants subcollection (confirmed or waitlist)
+        // 3. Atomically increments confirmedCount and updates status (OPEN→FULL)
+        // 4. Returns the user's final status (confirmed/waitlist/already_joined)
+        val result = firestore.callFunction(
+            name = "joinMatch",
+            data = mapOf("matchId" to gameId),
+        )
+        return result.fold(
+            onSuccess = { payload -> mapJoinMatchResponse(gameId, payload) },
+            onFailure = { error -> throw error },
+        )
+    }
+
+    /**
+     * Maps the Cloud Function JSON response to the typed [JoinMatchOutcome].
+     */
+    private fun mapJoinMatchResponse(
+        matchId: String,
+        payload: Map<String, Any?>,
+    ): JoinMatchOutcome {
+        return when (payload["status"]) {
+            "confirmed" -> JoinMatchOutcome.Confirmed(matchId)
+            "waitlist" -> {
+                val position = (payload["position"] as? Number)?.toInt() ?: 0
+                JoinMatchOutcome.Waitlist(matchId, position = position)
+            }
+            "already_joined" -> JoinMatchOutcome.AlreadyJoined(matchId)
+            else -> throw IllegalStateException(
+                "Unexpected joinMatch response status: ${payload["status"]}"
+            )
+        }
     }
 
     override suspend fun createMatch(request: CreateMatchRequest): String {

@@ -2,6 +2,7 @@ package com.walcker.games.features.domain.repository
 
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.MatchRole
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +36,7 @@ internal interface GameRepository {
      */
     suspend fun openGames(): Result<List<Game>>
 
-    suspend fun joinGame(gameId: String): Result<Unit>
+    suspend fun joinGame(gameId: String): Result<JoinMatchOutcome>
 
     /**
      * Creates a new match in Firestore.

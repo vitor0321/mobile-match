@@ -2,6 +2,7 @@ package com.walcker.games.features.data.source
 
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.model.Sport
@@ -23,16 +24,28 @@ internal class InMemoryGameSource : GameSource {
 
     override suspend fun openGames(): List<Game> = games.value
 
-    override suspend fun joinGame(gameId: String) {
+    override suspend fun joinGame(gameId: String): JoinMatchOutcome {
+        var outcome: JoinMatchOutcome = JoinMatchOutcome.AlreadyJoined(gameId)
         games.update { current ->
             current.map { game ->
-                if (game.id == gameId && game.hasOpenSlots) {
-                    game.copy(confirmedPlayers = game.confirmedPlayers + 1)
+                if (game.id != gameId) return@map game
+                if (gameId in game.participants) {
+                    outcome = JoinMatchOutcome.AlreadyJoined(gameId)
+                    return@map game
+                }
+                if (game.hasOpenSlots) {
+                    outcome = JoinMatchOutcome.Confirmed(gameId)
+                    game.copy(
+                        confirmedPlayers = game.confirmedPlayers + 1,
+                        participants = game.participants + gameId,
+                    )
                 } else {
-                    game
+                    outcome = JoinMatchOutcome.Waitlist(gameId, position = game.participants.size + 1)
+                    game.copy(participants = game.participants + gameId)
                 }
             }
         }
+        return outcome
     }
 
     override suspend fun createMatch(request: CreateMatchRequest): String {

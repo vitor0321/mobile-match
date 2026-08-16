@@ -8,6 +8,7 @@ import com.walcker.games.features.domain.error.GamesError
 import com.walcker.games.features.domain.error.toGamesError
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.MatchRole
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.repository.GameRepository
@@ -45,9 +46,9 @@ internal class GameRepositoryImpl(
         }
     }
 
-    override suspend fun joinGame(gameId: String): Result<Unit> {
+    override suspend fun joinGame(gameId: String): Result<JoinMatchOutcome> {
         return runCatching { source.joinGame(gameId) }
-            .onFailure { error -> throw error.toGamesError() }
+            .recoverCatching { error -> throw error.toGamesError() }
     }
 
     override suspend fun createMatch(request: CreateMatchRequest): Result<String> {
