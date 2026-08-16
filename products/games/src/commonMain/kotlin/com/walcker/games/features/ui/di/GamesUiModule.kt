@@ -3,6 +3,7 @@ package com.walcker.games.features.ui.di
 import com.walcker.games.features.ui.creatematch.CreateMatchStepModel
 import com.walcker.games.features.ui.gamelist.GameListStepModel
 import com.walcker.games.features.ui.mymatches.MyMatchesStepModel
+import com.walcker.games.features.ui.notifications.NotificationHistoryStepModel
 import com.walcker.games.features.ui.playerprofile.PlayerProfileStepModel
 import com.walcker.games.features.ui.search.SearchStepModel
 import org.koin.dsl.module
@@ -46,6 +47,13 @@ internal val gamesUiModule = module {
             getMyMatches = get(),
             stringsHolder = get(),
             logoutService = get(),
+        )
+    }
+    factory {
+        NotificationHistoryStepModel(
+            getNotificationHistory = get(),
+            sessionHolder = get(),
+            stringsHolder = get(),
         )
     }
 }

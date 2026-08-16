@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
+import com.walcker.games.features.ui.notifications.NotificationHistoryStep
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarLoadingIndicator
 import com.walcker.match.navigator.GamesDestination
@@ -121,5 +122,9 @@ private fun AuthenticatedShell() {
         }
     }
 
-    // TODO Phase 3-ETAPA2: Add NotificationHistoryStep modal
+    // Notification history modal
+    NotificationHistoryStep(
+        isVisible = showNotificationHistory,
+        onDismiss = { setShowNotificationHistory(false) },
+    )
 }
