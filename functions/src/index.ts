@@ -236,6 +236,174 @@ type JoinMatchResponse =
   | {status: "waitlist"; matchId: string; position: number}
   | {status: "already_joined"; matchId: string};
 
+// ---------------------------------------------------------------------------
+// leaveMatch — Callable (invocada por products/games)
+//
+// Remove o usuário da partida. Se ele era confirmado, decrementa confirmedCount
+// e **promove automaticamente o primeiro da fila (FIFO)** — regra B3 do plano
+// de migração (substitui o trigger `promote_waitlist()` do Postgres).
+//
+// Retorna {matchId, promotedUserId?} — promotedUserId é o uid que subiu da
+// fila, se houver, para que o app possa mostrar o banner localmente.
+// ---------------------------------------------------------------------------
+
+export const leaveMatch = onCall(
+  {region: REGION},
+  async (request): Promise<LeaveMatchResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data as Partial<{matchId: string}>;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+      throw new HttpsError("invalid-argument", "matchId is required.");
+    }
+    const matchId = data.matchId;
+
+    return db.runTransaction(async (txn) => {
+      const matchRef = db.doc(`matches/${matchId}`);
+      const matchSnap = await txn.get(matchRef);
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      const status = String(match.status ?? "OPEN");
+      if (status === "CANCELLED" || status === "FINISHED") {
+        throw new HttpsError("failed-precondition", `Cannot leave match in status ${status}.`);
+      }
+
+      const participants: string[] = Array.isArray(match.participants)
+        ? match.participants.filter((x): x is string => typeof x === "string")
+        : [];
+      if (!participants.includes(uid)) {
+        throw new HttpsError("not-found", "You are not in this match.");
+      }
+
+      // Organizer cannot leave — must cancel instead.
+      if (match.organizerId === uid) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Organizer must cancel the match, not leave it.",
+        );
+      }
+
+      const myParticipantRef = db.doc(`matches/${matchId}/participants/${uid}`);
+      const mySnap = await txn.get(myParticipantRef);
+      const wasConfirmed = mySnap.exists ? Boolean(mySnap.data()?.isConfirmed) : false;
+
+      // Delete participant doc + remove from array.
+      txn.delete(myParticipantRef);
+      txn.update(matchRef, {
+        participants: FieldValue.arrayRemove(uid),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      let promotedUserId: string | undefined;
+
+      if (wasConfirmed) {
+        // B3: promote first FIFO from waitlist inside the same transaction.
+        const waitlistQuery = db
+          .collection(`matches/${matchId}/participants`)
+          .where("isConfirmed", "==", false)
+          .orderBy("positionInWaitlist", "asc")
+          .limit(1);
+        const waitlistSnap = await txn.get(waitlistQuery);
+        const firstWaitlist = waitlistSnap.docs[0];
+
+        if (firstWaitlist) {
+          promotedUserId = firstWaitlist.id;
+          // Flip to confirmed, clear waitlist position.
+          txn.update(firstWaitlist.ref, {
+            isConfirmed: true,
+            positionInWaitlist: null,
+            promotedAt: FieldValue.serverTimestamp(),
+          });
+          txn.update(matchRef, {
+            confirmedCount: FieldValue.increment(1),
+            status: "OPEN", // opening back up since waitlist shrank
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        } else {
+          // No one to promote — just decrement.
+          txn.update(matchRef, {
+            confirmedCount: FieldValue.increment(-1),
+            status: "OPEN",
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      return {matchId, promotedUserId};
+    });
+  },
+);
+
+interface LeaveMatchResponse {
+  matchId: string;
+  /** UID of the user promoted from waitlist, if any. Undefined when no promotion happened. */
+  promotedUserId?: string;
+}
+
+// ---------------------------------------------------------------------------
+// cancelMatch — Callable (invocada por products/games, organizer-only)
+//
+// Encerra a partida: marca status=CANCELLED, remove todos os participantes.
+// Apenas o organizador pode cancelar.
+//
+// Em fases futuras, este callable deve disparar notificações FCM para os
+// participantes (placeholder reservado — Phase 6).
+// ---------------------------------------------------------------------------
+
+export const cancelMatch = onCall(
+  {region: REGION},
+  async (request): Promise<CancelMatchResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data as Partial<{matchId: string}>;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+      throw new HttpsError("invalid-argument", "matchId is required.");
+    }
+    const matchId = data.matchId;
+
+    return db.runTransaction(async (txn) => {
+      const matchRef = db.doc(`matches/${matchId}`);
+      const matchSnap = await txn.get(matchRef);
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      if (match.organizerId !== uid) {
+        throw new HttpsError("permission-denied", "Only the organizer can cancel the match.");
+      }
+
+      const status = String(match.status ?? "OPEN");
+      if (status === "CANCELLED") {
+        return {matchId, status: "already_cancelled" as const};
+      }
+      if (status === "FINISHED") {
+        throw new HttpsError("failed-precondition", "Cannot cancel a finished match.");
+      }
+
+      // Mark the match as cancelled; keep participant docs for audit but they
+      // become unreachable via the UI (status filter). Cascade delete would
+      // lose history, so we leave them and let a cleanup cron handle later.
+      txn.update(matchRef, {
+        status: "CANCELLED",
+        cancelledAt: FieldValue.serverTimestamp(),
+        cancelledBy: uid,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      return {matchId, status: "cancelled" as const};
+    });
+  },
+);
+
+interface CancelMatchResponse {
+  matchId: string;
+  status: "cancelled" | "already_cancelled";
+}
+
 function readEpochSeconds(value: unknown): number | null {
   if (typeof value === "number") return value;
   if (value && typeof value === "object" && "seconds" in value && typeof (value as {seconds: unknown}).seconds === "number") {

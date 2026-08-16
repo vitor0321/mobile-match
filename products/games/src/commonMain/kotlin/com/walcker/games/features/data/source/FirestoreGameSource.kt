@@ -2,9 +2,11 @@ package com.walcker.games.features.data.source
 
 import com.walcker.games.features.data.mapper.toGame
 import com.walcker.games.features.data.mapper.toParticipant
+import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
+import com.walcker.games.features.domain.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.geo.Coordinates
@@ -78,6 +80,41 @@ internal class FirestoreGameSource(
                 "Unexpected joinMatch response status: ${payload["status"]}"
             )
         }
+    }
+
+    override suspend fun leaveMatch(gameId: String): LeaveMatchOutcome {
+        val result = firestore.callFunction(
+            name = "leaveMatch",
+            data = mapOf("matchId" to gameId),
+        )
+        return result.fold(
+            onSuccess = { payload ->
+                LeaveMatchOutcome(
+                    matchId = gameId,
+                    promotedUserId = payload["promotedUserId"] as? String,
+                )
+            },
+            onFailure = { error -> throw error },
+        )
+    }
+
+    override suspend fun cancelMatch(gameId: String): CancelMatchOutcome {
+        val result = firestore.callFunction(
+            name = "cancelMatch",
+            data = mapOf("matchId" to gameId),
+        )
+        return result.fold(
+            onSuccess = { payload ->
+                when (payload["status"]) {
+                    "cancelled" -> CancelMatchOutcome.Cancelled(gameId)
+                    "already_cancelled" -> CancelMatchOutcome.AlreadyCancelled(gameId)
+                    else -> throw IllegalStateException(
+                        "Unexpected cancelMatch response status: ${payload["status"]}"
+                    )
+                }
+            },
+            onFailure = { error -> throw error },
+        )
     }
 
     override suspend fun createMatch(request: CreateMatchRequest): String {

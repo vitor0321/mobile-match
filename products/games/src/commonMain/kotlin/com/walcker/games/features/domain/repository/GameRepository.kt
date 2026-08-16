@@ -1,8 +1,10 @@
 package com.walcker.games.features.domain.repository
 
+import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
+import com.walcker.games.features.domain.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.model.MatchRole
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import kotlinx.coroutines.flow.Flow
@@ -54,16 +56,15 @@ internal interface GameRepository {
     suspend fun getMyMatches(userId: String): Result<List<MyMatch>>
 
     /**
-     * Cancels a match. Stub: returns PermissionDenied until Cloud Function
-     * callable is wired up.
+     * Cancels a match. Organizer-only; sets status=CANCELLED via Cloud Function.
      */
-    suspend fun cancelMatch(gameId: String): Result<Unit>
+    suspend fun cancelMatch(gameId: String): Result<CancelMatchOutcome>
 
     /**
-     * Leaves a match. Stub: returns PermissionDenied until Cloud Function
-     * callable is wired up.
+     * Leaves a match. Removes the user from participants and promotes the
+     * first FIFO from waitlist (B3) inside the same transaction.
      */
-    suspend fun leaveMatch(gameId: String): Result<Unit>
+    suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome>
 
     /**
      * Fetches a single game/match by ID from Firestore.

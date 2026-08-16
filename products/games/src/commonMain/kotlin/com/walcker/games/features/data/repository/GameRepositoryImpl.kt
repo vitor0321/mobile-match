@@ -6,9 +6,11 @@ import com.walcker.games.features.data.util.defaultShouldRetry
 import com.walcker.games.features.data.util.withRetry
 import com.walcker.games.features.domain.error.GamesError
 import com.walcker.games.features.domain.error.toGamesError
+import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
+import com.walcker.games.features.domain.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.model.MatchRole
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.repository.GameRepository
@@ -74,19 +76,20 @@ internal class GameRepositoryImpl(
         }
     }
 
-    override suspend fun cancelMatch(gameId: String): Result<Unit> {
-        // Stub: real implementation requires a Cloud Function callable that
-        // enforces that the caller is the organizer. Until then, surface this
-        // as PermissionDenied so the UI shows a "coming soon" message.
-        return Result.failure(
-            GamesError.PermissionDenied(message = "Cancelar partida ainda não está disponível.")
-        )
+    override suspend fun cancelMatch(gameId: String): Result<CancelMatchOutcome> {
+        return runCatching {
+            withRetry(shouldRetry = ::defaultShouldRetry) {
+                source.cancelMatch(gameId)
+            }
+        }.recoverCatching { error -> throw error.toGamesError() }
     }
 
-    override suspend fun leaveMatch(gameId: String): Result<Unit> {
-        return Result.failure(
-            GamesError.PermissionDenied(message = "Sair da partida ainda não está disponível.")
-        )
+    override suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome> {
+        return runCatching {
+            withRetry(shouldRetry = ::defaultShouldRetry) {
+                source.leaveMatch(gameId)
+            }
+        }.recoverCatching { error -> throw error.toGamesError() }
     }
 
     override suspend fun getGameById(gameId: String): Result<Game> {

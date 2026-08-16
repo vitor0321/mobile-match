@@ -1,8 +1,11 @@
 package com.walcker.games.features.data.source
 
+import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
+import com.walcker.games.features.domain.model.LeaveMatchOutcome
+import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.model.Sport
@@ -84,6 +87,45 @@ internal class InMemoryGameSource : GameSource {
     override suspend fun getGameById(gameId: String): Game {
         return games.value.firstOrNull { it.id == gameId }
             ?: throw IllegalStateException("Game with id '$gameId' not found")
+    }
+
+    override suspend fun leaveMatch(gameId: String): LeaveMatchOutcome {
+        var promoted: String? = null
+        games.update { current ->
+            current.map { game ->
+                if (game.id != gameId) return@map game
+                // B3: if the leaving user was confirmed, promote the first non-organizer participant.
+                val newParticipants = game.participants - "user_anon"
+                if (newParticipants.size < game.confirmedPlayers && game.confirmedPlayers > 1) {
+                    promoted = newParticipants.firstOrNull()
+                }
+                game.copy(
+                    confirmedPlayers = (game.confirmedPlayers - 1).coerceAtLeast(1),
+                    participants = newParticipants,
+                )
+            }
+        }
+        return LeaveMatchOutcome(matchId = gameId, promotedUserId = promoted)
+    }
+
+    override suspend fun cancelMatch(gameId: String): CancelMatchOutcome {
+        var wasAlreadyCancelled = false
+        games.update { current ->
+            current.map { game ->
+                if (game.id != gameId) return@map game
+                if (game.status == MatchStatus.CANCELLED) {
+                    wasAlreadyCancelled = true
+                    game
+                } else {
+                    game.copy(status = MatchStatus.CANCELLED)
+                }
+            }
+        }
+        return if (wasAlreadyCancelled) {
+            CancelMatchOutcome.AlreadyCancelled(gameId)
+        } else {
+            CancelMatchOutcome.Cancelled(gameId)
+        }
     }
 
     override fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>> {
