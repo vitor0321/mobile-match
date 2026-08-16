@@ -40,6 +40,8 @@ import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.identity.api.SessionHolder
+import com.walcker.match.navigator.PromotionCoordinator
 import org.koin.compose.koinInject
 
 /**
@@ -53,6 +55,8 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val getGameById: GetGameByIdUseCase = koinInject()
         val observeMatch: ObserveMatchUseCase = koinInject()
         val observeParticipants: ObserveParticipantsUseCase = koinInject()
+        val sessionHolder: SessionHolder = koinInject()
+        val promotionCoordinator: PromotionCoordinator = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
 
         val stepModel = remember {
@@ -60,6 +64,8 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 getGameById = getGameById,
                 observeMatch = observeMatch,
                 observeParticipants = observeParticipants,
+                sessionHolder = sessionHolder,
+                promotionCoordinator = promotionCoordinator,
                 stringsHolder = stringsHolder,
                 matchId = matchId,
             )
@@ -84,38 +90,79 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 )
             },
         ) { paddingValues ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background),
             ) {
-                when {
-                    state.isLoading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
+                // Promotion banner — shown when the user just moved from waitlist to confirmed.
+                if (state.justPromoted) {
+                    PromotionBanner(
+                        onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissPromotion) },
+                    )
+                }
 
-                    state.errorMessage != null -> {
-                        ErrorContent(
-                            error = state.errorMessage ?: "Unknown error",
-                            onRetry = { stepModel.onEvent(MatchDetailEvent.Retry) },
-                        )
-                    }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when {
+                        state.isLoading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                        }
 
-                    state.match != null -> {
-                        MatchDetailContent(
-                            match = state.match!!,
-                            participants = state.participants,
-                        )
-                    }
+                        state.errorMessage != null -> {
+                            ErrorContent(
+                                error = state.errorMessage ?: "Unknown error",
+                                onRetry = { stepModel.onEvent(MatchDetailEvent.Retry) },
+                            )
+                        }
 
-                    else -> {
-                        EmptyContent()
+                        state.match != null -> {
+                            MatchDetailContent(
+                                match = state.match!!,
+                                participants = state.participants,
+                            )
+                        }
+
+                        else -> {
+                            EmptyContent()
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PromotionBanner(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.primaryContainer,
+                shape = MaterialTheme.shapes.small,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "🎉",
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = "Você foi promovido da fila!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onDismiss) {
+            Text("✕", color = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }

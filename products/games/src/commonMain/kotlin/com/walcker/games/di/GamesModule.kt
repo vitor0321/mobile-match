@@ -7,6 +7,7 @@ import com.walcker.games.features.ui.di.gamesUiModule
 import com.walcker.games.strings.di.gamesStringsModule
 import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.GamesDestination
+import com.walcker.match.navigator.PromotionCoordinator
 import com.walcker.match.navigator.TabCoordinator
 import org.koin.dsl.module
 
@@ -15,4 +16,5 @@ val gamesModule = module {
     single<GamesDestination> { GamesDestinationImpl() }
     single { TabCoordinator() }
     single { DeepLinkCoordinator() }
+    single { PromotionCoordinator() }
 }
