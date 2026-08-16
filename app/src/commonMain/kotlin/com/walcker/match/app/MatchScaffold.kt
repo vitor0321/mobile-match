@@ -4,10 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,11 +56,13 @@ private fun LoginShell() {
     Navigator(screen = identityDestination.login())
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AuthenticatedShell() {
     val gamesDestination = koinInject<GamesDestination>()
     val tabCoordinator = koinInject<TabCoordinator>()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(0) }
+    val (showNotificationHistory, setShowNotificationHistory) = remember { mutableStateOf(false) }
 
     // Listen for cross-screen tab requests (e.g. "after creating a match, switch
     // to My Matches"). The shell owns the selected tab so this is the one place
@@ -66,6 +72,20 @@ private fun AuthenticatedShell() {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Top app bar with notification bell
+        TopAppBar(
+            title = { Text("Match") },
+            actions = {
+                TextButton(onClick = { setShowNotificationHistory(true) }) {
+                    Text("🔔")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        )
+
         // Main content area
         Box(
             modifier = Modifier
@@ -100,4 +120,6 @@ private fun AuthenticatedShell() {
             }
         }
     }
+
+    // TODO Phase 3-ETAPA2: Add NotificationHistoryStep modal
 }

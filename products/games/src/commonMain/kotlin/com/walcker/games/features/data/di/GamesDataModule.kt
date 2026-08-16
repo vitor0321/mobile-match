@@ -25,6 +25,8 @@ import com.walcker.games.features.domain.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.usecase.LeaveMatchUseCaseImpl
 import com.walcker.games.features.domain.usecase.UpdatePushTokenUseCase
 import com.walcker.games.features.domain.usecase.UpdatePushTokenUseCaseImpl
+import com.walcker.games.features.domain.usecase.GetNotificationHistoryUseCase
+import com.walcker.games.features.domain.usecase.GetNotificationHistoryUseCaseImpl
 import com.walcker.match.firestore.FirestoreClient
 import org.koin.dsl.module
 
@@ -51,4 +53,5 @@ internal val gamesDataModule = module {
     factory<CancelMatchUseCase> { CancelMatchUseCaseImpl(repository = get()) }
     factory<LeaveMatchUseCase> { LeaveMatchUseCaseImpl(repository = get()) }
     factory<UpdatePushTokenUseCase> { UpdatePushTokenUseCaseImpl(notificationRepository = get()) }
+    factory<GetNotificationHistoryUseCase> { GetNotificationHistoryUseCaseImpl(repository = get()) }
 }
