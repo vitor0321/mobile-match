@@ -52,6 +52,8 @@ internal val gamesUiModule = module {
     factory {
         NotificationHistoryStepModel(
             getNotificationHistory = get(),
+            markNotificationAsRead = get(),
+            deleteNotification = get(),
             sessionHolder = get(),
             stringsHolder = get(),
         )

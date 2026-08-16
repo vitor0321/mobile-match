@@ -3,7 +3,9 @@ package com.walcker.games.features.ui.notifications
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.error.GamesError
+import com.walcker.games.features.domain.usecase.DeleteNotificationUseCase
 import com.walcker.games.features.domain.usecase.GetNotificationHistoryUseCase
+import com.walcker.games.features.domain.usecase.MarkNotificationAsReadUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
@@ -16,6 +18,8 @@ import kotlinx.coroutines.launch
 
 internal class NotificationHistoryStepModel(
     private val getNotificationHistory: GetNotificationHistoryUseCase,
+    private val markNotificationAsRead: MarkNotificationAsReadUseCase,
+    private val deleteNotification: DeleteNotificationUseCase,
     private val sessionHolder: SessionHolder,
     private val stringsHolder: GamesStringsHolder,
 ) : ScreenModel {
@@ -31,22 +35,48 @@ internal class NotificationHistoryStepModel(
         when (event) {
             NotificationHistoryEvent.Refresh -> refresh()
             NotificationHistoryEvent.DismissError -> _state.update { it.copy(errorMessage = null) }
-            is NotificationHistoryEvent.MarkAsRead -> {
-                // TODO Phase3-ETAPA3: implement mark as read
-                _state.update { state ->
-                    state.copy(
-                        notifications = state.notifications.map { notif ->
-                            if (notif.id == event.id) notif.copy(isRead = true) else notif
-                        }
-                    )
+            is NotificationHistoryEvent.MarkAsRead -> markAsReadAction(event.id)
+            is NotificationHistoryEvent.Delete -> deleteAction(event.id)
+        }
+    }
+
+    private fun markAsReadAction(notificationId: String) {
+        screenModelScope.launch {
+            val session = sessionHolder.currentUser.first()
+            if (session == null) return@launch
+
+            markNotificationAsRead(session.uid, notificationId)
+                .onSuccess {
+                    _state.update { state ->
+                        state.copy(
+                            notifications = state.notifications.map { notif ->
+                                if (notif.id == notificationId) notif.copy(isRead = true) else notif
+                            }
+                        )
+                    }
                 }
-            }
-            is NotificationHistoryEvent.Delete -> {
-                // TODO Phase3-ETAPA3: implement delete
-                _state.update { state ->
-                    state.copy(notifications = state.notifications.filter { it.id != event.id })
+                .onFailure { error ->
+                    val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
+                    _state.update { it.copy(errorMessage = message) }
                 }
-            }
+        }
+    }
+
+    private fun deleteAction(notificationId: String) {
+        screenModelScope.launch {
+            val session = sessionHolder.currentUser.first()
+            if (session == null) return@launch
+
+            deleteNotification(session.uid, notificationId)
+                .onSuccess {
+                    _state.update { state ->
+                        state.copy(notifications = state.notifications.filter { it.id != notificationId })
+                    }
+                }
+                .onFailure { error ->
+                    val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
+                    _state.update { it.copy(errorMessage = message) }
+                }
         }
     }
 
