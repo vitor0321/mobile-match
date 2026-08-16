@@ -79,4 +79,13 @@ internal interface GameRepository {
      * caller stops collecting (e.g., when leaving the screen).
      */
     fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>>
+
+    /**
+     * Observes a single match document in real-time.
+     *
+     * Emits whenever the match metadata changes: status transitions
+     * (OPEN → FULL → FINISHED/CANCELLED), confirmedCount, or slot count.
+     * The Flow completes when the caller stops collecting.
+     */
+    fun observeMatch(matchId: String): Flow<Result<Game>>
 }

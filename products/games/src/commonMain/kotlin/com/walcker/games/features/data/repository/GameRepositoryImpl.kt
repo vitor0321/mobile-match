@@ -99,4 +99,8 @@ internal class GameRepositoryImpl(
     override fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>> {
         return source.observeParticipants(matchId)
     }
+
+    override fun observeMatch(matchId: String): Flow<Result<Game>> {
+        return source.observeMatch(matchId)
+    }
 }

@@ -103,6 +103,15 @@ internal class InMemoryGameSource : GameSource {
         }
     }
 
+    override fun observeMatch(matchId: String): Flow<Result<Game>> {
+        // Reactive: map the games StateFlow so joins/leaves re-emit automatically.
+        return games.map { list ->
+            list.firstOrNull { it.id == matchId }
+                ?.let { Result.success(it) }
+                ?: Result.failure(IllegalStateException("Game with id '$matchId' not found"))
+        }
+    }
+
     private companion object {
         // Current time: ~Aug 14 2026 15:00 UTC, so +3 hours = ~18:00 São Paulo time
         // Use Unix timestamp for "today at 20:00" (1723663200 = ~Aug 15 2026 01:00 UTC = Aug 15 04:00 SP)

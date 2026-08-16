@@ -25,4 +25,9 @@ internal interface GameSource {
      * Observes participant list updates for a match in real-time.
      */
     fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>>
+
+    /**
+     * Observes a single match document in real-time.
+     */
+    fun observeMatch(matchId: String): Flow<Result<Game>>
 }

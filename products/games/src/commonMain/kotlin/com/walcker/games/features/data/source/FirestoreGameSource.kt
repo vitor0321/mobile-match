@@ -186,5 +186,17 @@ internal class FirestoreGameSource(
                 }
             }
     }
+
+    override fun observeMatch(matchId: String): Flow<Result<Game>> {
+        return firestore
+            .document("matches/$matchId")
+            .snapshots()
+            .map { snapshotResult ->
+                snapshotResult.mapCatching { snapshot ->
+                    snapshot?.toGame()
+                        ?: throw IllegalStateException("Match not found: $matchId")
+                }
+            }
+    }
 }
 

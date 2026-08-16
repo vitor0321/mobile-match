@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -31,9 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
+import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
+import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.rememberGamesStrings
@@ -48,12 +51,14 @@ internal class MatchDetailStep(val matchId: String) : Screen {
     @Composable
     override fun Content() {
         val getGameById: GetGameByIdUseCase = koinInject()
+        val observeMatch: ObserveMatchUseCase = koinInject()
         val observeParticipants: ObserveParticipantsUseCase = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
 
         val stepModel = remember {
             MatchDetailStepModel(
                 getGameById = getGameById,
+                observeMatch = observeMatch,
                 observeParticipants = observeParticipants,
                 stringsHolder = stringsHolder,
                 matchId = matchId,
@@ -157,22 +162,15 @@ private fun MatchDetailContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Live status badge (from realtime match subscription)
+        StatusBadge(status = match.status)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Match details
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column {
-                Text(
-                    text = "Status",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = match.status.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
             Column {
                 Text(
                     text = "Duration",
@@ -230,6 +228,63 @@ private fun MatchDetailContent(
             // Fallback to the static list embedded in Game.participants
             StaticParticipantsList(participantIds = match.participants, organizerName = match.organizerName)
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Join button — reacts live to status and slot availability.
+        val confirmed = participants?.confirmedCount ?: match.confirmedPlayers
+        val total = participants?.totalSlots ?: match.totalPlayers
+        val isFull = confirmed >= total || match.status == MatchStatus.FULL
+        val isClosed = match.status == MatchStatus.FINISHED || match.status == MatchStatus.CANCELLED
+
+        JoinButton(
+            enabled = !isFull && !isClosed,
+            label = when {
+                isClosed -> "Partida encerrada"
+                isFull -> "Entrar na fila de espera"
+                else -> "Entrar na partida"
+            },
+        )
+    }
+}
+
+@Composable
+private fun StatusBadge(
+    status: MatchStatus,
+    modifier: Modifier = Modifier,
+) {
+    val (label, color) = when (status) {
+        MatchStatus.OPEN -> "Aberta" to MaterialTheme.colorScheme.primary
+        MatchStatus.FULL -> "Lotada" to MaterialTheme.colorScheme.error
+        MatchStatus.FINISHED -> "Encerrada" to MaterialTheme.colorScheme.onSurfaceVariant
+        MatchStatus.CANCELLED -> "Cancelada" to MaterialTheme.colorScheme.error
+    }
+
+    Box(
+        modifier = modifier
+            .background(color.copy(alpha = 0.15f), shape = MaterialTheme.shapes.small)
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+        )
+    }
+}
+
+@Composable
+private fun JoinButton(
+    enabled: Boolean,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = { /* TODO Phase 4-ETAPA3: wire joinMatch callable */ },
+        enabled = enabled,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Text(text = label)
     }
 }
 
