@@ -2,6 +2,8 @@ package com.walcker.games.features.data.source
 
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.ParticipantsSummary
+import kotlinx.coroutines.flow.Flow
 
 internal interface GameSource {
     suspend fun openGames(): List<Game>
@@ -18,4 +20,9 @@ internal interface GameSource {
      * Fetches a single game by ID from Firestore.
      */
     suspend fun getGameById(gameId: String): Game
+
+    /**
+     * Observes participant list updates for a match in real-time.
+     */
+    fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>>
 }

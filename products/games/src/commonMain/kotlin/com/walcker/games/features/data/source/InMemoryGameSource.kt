@@ -2,8 +2,12 @@ package com.walcker.games.features.data.source
 
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.Participant
+import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.model.Sport
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlin.random.Random
 
@@ -67,6 +71,36 @@ internal class InMemoryGameSource : GameSource {
     override suspend fun getGameById(gameId: String): Game {
         return games.value.firstOrNull { it.id == gameId }
             ?: throw IllegalStateException("Game with id '$gameId' not found")
+    }
+
+    override fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>> {
+        // Derive a fake participant list from the Game data we already have
+        val game = games.value.firstOrNull { it.id == matchId }
+        return if (game == null) {
+            MutableStateFlow(Result.success(ParticipantsSummary(emptyList(), emptyList(), 0, 0)))
+        } else {
+            val confirmed = game.participants.mapIndexed { index, userId ->
+                Participant(
+                    userId = userId,
+                    displayName = if (userId == game.organizerId) game.organizerName else "Jogador ${index + 1}",
+                    photoUrl = null,
+                    joinedAt = 1_726_000_000L + index.toLong() * 60L,
+                    isConfirmed = true,
+                    positionInWaitlist = null,
+                    hasPaid = index < game.confirmedPlayers,
+                )
+            }
+            MutableStateFlow(
+                Result.success(
+                    ParticipantsSummary(
+                        confirmed = confirmed,
+                        waitlist = emptyList(),
+                        confirmedCount = confirmed.size,
+                        totalSlots = game.totalPlayers,
+                    )
+                )
+            )
+        }
     }
 
     private companion object {

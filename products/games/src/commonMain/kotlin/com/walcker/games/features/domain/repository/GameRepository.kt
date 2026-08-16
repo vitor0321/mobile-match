@@ -3,6 +3,7 @@ package com.walcker.games.features.domain.repository
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.MatchRole
+import com.walcker.games.features.domain.model.ParticipantsSummary
 import kotlinx.coroutines.flow.Flow
 
 internal data class MyMatch(
@@ -69,4 +70,13 @@ internal interface GameRepository {
      * Used to load match details when navigating from notifications or other deep links.
      */
     suspend fun getGameById(gameId: String): Result<Game>
+
+    /**
+     * Observes the participant list of a match in real-time.
+     *
+     * Emits whenever someone joins, leaves, is promoted from waitlist,
+     * or has their payment status updated. The Flow completes when the
+     * caller stops collecting (e.g., when leaving the screen).
+     */
+    fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>>
 }

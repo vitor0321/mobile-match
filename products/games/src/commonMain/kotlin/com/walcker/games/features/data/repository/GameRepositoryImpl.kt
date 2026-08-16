@@ -9,6 +9,7 @@ import com.walcker.games.features.domain.error.toGamesError
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.MatchRole
+import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.repository.MyMatch
 import kotlinx.coroutines.flow.Flow
@@ -93,5 +94,9 @@ internal class GameRepositoryImpl(
         }.recoverCatching { error ->
             throw error.toGamesError()
         }
+    }
+
+    override fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>> {
+        return source.observeParticipants(matchId)
     }
 }

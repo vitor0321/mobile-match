@@ -33,6 +33,8 @@ import com.walcker.games.features.domain.usecase.MarkNotificationAsReadUseCase
 import com.walcker.games.features.domain.usecase.MarkNotificationAsReadUseCaseImpl
 import com.walcker.games.features.domain.usecase.DeleteNotificationUseCase
 import com.walcker.games.features.domain.usecase.DeleteNotificationUseCaseImpl
+import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
+import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.match.firestore.FirestoreClient
 import org.koin.dsl.module
 
@@ -63,4 +65,5 @@ internal val gamesDataModule = module {
     factory<GetGameByIdUseCase> { GetGameByIdUseCaseImpl(repository = get()) }
     factory<MarkNotificationAsReadUseCase> { MarkNotificationAsReadUseCaseImpl(repository = get()) }
     factory<DeleteNotificationUseCase> { DeleteNotificationUseCaseImpl(repository = get()) }
+    factory<ObserveParticipantsUseCase> { ObserveParticipantsUseCaseImpl(repository = get()) }
 }

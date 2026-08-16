@@ -1,8 +1,11 @@
 package com.walcker.games.features.data.source
 
 import com.walcker.games.features.data.mapper.toGame
+import com.walcker.games.features.data.mapper.toParticipant
 import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.Participant
+import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.geo.Coordinates
 import com.walcker.match.core.geo.boundsForRadius
@@ -11,7 +14,10 @@ import com.walcker.match.firestore.FirestoreClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 /**
  * Queries Firestore for open matches within a given radius, ordered by distance.
@@ -146,6 +152,39 @@ internal class FirestoreGameSource(
             .getOrNull()
             ?.toGame()
             ?: throw IllegalStateException("Match not found: $gameId")
+    }
+
+    override fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>> {
+        // Observe the participants subcollection in real-time. Each participant
+        // doc denormalizes its status (confirmed/waitlist) and position so the UI
+        // does not need a second round-trip to the match doc.
+        return firestore
+            .collection("matches/$matchId/participants")
+            .query()
+            .orderBy("joinedAt")
+            .snapshots()
+            .map { snapshotResult ->
+                snapshotResult.map { snapshots ->
+                    val participants = snapshots.mapNotNull { it.toParticipant() }
+                    val confirmed = participants.filter { it.isConfirmed }
+                    val waitlist = participants
+                        .filter { !it.isConfirmed }
+                        .sortedBy { it.positionInWaitlist ?: Int.MAX_VALUE }
+
+                    // totalSlots is denormalized on each participant doc; fall back
+                    // to confirmed size when absent (e.g. very first snapshot).
+                    val totalSlots = snapshots
+                        .firstNotNullOfOrNull { it.getLong("totalSlots")?.toInt() }
+                        ?: confirmed.size
+
+                    ParticipantsSummary(
+                        confirmed = confirmed,
+                        waitlist = waitlist,
+                        confirmedCount = confirmed.size,
+                        totalSlots = totalSlots.coerceAtLeast(confirmed.size),
+                    )
+                }
+            }
     }
 }
 
