@@ -25,6 +25,8 @@ import cafe.adriel.voyager.navigator.Navigator
 import com.walcker.games.features.ui.notifications.NotificationHistoryStep
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarLoadingIndicator
+import com.walcker.match.navigator.DeepLink
+import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.GamesDestination
 import com.walcker.match.navigator.IdentityDestination
 import com.walcker.match.navigator.MainTab
@@ -62,14 +64,27 @@ private fun LoginShell() {
 private fun AuthenticatedShell() {
     val gamesDestination = koinInject<GamesDestination>()
     val tabCoordinator = koinInject<TabCoordinator>()
+    val deepLinkCoordinator = koinInject<DeepLinkCoordinator>()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(0) }
     val (showNotificationHistory, setShowNotificationHistory) = remember { mutableStateOf(false) }
+    val (detailScreen, setDetailScreen) = remember { mutableStateOf<Screen?>(null) }
 
     // Listen for cross-screen tab requests (e.g. "after creating a match, switch
     // to My Matches"). The shell owns the selected tab so this is the one place
     // that needs to react.
     LaunchedEffect(tabCoordinator) {
         tabCoordinator.tabs.collect { tab -> setSelectedTab(tab.index) }
+    }
+
+    // Listen for deep link navigation events (e.g. "open match detail")
+    LaunchedEffect(deepLinkCoordinator) {
+        deepLinkCoordinator.links.collect { link ->
+            when (link) {
+                is DeepLink.OpenMatch -> {
+                    setDetailScreen(gamesDestination.matchDetail(link.matchId))
+                }
+            }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -94,12 +109,21 @@ private fun AuthenticatedShell() {
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
         ) {
-            when (selectedTab) {
-                MainTab.Home.index -> Navigator(screen = gamesDestination.gameList())
-                MainTab.Search.index -> Navigator(screen = gamesDestination.search())
-                MainTab.Create.index -> Navigator(screen = gamesDestination.create())
-                MainTab.MyMatches.index -> Navigator(screen = gamesDestination.myMatches())
-                MainTab.PlayerProfile.index -> Navigator(screen = gamesDestination.playerProfile())
+            // Tab navigation
+            if (detailScreen == null) {
+                when (selectedTab) {
+                    MainTab.Home.index -> Navigator(screen = gamesDestination.gameList())
+                    MainTab.Search.index -> Navigator(screen = gamesDestination.search())
+                    MainTab.Create.index -> Navigator(screen = gamesDestination.create())
+                    MainTab.MyMatches.index -> Navigator(screen = gamesDestination.myMatches())
+                    MainTab.PlayerProfile.index -> Navigator(screen = gamesDestination.playerProfile())
+                }
+            } else {
+                // Show detail screen overlay
+                Navigator(
+                    screen = detailScreen!!,
+                    onBackPressed = { setDetailScreen(null); true },
+                )
             }
         }
 

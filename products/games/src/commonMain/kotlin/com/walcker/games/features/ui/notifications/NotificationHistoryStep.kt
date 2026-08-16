@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import com.walcker.games.features.data.model.NotificationHistoryItem
 import com.walcker.games.strings.NotificationHistoryStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.navigator.DeepLink
+import com.walcker.match.navigator.DeepLinkCoordinator
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -46,6 +48,7 @@ fun NotificationHistoryStep(
     onDismiss: () -> Unit,
 ) {
     val stepModel: NotificationHistoryStepModel = koinInject()
+    val deepLinkCoordinator: DeepLinkCoordinator = koinInject()
     val state by stepModel.state.collectAsState()
     val strings = rememberGamesStrings().strings.notificationHistory
     val sheetState = rememberModalBottomSheetState()
@@ -63,8 +66,17 @@ fun NotificationHistoryStep(
                 state = state,
                 strings = strings,
                 onEvent = stepModel::onEvent,
-                onNotificationTap = { _ ->
-                    // TODO Phase 3-ETAPA3: deeplink to match detail
+                onNotificationTap = { notificationId ->
+                    // Extract matchId from notification data and navigate
+                    val matchId = state.notifications
+                        .find { it.id == notificationId }
+                        ?.data
+                        ?.get("matchId")
+                    if (!matchId.isNullOrEmpty()) {
+                        deepLinkCoordinator.navigate(DeepLink.OpenMatch(matchId))
+                        coroutineScope.launch { sheetState.hide() }
+                        onDismiss()
+                    }
                 },
             )
         }

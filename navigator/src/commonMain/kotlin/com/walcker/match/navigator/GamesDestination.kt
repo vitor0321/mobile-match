@@ -12,4 +12,5 @@ interface GamesDestination {
     fun create(): Screen
     fun myMatches(): Screen
     fun playerProfile(): Screen
+    fun matchDetail(matchId: String): Screen
 }
