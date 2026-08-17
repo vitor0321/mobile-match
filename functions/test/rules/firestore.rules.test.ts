@@ -311,6 +311,34 @@ describe("users — notificações, pagamentos, assinatura e dispositivos", () =
     await assertFails(getDoc(doc(asUser(ORGANIZER), "users", PLAYER, "notifications", "n1")));
   });
 
+  it("o dono marca a notificação do histórico como lida (isRead) ou apaga", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "users", PLAYER, "notificationHistory", "h1"), {
+        id: "h1",
+        title: "Você foi promovido!",
+        body: "Uma vaga abriu no Green Ball",
+        receivedAt: Date.now(),
+        isRead: false,
+        data: {matchId: MATCH_ID},
+      });
+    });
+
+    const own = doc(asUser(PLAYER), "users", PLAYER, "notificationHistory", "h1");
+
+    await assertSucceeds(getDoc(own));
+    await assertSucceeds(updateDoc(own, {isRead: true}));
+    // Só o campo isRead pode mudar — forjar o título é negado.
+    await assertFails(updateDoc(own, {title: "Título forjado"}));
+    // Criar histórico direto é negado (vem das Functions ao receber o push).
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "users", PLAYER, "notificationHistory", "h2"), {title: "Fake"}),
+    );
+    await assertSucceeds(deleteDoc(own));
+
+    // Ninguém lê o histórico de outro usuário.
+    await assertFails(getDoc(doc(asUser(ORGANIZER), "users", PLAYER, "notificationHistory", "h1")));
+  });
+
   it("pagamento e assinatura são só de leitura para o dono", async () => {
     await seed(async (database) => {
       await setDoc(doc(database, "users", PLAYER, "payments", "p1"), {

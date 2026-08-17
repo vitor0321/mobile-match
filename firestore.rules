@@ -226,6 +226,19 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // Histórico de notificações consumido pelo products/games (Phase 3).
+      // Mesmo princípio do feed acima, mas o app marca `isRead: true` em vez de
+      // gravar um timestamp. A criação continua sendo só das Functions (o push
+      // recebido registra o item); o cliente apenas lê, marca como lida e apaga.
+      match /notificationHistory/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if false;
+        allow update: if isOwner(userId)
+          && changedKeys().hasOnly(['isRead'])
+          && incoming().isRead is bool;
+        allow delete: if isOwner(userId);
+      }
+
       // Pagamentos Pix da partida — status só muda por callable
       // (registerPixPayment / confirmPixPayment).
       match /payments/{paymentId} {
