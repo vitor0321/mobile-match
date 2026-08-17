@@ -2,7 +2,7 @@ package com.walcker.match.core.location
 
 import com.walcker.match.core.geo.Coordinates
 
-internal interface LocationProvider {
+public interface LocationProvider {
     /**
      * Asks for location permission (shows the OS dialog on both platforms).
      * Returns `true` if the user granted or pre-granted the permission.

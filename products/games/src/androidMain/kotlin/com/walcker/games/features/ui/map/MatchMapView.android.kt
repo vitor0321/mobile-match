@@ -47,8 +47,8 @@ internal actual fun MatchMapView(
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
-        properties = MapProperties(isMyLocationEnabled = false),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
+        properties = MapProperties(isMyLocationEnabled = true),
+        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = true),
     ) {
         pins.forEach { pin ->
             Marker(

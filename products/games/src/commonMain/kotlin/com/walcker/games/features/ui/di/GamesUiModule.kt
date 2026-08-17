@@ -22,6 +22,7 @@ internal val gamesUiModule = module {
         MapStepModel(
             repository = get(),
             preferences = get(),
+            locationProvider = get(),
         )
     }
     factory {

@@ -4,6 +4,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.data.preferences.GamesPreferences
 import com.walcker.games.features.domain.repository.GameRepository
+import com.walcker.match.core.location.LocationProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,10 +20,11 @@ import kotlinx.coroutines.launch
 internal data class MapState(
     val pins: List<MapPin> = emptyList(),
     val camera: MapCamera = DEFAULT_CAMERA,
+    val userLocation: MapCamera? = null,
     val isLoading: Boolean = true,
 ) {
     internal companion object {
-        // São Paulo center (Av. Paulista area) until the user's GPS resolves (ETAPA2).
+        // São Paulo center (Av. Paulista area) until the user's GPS resolves.
         val DEFAULT_CAMERA = MapCamera(lat = -23.5505, lng = -46.6333, zoom = 13f)
     }
 }
@@ -33,10 +35,13 @@ internal data class MapState(
  * Reuses the same cached match stream as the list ([GameRepository.observeMatches])
  * and applies the same sport filter from [GamesPreferences], so map and list stay
  * consistent. Each match becomes a [MapPin].
+ *
+ * Also requests GPS permission and tracks user location to center the map.
  */
 internal class MapStepModel(
     private val repository: GameRepository,
     private val preferences: GamesPreferences,
+    private val locationProvider: LocationProvider,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(MapState())
@@ -45,6 +50,7 @@ internal class MapStepModel(
     init {
         observeMatches()
         refresh()
+        requestLocationPermissionAndTrack()
     }
 
     private fun observeMatches() {
@@ -66,6 +72,27 @@ internal class MapStepModel(
     private fun refresh() {
         screenModelScope.launch {
             repository.refresh()
+        }
+    }
+
+    private fun requestLocationPermissionAndTrack() {
+        screenModelScope.launch {
+            // Request GPS permission
+            val granted = locationProvider.requestPermission()
+            if (granted) {
+                // Get current location and update camera
+                locationProvider.currentLocation().onSuccess { coords ->
+                    val userCamera = MapCamera(lat = coords.lat, lng = coords.lng, zoom = 15f)
+                    _state.update {
+                        it.copy(
+                            camera = userCamera,
+                            userLocation = userCamera,
+                        )
+                    }
+                }.onFailure { e ->
+                    // Location unavailable; keep default camera
+                }
+            }
         }
     }
 }
