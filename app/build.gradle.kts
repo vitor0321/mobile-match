@@ -13,6 +13,7 @@ val releaseStorePassword = localProps.getProperty("release.storePassword")
 val admobAppId = localProps.getProperty("ADMOB_APP_ID", "ca-app-pub-8514371864627144~1123615258")
 val admobBannerUnitId = localProps.getProperty("ADMOB_BANNER_UNIT_ID", "ca-app-pub-8514371864627144/6345620957")
 val revenueCatAndroidKey = localProps.getProperty("REVENUECAT_ANDROID_KEY", "")
+val googleMapsApiKey = localProps.getProperty("GOOGLE_MAPS_API_KEY", "AIzaSyDYWYUaABISc5Z2gLeLGCN7bpF5sXrI4nc")
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -114,6 +115,7 @@ android {
         versionName = libs.versions.android.version.name.get()
         manifestPlaceholders["admobAppId"] = admobAppId
         manifestPlaceholders["admobBannerUnitId"] = admobBannerUnitId
+        manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
 
         buildConfigField("String", "ADMOB_APP_ID", "\"$admobAppId\"")
         buildConfigField("String", "ADMOB_BANNER_UNIT_ID", "\"$admobBannerUnitId\"")
@@ -136,6 +138,7 @@ android {
             buildConfigField("Boolean", "IS_DEBUG", "true")
             manifestPlaceholders["admobAppId"] = testAdmobAppId
             manifestPlaceholders["admobBannerUnitId"] = testAdmobBannerUnitId
+            manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
             buildConfigField("String", "ADMOB_APP_ID", "\"$testAdmobAppId\"")
             buildConfigField("String", "ADMOB_BANNER_UNIT_ID", "\"$testAdmobBannerUnitId\"")
         }

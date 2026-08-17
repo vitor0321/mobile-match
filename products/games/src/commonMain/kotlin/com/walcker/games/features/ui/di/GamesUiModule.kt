@@ -2,6 +2,7 @@ package com.walcker.games.features.ui.di
 
 import com.walcker.games.features.ui.creatematch.CreateMatchStepModel
 import com.walcker.games.features.ui.gamelist.GameListStepModel
+import com.walcker.games.features.ui.map.MapStepModel
 import com.walcker.games.features.ui.mymatches.MyMatchesStepModel
 import com.walcker.games.features.ui.notifications.NotificationHistoryStepModel
 import com.walcker.games.features.ui.playerprofile.PlayerProfileStepModel
@@ -15,6 +16,12 @@ internal val gamesUiModule = module {
             preferences = get(),
             joinGame = get(),
             stringsHolder = get(),
+        )
+    }
+    factory {
+        MapStepModel(
+            repository = get(),
+            preferences = get(),
         )
     }
     factory {

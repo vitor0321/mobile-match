@@ -68,6 +68,7 @@ private fun AuthenticatedShell() {
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(0) }
     val (showNotificationHistory, setShowNotificationHistory) = remember { mutableStateOf(false) }
     val (detailScreen, setDetailScreen) = remember { mutableStateOf<Screen?>(null) }
+    val (showMapView, setShowMapView) = remember { mutableStateOf(false) }
 
     // Listen for cross-screen tab requests (e.g. "after creating a match, switch
     // to My Matches"). The shell owns the selected tab so this is the one place
@@ -88,10 +89,15 @@ private fun AuthenticatedShell() {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Top app bar with notification bell
+        // Top app bar with notification bell and map toggle (on Home tab only)
         TopAppBar(
             title = { Text("Match") },
             actions = {
+                if (selectedTab == MainTab.Home.index) {
+                    TextButton(onClick = { setShowMapView(!showMapView) }) {
+                        Text(if (showMapView) "📋" else "🗺️")
+                    }
+                }
                 TextButton(onClick = { setShowNotificationHistory(true) }) {
                     Text("🔔")
                 }
@@ -112,7 +118,9 @@ private fun AuthenticatedShell() {
             // Tab navigation
             if (detailScreen == null) {
                 when (selectedTab) {
-                    MainTab.Home.index -> Navigator(screen = gamesDestination.gameList())
+                    MainTab.Home.index -> Navigator(
+                        screen = if (showMapView) gamesDestination.map() else gamesDestination.gameList()
+                    )
                     MainTab.Search.index -> Navigator(screen = gamesDestination.search())
                     MainTab.Create.index -> Navigator(screen = gamesDestination.create())
                     MainTab.MyMatches.index -> Navigator(screen = gamesDestination.myMatches())

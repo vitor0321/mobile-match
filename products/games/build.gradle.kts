@@ -56,6 +56,8 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.koin.android)
+            implementation(libs.maps.compose)
+            implementation(libs.play.services.maps)
         }
         androidUnitTest.dependencies {
             implementation(libs.junit)

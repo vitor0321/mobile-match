@@ -21,6 +21,9 @@
         <meta-data
             android:name="com.walcker.match.ads.BANNER_UNIT_ID"
             android:value="${admobBannerUnitId}" />
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${googleMapsApiKey}" />
 
         <activity
             android:name=".MainActivity"
