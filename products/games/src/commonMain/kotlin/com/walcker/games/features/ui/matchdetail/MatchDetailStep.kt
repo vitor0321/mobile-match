@@ -123,6 +123,14 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                     )
                 }
 
+                // Status change notification — shown when match status changes (FULL, FINISHED, CANCELLED)
+                state.statusChangeMessage?.let { message ->
+                    StatusChangeBanner(
+                        message = message,
+                        onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissStatusChange) },
+                    )
+                }
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     when {
                         state.isLoading -> {
@@ -312,6 +320,39 @@ private fun SuccessBanner(
         )
         TextButton(onClick = onDismiss) {
             Text("✕", color = MaterialTheme.colorScheme.onTertiaryContainer)
+        }
+    }
+}
+
+@Composable
+private fun StatusChangeBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.small,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "ℹ️",
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onDismiss) {
+            Text("✕", color = MaterialTheme.colorScheme.onSecondaryContainer)
         }
     }
 }

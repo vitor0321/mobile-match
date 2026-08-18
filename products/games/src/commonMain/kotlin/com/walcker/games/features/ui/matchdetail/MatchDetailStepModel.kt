@@ -49,6 +49,8 @@ internal data class MatchDetailState(
     val isCancellingMatch: Boolean = false,
     val showLeaveConfirmDialog: Boolean = false,
     val showCancelConfirmDialog: Boolean = false,
+    // Real-time status change notifications
+    val statusChangeMessage: String? = null,
     // Rating UI state
     val showRatingSheet: Boolean = false,
     val selectedPlayerForRating: Pair<String, String>? = null, // userId to displayName
@@ -67,6 +69,8 @@ internal sealed interface MatchDetailEvent {
     data object JoinMatch : MatchDetailEvent
     /** Dismisses the success message. */
     data object DismissSuccess : MatchDetailEvent
+    /** Dismisses the status change notification. */
+    data object DismissStatusChange : MatchDetailEvent
     /** Shows leave match confirmation dialog. */
     data object RequestLeaveMatch : MatchDetailEvent
     /** Confirms leaving the match. */
@@ -121,6 +125,11 @@ internal class MatchDetailStepModel(
      */
     private var previousConfirmedIds: Set<String>? = null
     private var currentUserId: String? = null
+    /**
+     * Previous match status; used to detect status transitions.
+     * `null` until the first snapshot lands, so we don't fire on initial load.
+     */
+    private var previousStatus: com.walcker.games.features.domain.model.MatchStatus? = null
 
     init {
         loadMatch()
@@ -140,6 +149,9 @@ internal class MatchDetailStepModel(
             MatchDetailEvent.JoinMatch -> joinMatchAction()
             MatchDetailEvent.DismissSuccess -> {
                 _state.update { it.copy(successMessage = null, joinOutcome = null) }
+            }
+            MatchDetailEvent.DismissStatusChange -> {
+                _state.update { it.copy(statusChangeMessage = null) }
             }
             MatchDetailEvent.RequestLeaveMatch -> {
                 _state.update { it.copy(showLeaveConfirmDialog = true) }
@@ -309,6 +321,7 @@ internal class MatchDetailStepModel(
                 .catch { /* ignore flow errors - keep last known state */ }
                 .collect { result ->
                     result.onSuccess { game ->
+                        detectStatusChange(game.status)
                         _state.update { it.copy(match = game, isLoading = false, errorMessage = null) }
                     }
                 }
@@ -367,5 +380,42 @@ internal class MatchDetailStepModel(
         }
 
         previousConfirmedIds = newConfirmedIds
+    }
+
+    /**
+     * Detects match status transitions and shows appropriate notifications.
+     * Fires only when status actually changes, not on first load.
+     */
+    private fun detectStatusChange(currentStatus: com.walcker.games.features.domain.model.MatchStatus) {
+        val prevStatus = previousStatus ?: run {
+            // First snapshot — record the baseline but don't fire.
+            previousStatus = currentStatus
+            return
+        }
+
+        // Detect transitions and show appropriate messages
+        if (prevStatus != currentStatus) {
+            val message = when {
+                // Match became full
+                prevStatus == com.walcker.games.features.domain.model.MatchStatus.OPEN &&
+                currentStatus == com.walcker.games.features.domain.model.MatchStatus.FULL -> {
+                    "Partida lotada! 🔴 Novas entradas serão na fila de espera."
+                }
+                // Match was finished
+                currentStatus == com.walcker.games.features.domain.model.MatchStatus.FINISHED -> {
+                    "Partida encerrada ✓"
+                }
+                // Match was cancelled
+                currentStatus == com.walcker.games.features.domain.model.MatchStatus.CANCELLED -> {
+                    "Partida foi cancelada ✕"
+                }
+                // Any other transition
+                else -> "Status da partida foi atualizado: ${currentStatus.name}"
+            }
+
+            _state.update { it.copy(statusChangeMessage = message) }
+        }
+
+        previousStatus = currentStatus
     }
 }
