@@ -1,6 +1,6 @@
 # Mobile Match — Roadmap Consolidado
 
-**Último atualizado:** 2026-08-18 · **Status:** Phase 5 Sprint 1-2 complete + backend de avaliação; Sprint 3 (polish) next
+**Último atualizado:** 2026-08-18 · **Status:** Phase 5 completa (Sprints 1-3 + backend de avaliação); Phase 6 next
 
 ---
 
@@ -126,7 +126,7 @@ functions/                  Cloud Functions (triggers, callables)
 
 ## O que Falta (Phase 5+)
 
-### Phase 5: Player Search & Filters ⏳ PENDENTE (15-20h)
+### Phase 5: Player Search & Filters ✅ COMPLETA (15-20h)
 
 **Objetivo:** Jogadores encontram e filtram outros jogadores. Veem ratings e histórico.
 
@@ -150,7 +150,12 @@ functions/                  Cloud Functions (triggers, callables)
    - `GetPlayerRatingsUseCase` + cursor opaco (`RatingCursor`)
    - Strings pt-BR/en-US e testes de StepModel
 
-3. **Polish & Integration** (2-4h) ⏳
+3. **Polish & Integration** (2-4h) ✅
+   - Mapeamento de campos corrigido: `fullName`/`avatarUrl`/`createdAt`
+   - Cache em memória com TTL de 5 min (busca + perfil), invalidado ao avaliar
+   - Debounce de 300ms e cancelamento da busca anterior
+   - Aviso de "refine a busca" quando o teto de leitura é atingido
+   - Jogadores banidos fora da busca (`where isBanned == false`)
    - Caching em memória (TTL 5 min)
    - Pagination nos resultados de busca
    - Pre-loading de jogadores próximos
@@ -430,8 +435,8 @@ Fase 7
 | **2** | Create + MyMatches + Profile | 20-25h | ✅ DONE |
 | **3** | Real-time + Join/Leave | 15-20h | ✅ DONE |
 | **4** | Cancel + UI Dialogs + Ratings | 10-15h | ✅ DONE |
-| **5** | Player Search & Filters | 15-20h | ⏳ NEXT |
-| **6** | Trust & Safety | 10-15h | ⏳ |
+| **5** | Player Search & Filters | 15-20h | ✅ DONE |
+| **6** | Trust & Safety | 10-15h | ⏳ NEXT |
 | **7** | Map + Polish | 8-12h | ⏳ |
 | **TOTAL** | Completo | **113-152h** | **~50% done** |
 
@@ -495,12 +500,22 @@ Fase 7
    - [x] Testes de emulador (callable) e de regras
    - [ ] **Falta:** `firebase deploy --only functions,firestore:rules,firestore:indexes`
 
-### Próximo (Sprint 3 — Polish)
+### Sprint 3 — Polish ✅
 
 5. **Caching & Performance**
-   - [ ] In-memory cache (TTL 5 min)
-   - [ ] Pagination nos resultados de busca de jogadores
-   - [ ] Pre-loading de jogadores próximos
+   - [x] Cache em memória com TTL de 5 min (`InMemoryPlayerCache`)
+   - [x] Debounce + cancelamento no lugar de paginação (ver D19)
+   - [ ] ~~Pre-loading de jogadores próximos~~ — o perfil não tem geo pública;
+         depende de `profiles/{uid}/private/data`, que só o dono lê
+
+8. **Correções encontradas no Sprint 3**
+   - [x] `FirestorePlayerSource` lia `displayName`/`photoUrl`/`createdAtSeconds`;
+         o documento tem `fullName`/`avatarUrl`/`createdAt`. Toda a busca voltava
+         vazia e o Player Details lançava "Player data incomplete"
+   - [x] Ordenações por `lastActivitySeconds` e `totalMatches` removidas — o
+         Firestore descarta documentos sem o campo do `orderBy`, então elas
+         devolviam lista vazia
+   - [x] Seção Experiência e filtros de mín. partidas removidos (sem escritor)
 
 ### Semana 3
 
@@ -630,6 +645,9 @@ Direto na chave Pix do organizador
 | **D14** | Avaliações recebidas | Cópia em `profiles/{uid}/ratings` | `users/` é a árvore privada do dono; perfil é público pra quem está logado |
 | **D15** | Fim da partida | `startsAt + durationMin` no passado | Nada marca `status: FINISHED` ainda — exigir esse status travaria toda avaliação |
 | **D16** | Reenvio de avaliação | Idempotente (`already_rated`) | Mesmo padrão de `joinMatch`/`cancelMatch`; reenviar não infla a média |
+| **D17** | Estatísticas de experiência | Fora do perfil de terceiros | Nada escreve os contadores; o perfil próprio deriva das próprias partidas, o de terceiros exigiria collection group + permissão. Volta na Phase 6 |
+| **D18** | Cache de jogador | Memória, TTL 5 min | Busca refaz query a cada filtro e a cada volta do perfil; TTL curto evita o repeteco sem segurar nome/nota velhos |
+| **D19** | Busca de jogadores | Debounce + teto, sem paginação | Filtro de nota/esporte roda no cliente: paginar em cima disso dá páginas de tamanho aleatório e um "tem mais" que mente. A UI avisa quando o teto é atingido |
 
 ---
 

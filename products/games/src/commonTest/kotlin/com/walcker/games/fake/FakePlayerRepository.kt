@@ -3,9 +3,11 @@ package com.walcker.games.fake
 import com.walcker.games.features.domain.model.PlayerDetails
 import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.PlayerSearchResult
+import com.walcker.games.features.domain.model.PlayerSearchResults
 import com.walcker.games.features.domain.model.Rating
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
+import com.walcker.games.features.domain.model.Sport
 import com.walcker.games.features.domain.repository.PlayerRepository
 
 /**
@@ -16,11 +18,14 @@ import com.walcker.games.features.domain.repository.PlayerRepository
  * page), so a test can describe a whole pagination sequence declaratively.
  */
 internal class FakePlayerRepository(
-    var searchResult: Result<List<PlayerSearchResult>> = Result.success(emptyList()),
+    var searchResult: Result<PlayerSearchResults> = Result.success(PlayerSearchResults.Empty),
     var detailsResult: Result<PlayerDetails> = Result.success(playerDetails()),
     var ratingPages: Map<String?, Result<RatingsPage>> =
         mapOf(null to Result.success(RatingsPage.Empty)),
 ) : PlayerRepository {
+
+    /** Every `searchPlayers` call, in order — lets tests assert debouncing. */
+    val searchCalls: MutableList<PlayerSearchFilters> = mutableListOf()
 
     /** Every `getPlayerRatings` call, in order — lets tests assert the query. */
     val ratingCalls: MutableList<RatingCall> = mutableListOf()
@@ -34,7 +39,10 @@ internal class FakePlayerRepository(
 
     override suspend fun searchPlayers(
         filters: PlayerSearchFilters,
-    ): Result<List<PlayerSearchResult>> = searchResult
+    ): Result<PlayerSearchResults> {
+        searchCalls += filters
+        return searchResult
+    }
 
     override suspend fun getPlayerDetails(userId: String): Result<PlayerDetails> = detailsResult
 
@@ -58,19 +66,26 @@ internal fun playerDetails(
     userId = userId,
     displayName = displayName,
     photoUrl = null,
-    email = "ana@match.app",
-    bio = "Meia-armadora",
     averageRating = averageRating,
     totalRatings = totalRatings,
-    matchesOrganized = 3,
-    matchesParticipated = 21,
     favoriteSports = emptyList(),
     city = "Porto Alegre",
     neighborhood = "Menino Deus",
-    locationRadius = 15,
-    joinRate = 0.9f,
-    cancelRate = 0.05f,
-    memberSince = 1_735_689_600L,
+    memberSinceMs = 1_735_689_600_000L,
+)
+
+internal fun playerSearchResult(
+    userId: String = "player-1",
+    displayName: String = "Ana Souza",
+    averageRating: Float = 4.5f,
+    sports: List<Sport> = emptyList(),
+): PlayerSearchResult = PlayerSearchResult(
+    userId = userId,
+    displayName = displayName,
+    photoUrl = null,
+    averageRating = averageRating,
+    totalRatings = 12,
+    favoriteSports = sports,
 )
 
 internal fun rating(
