@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -143,6 +144,8 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                                 participants = state.participants,
                                 canRate = state.match!!.status == MatchStatus.FINISHED,
                                 isJoining = state.isJoining,
+                                isLeavingMatch = state.isLeavingMatch,
+                                isCancellingMatch = state.isCancellingMatch,
                                 onRatePlayer = { userId, displayName ->
                                     stepModel.onEvent(
                                         MatchDetailEvent.OpenRatingSheet(userId, displayName),
@@ -150,6 +153,12 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                                 },
                                 onJoinMatch = {
                                     stepModel.onEvent(MatchDetailEvent.JoinMatch)
+                                },
+                                onLeaveMatch = {
+                                    stepModel.onEvent(MatchDetailEvent.RequestLeaveMatch)
+                                },
+                                onCancelMatch = {
+                                    stepModel.onEvent(MatchDetailEvent.RequestCancelMatch)
                                 },
                             )
                         }
@@ -172,6 +181,72 @@ internal class MatchDetailStep(val matchId: String) : Screen {
             },
             isLoading = state.isSubmittingRating,
         )
+
+        // Leave match confirmation dialog
+        if (state.showLeaveConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { stepModel.onEvent(MatchDetailEvent.CancelLeaveMatch) },
+                title = { Text("Sair da Partida?") },
+                text = {
+                    Text("Tem certeza de que deseja sair desta partida? Sua vaga será liberada para o próximo da fila.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { stepModel.onEvent(MatchDetailEvent.ConfirmLeaveMatch) },
+                        enabled = !state.isLeavingMatch,
+                    ) {
+                        if (state.isLeavingMatch) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        } else {
+                            Text("Sair")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { stepModel.onEvent(MatchDetailEvent.CancelLeaveMatch) },
+                    ) {
+                        Text("Cancelar")
+                    }
+                },
+            )
+        }
+
+        // Cancel match confirmation dialog
+        if (state.showCancelConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { stepModel.onEvent(MatchDetailEvent.CancelCancelMatch) },
+                title = { Text("Cancelar Partida?") },
+                text = {
+                    Text("Tem certeza de que deseja cancelar esta partida? Todos os participantes serão notificados.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { stepModel.onEvent(MatchDetailEvent.ConfirmCancelMatch) },
+                        enabled = !state.isCancellingMatch,
+                    ) {
+                        if (state.isCancellingMatch) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        } else {
+                            Text("Cancelar Partida")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { stepModel.onEvent(MatchDetailEvent.CancelCancelMatch) },
+                    ) {
+                        Text("Voltar")
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -247,8 +322,12 @@ private fun MatchDetailContent(
     participants: ParticipantsSummary?,
     canRate: Boolean,
     isJoining: Boolean,
+    isLeavingMatch: Boolean,
+    isCancellingMatch: Boolean,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     onJoinMatch: () -> Unit,
+    onLeaveMatch: () -> Unit,
+    onCancelMatch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -376,6 +455,46 @@ private fun MatchDetailContent(
             },
             onClick = onJoinMatch,
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Action buttons: Leave / Cancel (shown conditionally based on user role)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // Leave match button (participant)
+            Button(
+                onClick = onLeaveMatch,
+                enabled = !isClosed && !isLeavingMatch && !isCancellingMatch,
+                modifier = Modifier.weight(1f),
+            ) {
+                if (isLeavingMatch) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Text("Sair")
+                }
+            }
+
+            // Cancel match button (organizer only)
+            Button(
+                onClick = onCancelMatch,
+                enabled = !isClosed && !isCancellingMatch && !isLeavingMatch,
+                modifier = Modifier.weight(1f),
+            ) {
+                if (isCancellingMatch) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Text("Cancelar")
+                }
+            }
+        }
     }
 }
 
