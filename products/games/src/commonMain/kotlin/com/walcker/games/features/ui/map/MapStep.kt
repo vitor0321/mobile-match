@@ -33,6 +33,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
 import org.koin.compose.koinInject
+import com.walcker.match.core.geo.formatDistance
 
 /**
  * Map view showing open matches as live pins.
@@ -139,7 +140,7 @@ private fun NearbyMatchesSheet(
                         )
                     }
                     Text(
-                        text = String.format("%.1f km", nearby.distanceKm),
+                        text = formatDistance(nearby.distanceKm),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )

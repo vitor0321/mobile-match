@@ -55,3 +55,32 @@ private fun LocalDateTime.isSameDayAs(other: LocalDateTime): Boolean =
     year == other.year && monthNumber == other.monthNumber && dayOfMonth == other.dayOfMonth
 
 private fun Int.pad2(): String = if (this < 10) "0$this" else toString()
+
+/**
+ * Locale-neutral numeric date: `18/08/2026`.
+ *
+ * Used where a full relative label ([formatWhen]) would be noise — rating cards,
+ * "member since", history lists. Numeric on purpose: month names would need a
+ * translation table in `core`, which has no strings layer.
+ */
+public fun formatShortDate(
+    instant: Instant,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): String {
+    val local = instant.toLocalDateTime(timeZone)
+    return "${local.dayOfMonth.pad2()}/${local.monthNumber.pad2()}/${local.year}"
+}
+
+/**
+ * Convenience overload for epoch-millis values (how Firestore rating documents
+ * store `createdAtMs`). Returns an empty string for a missing/zero timestamp so
+ * the UI can skip rendering instead of showing `01/01/1970`.
+ */
+public fun formatShortDate(
+    epochMillis: Long,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): String = if (epochMillis <= 0L) {
+    ""
+} else {
+    formatShortDate(Instant.fromEpochMilliseconds(epochMillis), timeZone)
+}

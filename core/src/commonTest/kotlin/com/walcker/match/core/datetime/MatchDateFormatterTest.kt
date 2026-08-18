@@ -42,3 +42,37 @@ class MatchDateFormatterTest {
         assertEquals("15/08 · 19:30", formatWhen(matchSp, nowSp, saoPaulo))
     }
 }
+
+class FormatShortDateTest {
+
+    private val saoPaulo = TimeZone.of("America/Sao_Paulo")
+
+    @Test
+    fun `formats an instant as a zero padded numeric date`() {
+        val instant = Instant.parse("2026-08-18T12:00:00Z")
+
+        assertEquals("18/08/2026", formatShortDate(instant, saoPaulo))
+    }
+
+    @Test
+    fun `respects the requested time zone when the day differs`() {
+        // 01:00 UTC on the 19th is still the 18th in Sao Paulo (UTC-3)
+        val instant = Instant.parse("2026-08-19T01:00:00Z")
+
+        assertEquals("18/08/2026", formatShortDate(instant, saoPaulo))
+        assertEquals("19/08/2026", formatShortDate(instant, TimeZone.UTC))
+    }
+
+    @Test
+    fun `returns an empty string for a missing timestamp`() {
+        assertEquals("", formatShortDate(epochMillis = 0L, timeZone = saoPaulo))
+        assertEquals("", formatShortDate(epochMillis = -1L, timeZone = saoPaulo))
+    }
+
+    @Test
+    fun `formats epoch millis`() {
+        val millis = Instant.parse("2026-01-05T15:00:00Z").toEpochMilliseconds()
+
+        assertEquals("05/01/2026", formatShortDate(epochMillis = millis, timeZone = saoPaulo))
+    }
+}

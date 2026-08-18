@@ -37,6 +37,7 @@ import com.walcker.games.features.domain.model.Rating
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.navigator.IdentityDestination
 import org.koin.compose.koinInject
+import com.walcker.match.core.format.formatDecimal
 
 internal class PlayerProfileStep : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -232,7 +233,7 @@ private fun RatingsSummaryCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = String.format("%.1f", averageRating),
+                    text = formatDecimal(value = averageRating, decimals = 1),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,

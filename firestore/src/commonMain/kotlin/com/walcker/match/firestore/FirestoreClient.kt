@@ -156,7 +156,11 @@ public data class DocumentSnapshot(
     public fun getBoolean(field: String): Boolean? = get(field)
     public fun getMap(field: String): Map<String, Any?>? = get(field)
     public fun getList(field: String): List<Any?>? = get(field)
-    public fun getTimestamp(field: String): Long? = get(field)
+    /**
+     * Reads a time field as epoch milliseconds, unwrapping the platform SDK's
+     * timestamp type when needed (see [normalizeTimestampMillis]).
+     */
+    public fun getTimestamp(field: String): Long? = normalizeTimestampMillis(data[field])
 }
 
 /**
