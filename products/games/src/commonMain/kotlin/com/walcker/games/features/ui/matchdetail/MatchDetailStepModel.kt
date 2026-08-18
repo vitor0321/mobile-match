@@ -7,6 +7,7 @@ import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
+import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
 import com.walcker.games.features.ui.notifications.getCurrentTimeMillis
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
@@ -34,6 +35,10 @@ internal data class MatchDetailState(
      * The UI uses this to show a transient banner ("Você foi promovido!").
      */
     val justPromoted: Boolean = false,
+    // Rating UI state
+    val showRatingSheet: Boolean = false,
+    val selectedPlayerForRating: Pair<String, String>? = null, // userId to displayName
+    val isSubmittingRating: Boolean = false,
 )
 
 /**
@@ -44,6 +49,12 @@ internal sealed interface MatchDetailEvent {
     data object Dismiss : MatchDetailEvent
     /** Dismisses the "you were promoted" banner. */
     data object DismissPromotion : MatchDetailEvent
+    /** Opens rating sheet for a specific player. */
+    data class OpenRatingSheet(val userId: String, val displayName: String) : MatchDetailEvent
+    /** Closes rating sheet. */
+    data object CloseRatingSheet : MatchDetailEvent
+    /** Submits a rating for a player. */
+    data class SubmitRating(val rating: Int, val comment: String) : MatchDetailEvent
 }
 
 /**
@@ -61,6 +72,7 @@ internal class MatchDetailStepModel(
     private val getGameById: GetGameByIdUseCase,
     private val observeMatch: ObserveMatchUseCase,
     private val observeParticipants: ObserveParticipantsUseCase,
+    private val submitRating: SubmitRatingUseCase,
     private val sessionHolder: SessionHolder,
     private val promotionCoordinator: PromotionCoordinator,
     private val stringsHolder: GamesStringsHolder,
@@ -91,6 +103,50 @@ internal class MatchDetailStepModel(
             }
             MatchDetailEvent.DismissPromotion -> {
                 _state.update { it.copy(justPromoted = false) }
+            }
+            is MatchDetailEvent.OpenRatingSheet -> {
+                _state.update {
+                    it.copy(
+                        showRatingSheet = true,
+                        selectedPlayerForRating = event.userId to event.displayName,
+                    )
+                }
+            }
+            MatchDetailEvent.CloseRatingSheet -> {
+                _state.update {
+                    it.copy(showRatingSheet = false, selectedPlayerForRating = null)
+                }
+            }
+            is MatchDetailEvent.SubmitRating -> {
+                submitPlayerRating(event.rating, event.comment)
+            }
+        }
+    }
+
+    private fun submitPlayerRating(rating: Int, comment: String) {
+        val ratedUserId = _state.value.selectedPlayerForRating?.first ?: return
+        screenModelScope.launch {
+            _state.update { it.copy(isSubmittingRating = true) }
+            submitRating(
+                matchId = matchId,
+                ratedUserId = ratedUserId,
+                rating = rating,
+                comment = comment,
+            ).onSuccess {
+                _state.update {
+                    it.copy(
+                        isSubmittingRating = false,
+                        showRatingSheet = false,
+                        selectedPlayerForRating = null,
+                    )
+                }
+            }.onFailure { error ->
+                _state.update {
+                    it.copy(
+                        isSubmittingRating = false,
+                        errorMessage = error.message ?: "Erro ao enviar avaliação",
+                    )
+                }
             }
         }
     }

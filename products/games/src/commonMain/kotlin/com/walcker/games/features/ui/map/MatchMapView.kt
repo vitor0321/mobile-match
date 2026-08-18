@@ -21,6 +21,8 @@ internal data class MapCamera(
  * @param pins partidas a exibir como marcadores
  * @param camera centro/zoom inicial da câmera
  * @param onPinClick chamado com o matchId quando um marcador é tocado
+ * @param onNearbyTap chamado quando usuário toca para ver partidas próximas
+ * @param nearbyCount número de partidas próximas disponíveis
  * @param modifier modificador do container do mapa
  */
 @Composable
@@ -28,5 +30,7 @@ internal expect fun MatchMapView(
     pins: List<MapPin>,
     camera: MapCamera,
     onPinClick: (String) -> Unit,
+    onNearbyTap: () -> Unit,
+    nearbyCount: Int,
     modifier: Modifier,
 )

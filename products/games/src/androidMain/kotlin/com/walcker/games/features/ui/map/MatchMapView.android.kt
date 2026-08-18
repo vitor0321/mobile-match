@@ -1,8 +1,15 @@
 package com.walcker.games.features.ui.map
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -27,6 +34,8 @@ internal actual fun MatchMapView(
     pins: List<MapPin>,
     camera: MapCamera,
     onPinClick: (String) -> Unit,
+    onNearbyTap: () -> Unit,
+    nearbyCount: Int,
     modifier: Modifier,
 ) {
     val cameraPositionState = rememberCameraPositionState {
@@ -44,23 +53,37 @@ internal actual fun MatchMapView(
         )
     }
 
-    GoogleMap(
-        modifier = modifier,
-        cameraPositionState = cameraPositionState,
-        properties = MapProperties(isMyLocationEnabled = true),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = true),
-    ) {
-        pins.forEach { pin ->
-            Marker(
-                state = MarkerState(position = LatLng(pin.lat, pin.lng)),
-                title = pin.title,
-                snippet = pin.snippet,
-                icon = BitmapDescriptorFactory.defaultMarker(pin.status.markerHue()),
-                onClick = {
-                    onPinClick(pin.matchId)
-                    false // allow default info-window behavior too
-                },
-            )
+    Box(modifier = modifier) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(isMyLocationEnabled = true),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = true),
+        ) {
+            pins.forEach { pin ->
+                Marker(
+                    state = MarkerState(position = LatLng(pin.lat, pin.lng)),
+                    title = pin.title,
+                    snippet = pin.snippet,
+                    icon = BitmapDescriptorFactory.defaultMarker(pin.status.markerHue()),
+                    onClick = {
+                        onPinClick(pin.matchId)
+                        false // allow default info-window behavior too
+                    },
+                )
+            }
+        }
+
+        // Nearby matches button (bottom-right corner)
+        if (nearbyCount > 0) {
+            Button(
+                onClick = onNearbyTap,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+            ) {
+                Text("$nearbyCount próximas")
+            }
         }
     }
 }

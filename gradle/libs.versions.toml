@@ -44,6 +44,7 @@ turbine = "1.2.0"
 voyager = "1.1.0-beta03"
 lyricist = "1.8.0"
 purchases-kmp = "2.10.2+17.55.1"
+accompanist = "0.36.0"
 
 [libraries]
 # Kotlin
@@ -142,6 +143,9 @@ lyricist-core = { module = "cafe.adriel.lyricist:lyricist", version.ref = "lyric
 lyricist-processor = { module = "cafe.adriel.lyricist:lyricist-processor", version.ref = "lyricist" }
 purchasesKmpCore = { module = "com.revenuecat.purchases:purchases-kmp-core", version.ref = "purchases-kmp" }
 purchasesKmpDatetime = { module = "com.revenuecat.purchases:purchases-kmp-datetime", version.ref = "purchases-kmp" }
+
+# Accompanist
+accompanist-swiperefresh = { module = "com.google.accompanist:accompanist-swiperefresh", version.ref = "accompanist" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

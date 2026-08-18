@@ -31,6 +31,8 @@ internal actual fun MatchMapView(
     pins: List<MapPin>,
     camera: MapCamera,
     onPinClick: (String) -> Unit,
+    onNearbyTap: () -> Unit,
+    nearbyCount: Int,
     modifier: Modifier,
 ) {
     Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {

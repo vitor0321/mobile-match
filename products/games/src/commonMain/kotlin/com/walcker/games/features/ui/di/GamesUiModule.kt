@@ -53,6 +53,7 @@ internal val gamesUiModule = module {
         PlayerProfileStepModel(
             sessionHolder = get(),
             getMyMatches = get(),
+            getUserRatings = get(),
             stringsHolder = get(),
             logoutService = get(),
         )

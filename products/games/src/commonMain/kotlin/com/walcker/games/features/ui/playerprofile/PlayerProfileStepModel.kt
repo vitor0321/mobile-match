@@ -4,6 +4,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.error.GamesError
 import com.walcker.games.features.domain.usecase.GetMyMatchesUseCase
+import com.walcker.games.features.domain.usecase.GetUserRatingsUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.SessionHolder
@@ -16,6 +17,7 @@ import kotlinx.coroutines.launch
 internal class PlayerProfileStepModel(
     private val sessionHolder: SessionHolder,
     private val getMyMatches: GetMyMatchesUseCase,
+    private val getUserRatings: GetUserRatingsUseCase,
     private val stringsHolder: GamesStringsHolder,
     private val logoutService: LogoutService,
 ) : ScreenModel {
@@ -66,7 +68,13 @@ internal class PlayerProfileStepModel(
         screenModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
             val nowSeconds = getCurrentEpochSeconds()
-            getMyMatches(userId, nowSeconds)
+
+            // Load matches and ratings in parallel
+            val matchesResult = getMyMatches(userId, nowSeconds)
+            val ratingsResult = getUserRatings(userId, limit = 50)
+
+            // Process matches
+            matchesResult
                 .onSuccess { result ->
                     val allMatches = result.active + result.past
                     val organized = allMatches.count { match ->
@@ -75,13 +83,39 @@ internal class PlayerProfileStepModel(
                     val participated = allMatches.count { match ->
                         match.role == com.walcker.games.features.domain.model.MatchRole.PARTICIPANT
                     }
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            matchesOrganized = organized,
-                            matchesParticipated = participated,
-                        )
-                    }
+
+                    // Process ratings
+                    ratingsResult
+                        .onSuccess { ratings ->
+                            val avgRating = if (ratings.isNotEmpty()) {
+                                ratings.map { it.rating }.average().toFloat()
+                            } else {
+                                0f
+                            }
+
+                            _state.update {
+                                it.copy(
+                                    isLoading = false,
+                                    matchesOrganized = organized,
+                                    matchesParticipated = participated,
+                                    ratings = ratings,
+                                    averageRating = avgRating,
+                                    totalRatings = ratings.size,
+                                )
+                            }
+                        }
+                        .onFailure { error ->
+                            // Ratings failed but matches loaded successfully
+                            val message = (error as? GamesError)?.message ?: error.message ?: "Erro ao carregar avaliações"
+                            _state.update {
+                                it.copy(
+                                    isLoading = false,
+                                    matchesOrganized = organized,
+                                    matchesParticipated = participated,
+                                    errorMessage = message,
+                                )
+                            }
+                        }
                 }
                 .onFailure { error ->
                     val message = (error as? GamesError)?.message ?: error.message ?: "Erro"

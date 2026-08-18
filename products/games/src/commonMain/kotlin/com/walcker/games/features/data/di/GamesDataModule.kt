@@ -5,12 +5,16 @@ import com.walcker.games.features.data.platform.GamesPlatformServices
 import com.walcker.games.features.data.preferences.GamesPreferences
 import com.walcker.games.features.data.repository.GameRepositoryImpl
 import com.walcker.games.features.data.repository.NotificationRepositoryImpl
+import com.walcker.games.features.data.repository.RatingRepositoryImpl
 import com.walcker.games.features.data.source.FirestoreGameSource
 import com.walcker.games.features.data.source.FirestoreNotificationSource
+import com.walcker.games.features.data.source.FirestoreRatingSource
 import com.walcker.games.features.data.source.GameSource
 import com.walcker.games.features.data.source.NotificationSource
+import com.walcker.games.features.data.source.RatingSource
 import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.repository.NotificationRepository
+import com.walcker.games.features.domain.repository.RatingRepository
 import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.CancelMatchUseCaseImpl
 import com.walcker.games.features.domain.usecase.CreateMatchUseCase
@@ -37,6 +41,8 @@ import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCaseImpl
+import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
+import com.walcker.games.features.domain.usecase.GetUserRatingsUseCase
 import com.walcker.match.firestore.FirestoreClient
 import org.koin.dsl.module
 
@@ -56,6 +62,10 @@ internal val gamesDataModule = module {
     single<NotificationRepository> {
         NotificationRepositoryImpl(source = get())
     }
+    single<RatingSource> { FirestoreRatingSource(firestore = get<FirestoreClient>()) }
+    single<RatingRepository> {
+        RatingRepositoryImpl(ratingSource = get())
+    }
     factory<GetOpenGamesUseCase> { GetOpenGamesUseCaseImpl(repository = get()) }
     factory<JoinGameUseCase> { JoinGameUseCaseImpl(repository = get()) }
     factory<CreateMatchUseCase> { CreateMatchUseCaseImpl(repository = get()) }
@@ -69,4 +79,6 @@ internal val gamesDataModule = module {
     factory<DeleteNotificationUseCase> { DeleteNotificationUseCaseImpl(repository = get()) }
     factory<ObserveParticipantsUseCase> { ObserveParticipantsUseCaseImpl(repository = get()) }
     factory<ObserveMatchUseCase> { ObserveMatchUseCaseImpl(repository = get()) }
+    factory { SubmitRatingUseCase(ratingRepository = get()) }
+    factory { GetUserRatingsUseCase(ratingRepository = get()) }
 }

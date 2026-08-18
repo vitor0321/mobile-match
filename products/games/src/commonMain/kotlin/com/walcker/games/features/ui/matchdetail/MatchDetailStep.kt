@@ -35,9 +35,11 @@ import cafe.adriel.voyager.core.screen.Screen
 import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.games.features.domain.model.ParticipantsSummary
+import com.walcker.games.features.ui.ratings.RatingBottomSheet
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
+import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
@@ -55,6 +57,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val getGameById: GetGameByIdUseCase = koinInject()
         val observeMatch: ObserveMatchUseCase = koinInject()
         val observeParticipants: ObserveParticipantsUseCase = koinInject()
+        val submitRating: SubmitRatingUseCase = koinInject()
         val sessionHolder: SessionHolder = koinInject()
         val promotionCoordinator: PromotionCoordinator = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
@@ -64,6 +67,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 getGameById = getGameById,
                 observeMatch = observeMatch,
                 observeParticipants = observeParticipants,
+                submitRating = submitRating,
                 sessionHolder = sessionHolder,
                 promotionCoordinator = promotionCoordinator,
                 stringsHolder = stringsHolder,
@@ -122,6 +126,12 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                             MatchDetailContent(
                                 match = state.match!!,
                                 participants = state.participants,
+                                canRate = state.match!!.status == MatchStatus.FINISHED,
+                                onRatePlayer = { userId, displayName ->
+                                    stepModel.onEvent(
+                                        MatchDetailEvent.OpenRatingSheet(userId, displayName),
+                                    )
+                                },
                             )
                         }
 
@@ -132,6 +142,17 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 }
             }
         }
+
+        // Rating bottom sheet — shown when user taps "Rate" on a participant.
+        RatingBottomSheet(
+            isVisible = state.showRatingSheet,
+            playerName = state.selectedPlayerForRating?.second ?: "",
+            onDismiss = { stepModel.onEvent(MatchDetailEvent.CloseRatingSheet) },
+            onSubmit = { rating, comment ->
+                stepModel.onEvent(MatchDetailEvent.SubmitRating(rating, comment))
+            },
+            isLoading = state.isSubmittingRating,
+        )
     }
 }
 
@@ -171,6 +192,8 @@ private fun PromotionBanner(
 private fun MatchDetailContent(
     match: com.walcker.games.features.domain.model.Game,
     participants: ParticipantsSummary?,
+    canRate: Boolean,
+    onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -270,7 +293,11 @@ private fun MatchDetailContent(
 
         // Live participant list (from realtime subscription)
         if (participants != null) {
-            ParticipantsList(participants = participants)
+            ParticipantsList(
+                participants = participants,
+                canRate = canRate,
+                onRatePlayer = onRatePlayer,
+            )
         } else {
             // Fallback to the static list embedded in Game.participants
             StaticParticipantsList(participantIds = match.participants, organizerName = match.organizerName)
@@ -338,6 +365,8 @@ private fun JoinButton(
 @Composable
 private fun ParticipantsList(
     participants: ParticipantsSummary,
+    canRate: Boolean,
+    onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -356,7 +385,12 @@ private fun ParticipantsList(
                 )
             }
             items(items = participants.confirmed, key = { it.userId }) { participant ->
-                ParticipantRow(participant = participant, statusLabel = "✓ Confirmed")
+                ParticipantRow(
+                    participant = participant,
+                    statusLabel = "✓ Confirmed",
+                    canRate = canRate,
+                    onRatePlayer = onRatePlayer,
+                )
             }
         }
 
@@ -371,7 +405,12 @@ private fun ParticipantsList(
             }
             items(items = participants.waitlist, key = { it.userId }) { participant ->
                 val pos = participant.positionInWaitlist ?: 0
-                ParticipantRow(participant = participant, statusLabel = "#$pos in queue")
+                ParticipantRow(
+                    participant = participant,
+                    statusLabel = "#$pos in queue",
+                    canRate = false, // Only rate confirmed players
+                    onRatePlayer = onRatePlayer,
+                )
             }
         }
     }
@@ -401,6 +440,8 @@ private fun StaticParticipantsList(
 private fun ParticipantRow(
     participant: Participant,
     statusLabel: String,
+    canRate: Boolean,
+    onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -449,6 +490,15 @@ private fun ParticipantRow(
                 text = "💰",
                 style = MaterialTheme.typography.labelMedium,
             )
+        }
+
+        // Rate button — only shown after match is finished.
+        if (canRate) {
+            TextButton(
+                onClick = { onRatePlayer(participant.userId, participant.displayName) },
+            ) {
+                Text("⭐ Avaliar")
+            }
         }
     }
 }
