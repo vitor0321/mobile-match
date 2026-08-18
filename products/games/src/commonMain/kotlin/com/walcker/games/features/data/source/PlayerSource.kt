@@ -13,16 +13,20 @@ internal interface PlayerSource {
     /**
      * Search for players matching the given filters.
      *
-     * @param filters Search and filter criteria (name, rating, sports, etc)
-     * @return Raw DTOs from Firestore to be mapped by repository
+     * @param filters Search and filter criteria (name, rating, sports)
+     * @param limit Hard cap on documents read from Firestore
+     * @return Raw DTOs from Firestore to be mapped by the repository
      */
-    suspend fun searchPlayers(filters: PlayerSearchFilters): Result<List<PlayerSearchResultDto>>
+    suspend fun searchPlayers(
+        filters: PlayerSearchFilters,
+        limit: Int = DEFAULT_SEARCH_LIMIT,
+    ): Result<PlayerSearchPageDto>
 
     /**
      * Fetch detailed player profile from Firestore.
      *
      * @param userId Player ID
-     * @return Raw DTO to be mapped by repository
+     * @return Raw DTO to be mapped by the repository
      */
     suspend fun getPlayerDetails(userId: String): Result<PlayerDetailsDto>
 
@@ -41,44 +45,58 @@ internal interface PlayerSource {
         sort: RatingSort = RatingSort.RECENT,
         cursor: String? = null,
     ): Result<RatingsPage>
+
+    companion object {
+        /**
+         * How many profiles a single search reads.
+         *
+         * Rating range and sport are still filtered client-side, so this is a
+         * ceiling on documents read, not on results shown. The UI tells the
+         * user to narrow the search when the cap is hit — see
+         * [com.walcker.games.features.ui.player_search.PlayerSearchState].
+         */
+        const val DEFAULT_SEARCH_LIMIT: Int = 50
+    }
 }
 
 /**
- * DTO for player search result from Firestore.
+ * One search response: the matches plus whether the read cap was reached.
  *
- * Maps to domain [com.walcker.games.features.domain.model.PlayerSearchResult].
+ * @param reachedLimit the query returned as many documents as it asked for, so
+ *        matching players may exist beyond them
  */
-internal data class PlayerSearchResultDto(
-    val userId: String,
-    val displayName: String,
-    val photoUrl: String?,
-    val rating: Float,
-    val ratingCount: Int,
-    val sports: List<String>, // Sport enum names
-    val matchesOrganized: Int,
-    val matchesParticipated: Int,
+internal data class PlayerSearchPageDto(
+    val players: List<PlayerSearchResultDto>,
+    val reachedLimit: Boolean,
 )
 
 /**
- * DTO for detailed player profile from Firestore.
+ * DTO for a player search result.
  *
- * Maps to domain [com.walcker.games.features.domain.model.PlayerDetails].
+ * Field names mirror `profiles/{uid}` exactly — `fullName`, `avatarUrl` — which
+ * is what `onUserCreate` writes and what `profileEditableFields()` in
+ * firestore.rules allows the owner to edit.
+ */
+internal data class PlayerSearchResultDto(
+    val userId: String,
+    val fullName: String,
+    val avatarUrl: String?,
+    val rating: Float,
+    val ratingCount: Int,
+    val sports: List<String>, // Sport enum names
+)
+
+/**
+ * DTO for a detailed player profile.
  */
 internal data class PlayerDetailsDto(
     val userId: String,
-    val displayName: String,
-    val photoUrl: String?,
-    val email: String,
-    val bio: String?,
+    val fullName: String,
+    val avatarUrl: String?,
     val rating: Float,
     val ratingCount: Int,
-    val matchesOrganized: Int,
-    val matchesParticipated: Int,
     val sports: List<String>, // Sport enum names
     val city: String?,
     val neighborhood: String?,
-    val radiusKm: Int,
-    val joinRate: Float,
-    val cancelRate: Float,
-    val memberSinceSeconds: Long,
+    val createdAtMs: Long,
 )

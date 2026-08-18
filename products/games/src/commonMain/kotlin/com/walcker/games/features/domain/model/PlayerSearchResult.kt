@@ -1,10 +1,11 @@
 package com.walcker.games.features.domain.model
 
 /**
- * Search result for a player in the player search feature.
+ * A player as shown in the search results list.
  *
- * Contains essential player information for displaying in search results.
- * For detailed info, fetch [PlayerDetails] separately.
+ * Only carries what the `profiles/{uid}` document actually stores today. Match
+ * counts and activity rates were removed in Phase 5 Sprint 3: nothing writes
+ * them, so every card rendered zeros.
  */
 internal data class PlayerSearchResult(
     val userId: String,
@@ -13,6 +14,4 @@ internal data class PlayerSearchResult(
     val averageRating: Float,
     val totalRatings: Int,
     val favoriteSports: List<Sport>,
-    val matchesOrganized: Int,
-    val matchesParticipated: Int,
 )

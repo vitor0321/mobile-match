@@ -8,7 +8,9 @@ import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,15 +20,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * MVI ScreenModel for player search functionality.
+ * MVI ScreenModel for player search.
  *
- * - Manages search query and filters
- * - Calls SearchPlayersUseCase with current filters
- * - Handles navigation to player details
+ * Typing is debounced and each new search cancels the one in flight. Without
+ * that, every keystroke fired a Firestore query and the answers could land out
+ * of order — the results for "an" arriving after "ana" and overwriting them.
  */
 internal class PlayerSearchStepModel(
     private val searchPlayersUseCase: SearchPlayersUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val debounceMs: Long = SEARCH_DEBOUNCE_MS,
 ) : ScreenModel {
 
     private val strings get() = stringsHolder.resolveStringsOrDefault().playerSearch
@@ -37,34 +40,35 @@ internal class PlayerSearchStepModel(
     private val _effects = Channel<PlayerSearchEffect>(Channel.BUFFERED)
     val effects: Flow<PlayerSearchEffect> = _effects.receiveAsFlow()
 
+    private var searchJob: Job? = null
+
     fun onEvent(event: PlayerSearchEvents) {
         when (event) {
             is PlayerSearchEvents.QueryChanged -> {
                 _state.update { it.copy(query = event.query) }
-                performSearch()
+                scheduleSearch()
             }
+
             is PlayerSearchEvents.FiltersChanged -> {
                 _state.update { it.copy(filters = event.filters) }
-                performSearch()
+                scheduleSearch()
             }
+
             is PlayerSearchEvents.MinRatingChanged -> {
-                _state.update {
-                    it.copy(filters = it.filters.copy(minRating = event.minRating))
-                }
-                performSearch()
+                _state.update { it.copy(filters = it.filters.copy(minRating = event.minRating)) }
+                scheduleSearch()
             }
+
             is PlayerSearchEvents.MaxRatingChanged -> {
-                _state.update {
-                    it.copy(filters = it.filters.copy(maxRating = event.maxRating))
-                }
-                performSearch()
+                _state.update { it.copy(filters = it.filters.copy(maxRating = event.maxRating)) }
+                scheduleSearch()
             }
+
             is PlayerSearchEvents.SportsFilterChanged -> {
-                _state.update {
-                    it.copy(filters = it.filters.copy(favoriteSports = event.sports))
-                }
-                performSearch()
+                _state.update { it.copy(filters = it.filters.copy(favoriteSports = event.sports)) }
+                scheduleSearch()
             }
+
             PlayerSearchEvents.ResetFilters -> {
                 _state.update {
                     it.copy(
@@ -73,11 +77,14 @@ internal class PlayerSearchStepModel(
                         showFiltersPanel = false,
                     )
                 }
-                performSearch()
+                // Nothing to wait for: clearing is not typing.
+                scheduleSearch(debounce = false)
             }
+
             PlayerSearchEvents.ToggleFiltersPanel -> {
                 _state.update { it.copy(showFiltersPanel = !it.showFiltersPanel) }
             }
+
             is PlayerSearchEvents.SelectPlayer -> {
                 screenModelScope.launch {
                     _effects.send(PlayerSearchEffect.NavigateToPlayer(event.userId))
@@ -86,48 +93,51 @@ internal class PlayerSearchStepModel(
         }
     }
 
-    private fun performSearch() {
-        screenModelScope.launch {
-            val currentState = _state.value
+    private fun scheduleSearch(debounce: Boolean = true) {
+        searchJob?.cancel()
 
-            // Only search if query is not blank or filters are active
-            if (currentState.query.isBlank() &&
-                currentState.filters == PlayerSearchFilters()
-            ) {
-                _state.update { it.copy(results = persistentListOf()) }
-                return@launch
+        val current = _state.value
+        if (current.isIdle) {
+            _state.update {
+                it.copy(
+                    results = persistentListOf(),
+                    isLoading = false,
+                    reachedLimit = false,
+                    errorMessage = null,
+                )
             }
+            return
+        }
+
+        searchJob = screenModelScope.launch {
+            if (debounce) delay(debounceMs)
 
             _state.update { it.copy(isLoading = true, errorMessage = null) }
 
-            searchPlayersUseCase(currentState.filters)
+            // The query travels inside the filters so it is part of the cache
+            // key — two searches differing only by name are different searches.
+            val filters = current.filters.copy(query = current.query.trim())
+
+            searchPlayersUseCase(filters)
                 .onSuccess { results ->
-                    // Apply client-side query filter
-                    val filtered = if (currentState.query.isBlank()) {
-                        results
-                    } else {
-                        val trimmedQuery = currentState.query.trim().lowercase()
-                        results.filter { player ->
-                            player.displayName.lowercase().contains(trimmedQuery)
-                        }
-                    }
                     _state.update {
                         it.copy(
-                            results = filtered.toImmutableList(),
+                            results = results.players.toImmutableList(),
+                            reachedLimit = results.reachedLimit,
                             isLoading = false,
                         )
                     }
                 }
                 .onFailure { error ->
                     val message = error.message ?: strings.errorLoading
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = message,
-                        )
-                    }
+                    _state.update { it.copy(isLoading = false, errorMessage = message) }
                     _effects.send(PlayerSearchEffect.ShowMessage(message))
                 }
         }
+    }
+
+    internal companion object {
+        /** Long enough to skip intermediate keystrokes, short enough to feel live. */
+        internal const val SEARCH_DEBOUNCE_MS: Long = 300L
     }
 }

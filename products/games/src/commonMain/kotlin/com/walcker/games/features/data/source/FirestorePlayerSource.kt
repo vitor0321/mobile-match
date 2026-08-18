@@ -1,77 +1,64 @@
 package com.walcker.games.features.data.source
 
+import com.walcker.games.features.domain.model.PROFILE_FIELD_IS_BANNED
 import com.walcker.games.features.domain.model.PlayerSearchFilters
-import com.walcker.games.features.domain.model.PlayerSortBy
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.match.firestore.DocumentSnapshot
 import com.walcker.match.firestore.FirestoreClient
 
 /**
- * Firestore implementation of [PlayerSource].
+ * Firestore implementation of [PlayerSource]. Reads `profiles/{uid}`.
  *
- * Queries the `profiles/{uid}` collection for player search and details.
- * Delegates to [RatingSource] for rating queries.
+ * Only the sort field and the ban check run server-side. Name, rating range and
+ * sport are matched here, on the [PlayerSource.DEFAULT_SEARCH_LIMIT] documents
+ * the query returned: Firestore has no case-insensitive contains, and every
+ * extra inequality would need its own composite index. The consequence is
+ * honest but real — a search can miss someone ranked below the cap, which is
+ * why the UI surfaces "narrow your search" when the cap is reached.
  *
- * Note: For MVP, search is name-only. Sport/stats filtering happens client-side
- * due to Firestore single-field query limitations. This can be optimized in Phase 6
- * by adding denormalized indexes or a separate search index.
+ * Delegates rating queries to [RatingSource].
  */
 internal class FirestorePlayerSource(
     private val firestore: FirestoreClient,
     private val ratingSource: RatingSource,
 ) : PlayerSource {
 
-    override suspend fun searchPlayers(filters: PlayerSearchFilters): Result<List<PlayerSearchResultDto>> =
-        runCatching {
-            // Base query: order by sort preference
-            val baseQuery = when (filters.sortBy) {
-                PlayerSortBy.RATING -> firestore
-                    .collection("profiles")
-                    .query()
-                    .orderBy("rating", "desc")
+    override suspend fun searchPlayers(
+        filters: PlayerSearchFilters,
+        limit: Int,
+    ): Result<PlayerSearchPageDto> = runCatching {
+        val sort = filters.sortBy
 
-                PlayerSortBy.NAME -> firestore
-                    .collection("profiles")
-                    .query()
-                    .orderBy("displayName", "asc")
+        val snapshots = firestore
+            .collection(PROFILES_COLLECTION)
+            .query()
+            // Banned players never surface in search.
+            .where(PROFILE_FIELD_IS_BANNED, "==", false)
+            .orderBy(sort.field, if (sort.descending) DESCENDING else ASCENDING)
+            .limit(limit)
+            .get()
+            .getOrThrow()
 
-                PlayerSortBy.RECENT_ACTIVITY -> firestore
-                    .collection("profiles")
-                    .query()
-                    .orderBy("lastActivitySeconds", "desc")
-
-                PlayerSortBy.MATCHES_PLAYED -> firestore
-                    .collection("profiles")
-                    .query()
-                    .orderBy("totalMatches", "desc") // matchesOrganized + matchesParticipated
-            }
-
-            // Execute query with limit
-            val snapshots = baseQuery
-                .limit(50)
-                .get()
-                .getOrThrow()
-
-            // Map to DTOs and apply client-side filters
-            snapshots.mapNotNull { snapshot ->
-                snapshot.toPlayerSearchResultDto()?.let { dto ->
-                    // Client-side filtering: rating range, sports, match counts
-                    if (matchesFilters(dto, filters)) dto else null
-                }
-            }
-        }
+        PlayerSearchPageDto(
+            players = snapshots.mapNotNull { snapshot ->
+                snapshot.toPlayerSearchResultDto()?.takeIf { it.matches(filters) }
+            },
+            // A full page means Firestore had more to give.
+            reachedLimit = snapshots.size >= limit,
+        )
+    }
 
     override suspend fun getPlayerDetails(userId: String): Result<PlayerDetailsDto> =
         runCatching {
             val snapshot = firestore
-                .document("profiles/$userId")
+                .document("$PROFILES_COLLECTION/$userId")
                 .get()
                 .getOrThrow()
-                ?: throw Exception("Player document not found")
+                ?: throw NoSuchElementException("Player $userId not found.")
 
             snapshot.toPlayerDetailsDto()
-                ?: throw Exception("Player data incomplete")
+                ?: throw NoSuchElementException("Player $userId has no name on the profile.")
         }
 
     override suspend fun getPlayerRatings(
@@ -87,97 +74,69 @@ internal class FirestorePlayerSource(
             cursor = cursor,
         )
 
-    /**
-     * Client-side filter: check if DTO matches all active filters.
-     *
-     * TODO: Move to server-side queries once composite indexes are available.
-     */
-    private fun matchesFilters(dto: PlayerSearchResultDto, filters: PlayerSearchFilters): Boolean {
-        // Name filter (server-side would be better but complex case-insensitive match)
-        if (filters.query.isNotBlank()) {
-            if (!dto.displayName.contains(filters.query, ignoreCase = true)) {
-                return false
-            }
-        }
+    /** Client-side leg of the filtering — see the class docs for why. */
+    private fun PlayerSearchResultDto.matches(filters: PlayerSearchFilters): Boolean {
+        val query = filters.query.trim()
+        if (query.isNotEmpty() && !fullName.contains(query, ignoreCase = true)) return false
 
-        // Rating filters
-        if (filters.minRating != null && dto.rating < filters.minRating) {
-            return false
-        }
-        if (filters.maxRating != null && dto.rating > filters.maxRating) {
-            return false
-        }
+        filters.minRating?.let { if (rating < it) return false }
+        filters.maxRating?.let { if (rating > it) return false }
 
-        // Sports filter
         if (filters.favoriteSports.isNotEmpty()) {
-            val dtoSports = dto.sports.mapNotNull { sportName ->
-                try {
-                    com.walcker.games.features.domain.model.Sport.valueOf(sportName)
-                } catch (e: IllegalArgumentException) {
-                    null
-                }
-            }
-            if (dtoSports.intersect(filters.favoriteSports).isEmpty()) {
-                return false
-            }
-        }
-
-        // Match count filters
-        if (filters.minMatchesOrganized != null && dto.matchesOrganized < filters.minMatchesOrganized) {
-            return false
-        }
-        if (filters.minMatchesParticipated != null && dto.matchesParticipated < filters.minMatchesParticipated) {
-            return false
+            val wanted = filters.favoriteSports.map { it.name }.toSet()
+            if (sports.none { it in wanted }) return false
         }
 
         return true
     }
 
-    /**
-     * Map Firestore document to PlayerSearchResultDto.
-     *
-     * Returns null if document is missing required fields.
-     */
+    /** A profile with no name is unusable in a list — skip it rather than render a blank row. */
     private fun DocumentSnapshot.toPlayerSearchResultDto(): PlayerSearchResultDto? = try {
         PlayerSearchResultDto(
             userId = id,
-            displayName = getString("displayName") ?: return null,
-            photoUrl = getString("photoUrl"),
-            rating = getDouble("rating")?.toFloat() ?: 0f,
-            ratingCount = (getLong("ratingCount") ?: 0).toInt(),
-            sports = (getList("sports") as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-            matchesOrganized = (getLong("matchesOrganized") ?: 0).toInt(),
-            matchesParticipated = (getLong("matchesParticipated") ?: 0).toInt(),
+            fullName = getString(FIELD_FULL_NAME)?.takeIf { it.isNotBlank() } ?: return null,
+            avatarUrl = getString(FIELD_AVATAR_URL),
+            rating = getDouble(FIELD_RATING)?.toFloat() ?: 0f,
+            ratingCount = (getLong(FIELD_RATING_COUNT) ?: 0L).toInt(),
+            sports = readSports(),
         )
     } catch (e: Exception) {
         null
     }
 
-    /**
-     * Map Firestore document to PlayerDetailsDto.
-     *
-     * Returns null if document is missing required fields.
-     */
     private fun DocumentSnapshot.toPlayerDetailsDto(): PlayerDetailsDto? = try {
         PlayerDetailsDto(
             userId = id,
-            displayName = getString("displayName") ?: return null,
-            photoUrl = getString("photoUrl"),
-            email = getString("email") ?: "",
-            bio = getString("bio"),
-            rating = getDouble("rating")?.toFloat() ?: 0f,
-            ratingCount = (getLong("ratingCount") ?: 0).toInt(),
-            matchesOrganized = (getLong("matchesOrganized") ?: 0).toInt(),
-            matchesParticipated = (getLong("matchesParticipated") ?: 0).toInt(),
-            sports = (getList("sports") as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-            city = getString("city"),
-            neighborhood = getString("neighborhood"),
-            radiusKm = (getLong("radiusKm") ?: 15).toInt(),
-            joinRate = getDouble("joinRate")?.toFloat() ?: 0f,
-            cancelRate = getDouble("cancelRate")?.toFloat() ?: 0f,
-            memberSinceSeconds = getLong("createdAtSeconds") ?: 0,
+            fullName = getString(FIELD_FULL_NAME)?.takeIf { it.isNotBlank() } ?: return null,
+            avatarUrl = getString(FIELD_AVATAR_URL),
+            rating = getDouble(FIELD_RATING)?.toFloat() ?: 0f,
+            ratingCount = (getLong(FIELD_RATING_COUNT) ?: 0L).toInt(),
+            sports = readSports(),
+            city = getString(FIELD_CITY),
+            neighborhood = getString(FIELD_NEIGHBORHOOD),
+            // createdAt is a Firestore Timestamp; getTimestamp unwraps it to millis.
+            createdAtMs = getTimestamp(FIELD_CREATED_AT) ?: 0L,
         )
     } catch (e: Exception) {
         null
+    }
+
+    private fun DocumentSnapshot.readSports(): List<String> =
+        getList(FIELD_SPORTS)?.filterIsInstance<String>().orEmpty()
+
+    private companion object {
+        const val PROFILES_COLLECTION = "profiles"
+        const val ASCENDING = "asc"
+        const val DESCENDING = "desc"
+
+        // Field names of profiles/{uid} — see onUserCreate in functions/src/index.ts.
+        const val FIELD_FULL_NAME = "fullName"
+        const val FIELD_AVATAR_URL = "avatarUrl"
+        const val FIELD_RATING = "rating"
+        const val FIELD_RATING_COUNT = "ratingCount"
+        const val FIELD_SPORTS = "sports"
+        const val FIELD_CITY = "city"
+        const val FIELD_NEIGHBORHOOD = "neighborhood"
+        const val FIELD_CREATED_AT = "createdAt"
     }
 }

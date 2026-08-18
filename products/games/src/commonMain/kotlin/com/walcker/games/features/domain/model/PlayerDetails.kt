@@ -1,26 +1,24 @@
 package com.walcker.games.features.domain.model
 
 /**
- * Detailed player profile information.
+ * Detailed player profile, fetched when the user opens someone from search.
  *
- * Fetched when user taps on a player from search results.
- * Contains all stats, preferences, and historical data.
+ * Mirrors the real shape of `profiles/{uid}` — see `onUserCreate` in
+ * `functions/src/index.ts` and `profileEditableFields()` in `firestore.rules`.
+ * Experience stats (matches organized/played, join and cancel rates) are not
+ * here because no writer produces them yet; they come back in Phase 6 together
+ * with the trigger that maintains them.
+ *
+ * @param memberSinceMs epoch millis of profile creation; `0` when unknown
  */
 internal data class PlayerDetails(
     val userId: String,
     val displayName: String,
     val photoUrl: String?,
-    val email: String,
-    val bio: String?,
     val averageRating: Float,
     val totalRatings: Int,
-    val matchesOrganized: Int,
-    val matchesParticipated: Int,
     val favoriteSports: List<Sport>,
     val city: String?,
     val neighborhood: String?,
-    val locationRadius: Int, // km
-    val joinRate: Float, // fraction 0f..1f — format with formatPercent at the edge
-    val cancelRate: Float, // fraction 0f..1f
-    val memberSince: Long, // unix epoch seconds
+    val memberSinceMs: Long,
 )

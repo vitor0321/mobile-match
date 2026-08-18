@@ -2,7 +2,7 @@ package com.walcker.games.features.domain.repository
 
 import com.walcker.games.features.domain.model.PlayerDetails
 import com.walcker.games.features.domain.model.PlayerSearchFilters
-import com.walcker.games.features.domain.model.PlayerSearchResult
+import com.walcker.games.features.domain.model.PlayerSearchResults
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 
@@ -15,10 +15,11 @@ internal interface PlayerRepository {
     /**
      * Search for players by name and filters.
      *
-     * @param filters Player search filters (name, rating, sports, matches, etc)
-     * @return List of matching players, sorted per [filters.sortBy]
+     * @param filters Player search filters (name, rating, sports)
+     * @return Matching players sorted per [filters.sortBy], plus whether the
+     *         read cap was reached
      */
-    suspend fun searchPlayers(filters: PlayerSearchFilters): Result<List<PlayerSearchResult>>
+    suspend fun searchPlayers(filters: PlayerSearchFilters): Result<PlayerSearchResults>
 
     /**
      * Fetch detailed profile for a specific player.

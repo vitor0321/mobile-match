@@ -1,6 +1,7 @@
 package com.walcker.games.features.data.di
 
 import com.walcker.games.features.data.cache.InMemoryMatchCache
+import com.walcker.games.features.data.cache.InMemoryPlayerCache
 import com.walcker.games.features.data.platform.GamesPlatformServices
 import com.walcker.games.features.data.platform.createPlayerSource
 import com.walcker.games.features.data.preferences.GamesPreferences
@@ -74,7 +75,7 @@ internal val gamesDataModule = module {
     }
     single<RatingSource> { FirestoreRatingSource(firestore = get<FirestoreClient>()) }
     single<RatingRepository> {
-        RatingRepositoryImpl(ratingSource = get())
+        RatingRepositoryImpl(ratingSource = get(), playerCache = get())
     }
     factory<GetOpenGamesUseCase> { GetOpenGamesUseCaseImpl(repository = get()) }
     factory<JoinGameUseCase> { JoinGameUseCaseImpl(repository = get()) }
@@ -99,8 +100,9 @@ internal val gamesDataModule = module {
             ratingSource = get(),
         )
     }
+    single<InMemoryPlayerCache> { InMemoryPlayerCache() }
     single<PlayerRepository> {
-        PlayerRepositoryImpl(source = get())
+        PlayerRepositoryImpl(source = get(), cache = get())
     }
     factory<SearchPlayersUseCase> { SearchPlayersUseCaseImpl(repository = get()) }
     factory<GetPlayerDetailsUseCase> { GetPlayerDetailsUseCaseImpl(repository = get()) }

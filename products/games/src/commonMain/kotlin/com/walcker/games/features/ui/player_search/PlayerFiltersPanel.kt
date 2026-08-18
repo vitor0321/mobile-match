@@ -10,26 +10,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.strings.PlayerSearchStrings
 
 /**
- * ModalBottomSheet panel for advanced player search filters.
+ * Bottom sheet with the advanced player search filters.
  *
- * Allows filtering by: rating range, favorite sports, min matches.
+ * Only rating and sport: the match-count filters were removed in Sprint 3
+ * because nothing writes those counters, so they silently excluded everyone.
  */
 @Composable
 internal fun PlayerFiltersPanel(
     filters: PlayerSearchFilters,
+    strings: PlayerSearchStrings,
     onFiltersChanged: (filters: PlayerSearchFilters) -> Unit,
     onResetFilters: () -> Unit,
     onDismiss: () -> Unit,
@@ -43,46 +47,34 @@ internal fun PlayerFiltersPanel(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = "Filtros Avançados",
+            text = strings.filtersTitle,
             style = MaterialTheme.typography.headlineSmall,
         )
 
-        // Rating range section
         Text(
-            text = "Avaliação",
+            text = strings.ratingSection,
             style = MaterialTheme.typography.labelLarge,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = filters.minRating?.toString() ?: "",
-                onValueChange = { value ->
-                    val minRating = value.toFloatOrNull()
-                    onFiltersChanged(filters.copy(minRating = minRating))
-                },
+            RatingBoundField(
+                value = filters.minRating,
+                label = strings.ratingMin,
+                onValueChange = { onFiltersChanged(filters.copy(minRating = it)) },
                 modifier = Modifier.weight(1f),
-                label = { Text("Mínimo") },
-                placeholder = { Text("0.0") },
-                singleLine = true,
             )
-            OutlinedTextField(
-                value = filters.maxRating?.toString() ?: "",
-                onValueChange = { value ->
-                    val maxRating = value.toFloatOrNull()
-                    onFiltersChanged(filters.copy(maxRating = maxRating))
-                },
+            RatingBoundField(
+                value = filters.maxRating,
+                label = strings.ratingMax,
+                onValueChange = { onFiltersChanged(filters.copy(maxRating = it)) },
                 modifier = Modifier.weight(1f),
-                label = { Text("Máximo") },
-                placeholder = { Text("5.0") },
-                singleLine = true,
             )
         }
 
-        // Sports filter section
         Text(
-            text = "Esportes Favoritos",
+            text = strings.sportsSection,
             style = MaterialTheme.typography.labelLarge,
         )
         Column(
@@ -90,65 +82,23 @@ internal fun PlayerFiltersPanel(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Sport.entries.forEach { sport ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Checkbox(
-                        checked = filters.favoriteSports.contains(sport),
-                        onCheckedChange = { isChecked ->
-                            val newSports = if (isChecked) {
-                                filters.favoriteSports + sport
-                            } else {
-                                filters.favoriteSports - sport
-                            }
-                            onFiltersChanged(filters.copy(favoriteSports = newSports))
-                        },
-                    )
-                    Text(
-                        text = sport.label,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                val selected = sport in filters.favoriteSports
+                FilterChip(
+                    selected = selected,
+                    onClick = {
+                        val updated = if (selected) {
+                            filters.favoriteSports - sport
+                        } else {
+                            filters.favoriteSports + sport
+                        }
+                        onFiltersChanged(filters.copy(favoriteSports = updated))
+                    },
+                    label = { Text(sport.label) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
-        // Min matches section
-        Text(
-            text = "Experiência Mínima",
-            style = MaterialTheme.typography.labelLarge,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = filters.minMatchesOrganized?.toString() ?: "",
-                onValueChange = { value ->
-                    val minMatches = value.toIntOrNull()
-                    onFiltersChanged(filters.copy(minMatchesOrganized = minMatches))
-                },
-                modifier = Modifier.weight(1f),
-                label = { Text("Partidas Organizadas") },
-                placeholder = { Text("0") },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = filters.minMatchesParticipated?.toString() ?: "",
-                onValueChange = { value ->
-                    val minMatches = value.toIntOrNull()
-                    onFiltersChanged(filters.copy(minMatchesParticipated = minMatches))
-                },
-                modifier = Modifier.weight(1f),
-                label = { Text("Partidas Participadas") },
-                placeholder = { Text("0") },
-                singleLine = true,
-            )
-        }
-
-        // Action buttons
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -159,17 +109,43 @@ internal fun PlayerFiltersPanel(
                 onClick = onResetFilters,
                 modifier = Modifier.weight(1f),
             ) {
-                Text("Limpar Filtros")
+                Text(strings.clearFilters)
             }
             Button(
                 onClick = onDismiss,
                 modifier = Modifier.weight(1f),
             ) {
-                Text("Aplicar")
+                Text(strings.applyFilters)
             }
         }
 
-        // Spacer for bottom navigation
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
+
+/**
+ * Rating bound input.
+ *
+ * Anything outside `0..5` is clamped and an unparseable value clears the bound
+ * instead of freezing the field — the filter is a hint, not a form to validate.
+ */
+@Composable
+private fun RatingBoundField(
+    value: Float?,
+    label: String,
+    onValueChange: (Float?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = value?.toString() ?: "",
+        onValueChange = { text ->
+            onValueChange(text.toFloatOrNull()?.coerceIn(0f, MAX_RATING))
+        },
+        modifier = modifier,
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+    )
+}
+
+private const val MAX_RATING = 5f

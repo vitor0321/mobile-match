@@ -1,11 +1,12 @@
 package com.walcker.games.features.data.repository
 
+import com.walcker.games.features.data.cache.InMemoryPlayerCache
 import com.walcker.games.features.data.mapper.toDomain
 import com.walcker.games.features.data.source.PlayerSource
 import com.walcker.games.features.domain.error.GamesError
 import com.walcker.games.features.domain.model.PlayerDetails
 import com.walcker.games.features.domain.model.PlayerSearchFilters
-import com.walcker.games.features.domain.model.PlayerSearchResult
+import com.walcker.games.features.domain.model.PlayerSearchResults
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.games.features.domain.repository.PlayerRepository
@@ -13,26 +14,41 @@ import com.walcker.games.features.domain.repository.PlayerRepository
 /**
  * Implementation of [PlayerRepository].
  *
- * Handles data layer logic: calling [PlayerSource] for Firestore queries,
- * mapping DTOs to domain models, and error handling.
+ * Reads go through [InMemoryPlayerCache] first: the search screen re-queries on
+ * every filter change and on every back-navigation from a profile, and those
+ * repeats are pure cost. Ratings are deliberately not cached — a paginated,
+ * sortable list keyed by cursor would need its own invalidation story, and the
+ * user reaches it far less often.
  */
 internal class PlayerRepositoryImpl(
     private val source: PlayerSource,
+    private val cache: InMemoryPlayerCache,
 ) : PlayerRepository {
 
-    override suspend fun searchPlayers(filters: PlayerSearchFilters): Result<List<PlayerSearchResult>> =
-        source.searchPlayers(filters)
-            .mapCatching { dtos -> dtos.map { it.toDomain() } }
-            .recoverCatching { error ->
-                throw mapToGamesError(error)
-            }
+    override suspend fun searchPlayers(
+        filters: PlayerSearchFilters,
+    ): Result<PlayerSearchResults> {
+        cache.searchResults(filters)?.let { return Result.success(it) }
 
-    override suspend fun getPlayerDetails(userId: String): Result<PlayerDetails> =
-        source.getPlayerDetails(userId)
-            .mapCatching { it.toDomain() }
-            .recoverCatching { error ->
-                throw mapToGamesError(error)
+        return source.searchPlayers(filters)
+            .mapCatching { page ->
+                PlayerSearchResults(
+                    players = page.players.map { it.toDomain() },
+                    reachedLimit = page.reachedLimit,
+                )
             }
+            .onSuccess { results -> cache.putSearchResults(filters, results) }
+            .recoverCatching { error -> throw mapToGamesError(error) }
+    }
+
+    override suspend fun getPlayerDetails(userId: String): Result<PlayerDetails> {
+        cache.details(userId)?.let { return Result.success(it) }
+
+        return source.getPlayerDetails(userId)
+            .mapCatching { it.toDomain() }
+            .onSuccess { player -> cache.putDetails(userId, player) }
+            .recoverCatching { error -> throw mapToGamesError(error) }
+    }
 
     override suspend fun getPlayerRatings(
         userId: String,
@@ -41,17 +57,15 @@ internal class PlayerRepositoryImpl(
         cursor: String?,
     ): Result<RatingsPage> =
         source.getPlayerRatings(userId, limit, sort, cursor)
-            .recoverCatching { error ->
-                throw mapToGamesError(error)
-            }
+            .recoverCatching { error -> throw mapToGamesError(error) }
 
     /**
      * Convert exceptions from the source layer to domain [GamesError].
      */
     private fun mapToGamesError(error: Throwable): GamesError = when {
         error is GamesError -> error
-        error.message?.contains("not found", ignoreCase = true) == true ->
-            GamesError.NotFound(error.message ?: "Jogador não encontrado")
+        error is NoSuchElementException ->
+            GamesError.NotFound("Jogador")
         error.message?.contains("permission denied", ignoreCase = true) == true ->
             GamesError.PermissionDenied(error.message ?: "Sem permissão para acessar")
         else ->

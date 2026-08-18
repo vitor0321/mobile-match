@@ -105,26 +105,21 @@ internal fun PlayerSearchResultCard(
                     )
                 }
 
-                // Sports and match count
-                Text(
-                    text = buildString {
-                        if (player.favoriteSports.isNotEmpty()) {
-                            append(player.favoriteSports.take(2).joinToString(", ") { it.label })
-                        }
-                        if (player.matchesOrganized + player.matchesParticipated > 0) {
-                            append(" • ")
-                            append(
-                                (player.matchesOrganized + player.matchesParticipated)
-                                    .toString()
-                            )
-                            append(" partidas")
-                        }
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
+                // Favourite sports. The match counter that used to sit here was
+                // removed with the fields that never had a writer.
+                if (player.favoriteSports.isNotEmpty()) {
+                    Text(
+                        text = player.favoriteSports
+                            .take(MAX_SPORTS_ON_CARD)
+                            .joinToString(separator = " · ") { it.label },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
 }
+
+private const val MAX_SPORTS_ON_CARD = 3

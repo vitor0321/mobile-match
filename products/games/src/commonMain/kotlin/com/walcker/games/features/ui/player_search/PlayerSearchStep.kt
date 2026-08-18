@@ -77,6 +77,7 @@ internal class PlayerSearchStep : Screen {
             ) {
                 PlayerFiltersPanel(
                     filters = state.filters,
+                    strings = strings,
                     onFiltersChanged = { filters ->
                         stepModel.onEvent(PlayerSearchEvents.FiltersChanged(filters))
                     },
@@ -120,7 +121,7 @@ internal class PlayerSearchStep : Screen {
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
-                            contentDescription = "Filtros",
+                            contentDescription = strings.filtersButton,
                         )
                     }
                 }
@@ -151,14 +152,18 @@ internal class PlayerSearchStep : Screen {
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             Button(
-                                onClick = { stepModel.onEvent(PlayerSearchEvents.QueryChanged(state.query)) },
+                                onClick = {
+                                    stepModel.onEvent(
+                                        PlayerSearchEvents.QueryChanged(state.query),
+                                    )
+                                },
                                 modifier = Modifier.padding(top = 16.dp),
                             ) {
-                                Text("Tentar Novamente")
+                                Text(strings.retry)
                             }
                         }
                     }
-                    state.results.isEmpty() && state.query.isBlank() -> {
+                    state.isIdle -> {
                         EmptyState(
                             message = strings.emptySearchPrompt,
                             modifier = Modifier.fillMaxSize(),
@@ -176,6 +181,18 @@ internal class PlayerSearchStep : Screen {
                             contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
+                            // The list may be missing people the query never
+                            // read. Say so rather than let it look complete.
+                            if (state.reachedLimit) {
+                                item(key = "reached-limit") {
+                                    Text(
+                                        text = strings.reachedLimit,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+
                             items(
                                 items = state.results,
                                 key = { it.userId },

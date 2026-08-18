@@ -11,19 +11,11 @@ import com.walcker.games.features.domain.model.Sport
  */
 internal fun PlayerSearchResultDto.toDomain(): PlayerSearchResult = PlayerSearchResult(
     userId = userId,
-    displayName = displayName,
-    photoUrl = photoUrl,
+    displayName = fullName,
+    photoUrl = avatarUrl,
     averageRating = rating,
     totalRatings = ratingCount,
-    favoriteSports = sports.mapNotNull { sportName ->
-        try {
-            Sport.valueOf(sportName)
-        } catch (e: IllegalArgumentException) {
-            null
-        }
-    },
-    matchesOrganized = matchesOrganized,
-    matchesParticipated = matchesParticipated,
+    favoriteSports = sports.toSports(),
 )
 
 /**
@@ -31,27 +23,20 @@ internal fun PlayerSearchResultDto.toDomain(): PlayerSearchResult = PlayerSearch
  */
 internal fun PlayerDetailsDto.toDomain(): PlayerDetails = PlayerDetails(
     userId = userId,
-    displayName = displayName,
-    photoUrl = photoUrl,
-    email = email,
-    bio = bio,
+    displayName = fullName,
+    photoUrl = avatarUrl,
     averageRating = rating,
     totalRatings = ratingCount,
-    matchesOrganized = matchesOrganized,
-    matchesParticipated = matchesParticipated,
-    favoriteSports = sports.mapNotNull { sportName ->
-        try {
-            Sport.valueOf(sportName)
-        } catch (e: IllegalArgumentException) {
-            null
-        }
-    },
+    favoriteSports = sports.toSports(),
     city = city,
     neighborhood = neighborhood,
-    locationRadius = radiusKm,
-    // Domain contract is a 0f..1f fraction; clamp so a malformed backend
-    // value can never render as a nonsense percentage.
-    joinRate = joinRate.coerceIn(0f, 1f),
-    cancelRate = cancelRate.coerceIn(0f, 1f),
-    memberSince = memberSinceSeconds,
+    memberSinceMs = createdAtMs,
 )
+
+/**
+ * An unknown sport name is dropped rather than failing the whole profile: the
+ * enum can lag behind what an older client wrote.
+ */
+private fun List<String>.toSports(): List<Sport> = mapNotNull { name ->
+    Sport.entries.firstOrNull { it.name == name }
+}

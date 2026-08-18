@@ -1,19 +1,12 @@
 package com.walcker.games.strings
 
 import com.walcker.match.core.format.formatDecimal
-import com.walcker.match.core.format.formatPercent
 
 internal data class PlayerDetailsStrings(
     val title: String,
     val errorLoading: String,
     val retry: String,
     val back: String,
-    val about: String,
-    val experience: String,
-    val matchesOrganized: String,
-    val matchesParticipated: String,
-    val joinRate: String,
-    val cancelRate: String,
     val reviews: String,
     val noReviews: String,
     val seeAllReviews: String,
@@ -21,7 +14,6 @@ internal data class PlayerDetailsStrings(
     val memberSince: (String) -> String,
     val ratingValue: (Float) -> String,
     val ratingAccessibility: (Float) -> String,
-    val percentValue: (Float) -> String,
 )
 
 internal val playerDetailsStringsEn = PlayerDetailsStrings(
@@ -29,12 +21,6 @@ internal val playerDetailsStringsEn = PlayerDetailsStrings(
     errorLoading = "Error loading player. Please try again.",
     retry = "Try again",
     back = "Back",
-    about = "About",
-    experience = "Experience",
-    matchesOrganized = "Organized",
-    matchesParticipated = "Played",
-    joinRate = "Join rate",
-    cancelRate = "Cancel rate",
     reviews = "Reviews",
     noReviews = "This player hasn't been reviewed yet.",
     seeAllReviews = "See all reviews",
@@ -44,7 +30,6 @@ internal val playerDetailsStringsEn = PlayerDetailsStrings(
     ratingAccessibility = { value ->
         "Rated ${formatDecimal(value = value, decimals = 1, decimalSeparator = '.')} out of 5"
     },
-    percentValue = { fraction -> formatPercent(fraction) },
 )
 
 internal val playerDetailsStringsPt = PlayerDetailsStrings(
@@ -52,12 +37,6 @@ internal val playerDetailsStringsPt = PlayerDetailsStrings(
     errorLoading = "Erro ao carregar jogador. Tente novamente.",
     retry = "Tentar novamente",
     back = "Voltar",
-    about = "Sobre",
-    experience = "Experiência",
-    matchesOrganized = "Organizadas",
-    matchesParticipated = "Jogadas",
-    joinRate = "Taxa de entrada",
-    cancelRate = "Taxa de cancelamento",
     reviews = "Avaliações",
     noReviews = "Este jogador ainda não recebeu avaliações.",
     seeAllReviews = "Ver todas as avaliações",
@@ -67,5 +46,4 @@ internal val playerDetailsStringsPt = PlayerDetailsStrings(
     ratingAccessibility = { value ->
         "Nota ${formatDecimal(value = value, decimals = 1, decimalSeparator = ',')} de 5"
     },
-    percentValue = { fraction -> formatPercent(fraction) },
 )
