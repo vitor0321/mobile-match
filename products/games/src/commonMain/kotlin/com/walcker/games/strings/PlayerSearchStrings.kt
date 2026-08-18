@@ -1,5 +1,7 @@
 package com.walcker.games.strings
 
+import com.walcker.match.core.format.formatDecimal
+
 internal data class PlayerSearchStrings(
     val title: String,
     val subtitle: String,
@@ -7,6 +9,8 @@ internal data class PlayerSearchStrings(
     val emptySearchPrompt: String,
     val emptyForQuery: (String) -> String,
     val errorLoading: String,
+    val ratingValue: (Float) -> String,
+    val ratingAccessibility: (Float) -> String,
 )
 
 internal val playerSearchStringsEn = PlayerSearchStrings(
@@ -16,6 +20,10 @@ internal val playerSearchStringsEn = PlayerSearchStrings(
     emptySearchPrompt = "Search for a player to get started",
     emptyForQuery = { q -> "No players found matching \"$q\"." },
     errorLoading = "Error loading players. Please try again.",
+    ratingValue = { value -> formatDecimal(value = value, decimals = 1, decimalSeparator = '.') },
+    ratingAccessibility = { value ->
+        "Rated ${formatDecimal(value = value, decimals = 1, decimalSeparator = '.')} out of 5"
+    },
 )
 
 internal val playerSearchStringsPt = PlayerSearchStrings(
@@ -25,4 +33,8 @@ internal val playerSearchStringsPt = PlayerSearchStrings(
     emptySearchPrompt = "Busque um jogador para começar",
     emptyForQuery = { q -> "Nenhum jogador encontrado para \"$q\"." },
     errorLoading = "Erro ao carregar jogadores. Tente novamente.",
+    ratingValue = { value -> formatDecimal(value = value, decimals = 1, decimalSeparator = ',') },
+    ratingAccessibility = { value ->
+        "Nota ${formatDecimal(value = value, decimals = 1, decimalSeparator = ',')} de 5"
+    },
 )

@@ -29,6 +29,8 @@ import com.walcker.games.features.domain.usecase.GetOpenGamesUseCase
 import com.walcker.games.features.domain.usecase.GetOpenGamesUseCaseImpl
 import com.walcker.games.features.domain.usecase.GetPlayerDetailsUseCase
 import com.walcker.games.features.domain.usecase.GetPlayerDetailsUseCaseImpl
+import com.walcker.games.features.domain.usecase.GetPlayerRatingsUseCase
+import com.walcker.games.features.domain.usecase.GetPlayerRatingsUseCaseImpl
 import com.walcker.games.features.domain.usecase.JoinGameUseCase
 import com.walcker.games.features.domain.usecase.JoinGameUseCaseImpl
 import com.walcker.games.features.domain.usecase.LeaveMatchUseCase
@@ -102,4 +104,5 @@ internal val gamesDataModule = module {
     }
     factory<SearchPlayersUseCase> { SearchPlayersUseCaseImpl(repository = get()) }
     factory<GetPlayerDetailsUseCase> { GetPlayerDetailsUseCaseImpl(repository = get()) }
+    factory<GetPlayerRatingsUseCase> { GetPlayerRatingsUseCaseImpl(repository = get()) }
 }

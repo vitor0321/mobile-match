@@ -6,7 +6,8 @@ import com.walcker.games.features.domain.error.GamesError
 import com.walcker.games.features.domain.model.PlayerDetails
 import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.PlayerSearchResult
-import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.RatingSort
+import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.games.features.domain.repository.PlayerRepository
 
 /**
@@ -36,9 +37,10 @@ internal class PlayerRepositoryImpl(
     override suspend fun getPlayerRatings(
         userId: String,
         limit: Int,
+        sort: RatingSort,
         cursor: String?,
-    ): Result<List<Rating>> =
-        source.getPlayerRatings(userId, limit, cursor)
+    ): Result<RatingsPage> =
+        source.getPlayerRatings(userId, limit, sort, cursor)
             .recoverCatching { error ->
                 throw mapToGamesError(error)
             }

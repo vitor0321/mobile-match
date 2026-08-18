@@ -5,6 +5,8 @@ import com.walcker.games.features.ui.gamelist.GameListStepModel
 import com.walcker.games.features.ui.map.MapStepModel
 import com.walcker.games.features.ui.mymatches.MyMatchesStepModel
 import com.walcker.games.features.ui.notifications.NotificationHistoryStepModel
+import com.walcker.games.features.ui.player_details.PlayerDetailsStepModel
+import com.walcker.games.features.ui.player_ratings.PlayerRatingsListStepModel
 import com.walcker.games.features.ui.player_search.PlayerSearchStepModel
 import com.walcker.games.features.ui.playerprofile.PlayerProfileStepModel
 import com.walcker.games.features.ui.search.SearchStepModel
@@ -71,6 +73,22 @@ internal val gamesUiModule = module {
     factory {
         PlayerSearchStepModel(
             searchPlayersUseCase = get(),
+            stringsHolder = get(),
+        )
+    }
+    factory { (userId: String) ->
+        PlayerDetailsStepModel(
+            userId = userId,
+            getPlayerDetails = get(),
+            getPlayerRatings = get(),
+            stringsHolder = get(),
+        )
+    }
+    factory { (userId: String, playerName: String) ->
+        PlayerRatingsListStepModel(
+            userId = userId,
+            playerName = playerName,
+            getPlayerRatings = get(),
             stringsHolder = get(),
         )
     }

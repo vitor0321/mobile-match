@@ -49,7 +49,9 @@ internal fun PlayerDetailsDto.toDomain(): PlayerDetails = PlayerDetails(
     city = city,
     neighborhood = neighborhood,
     locationRadius = radiusKm,
-    joinRate = joinRate,
-    cancelRate = cancelRate,
+    // Domain contract is a 0f..1f fraction; clamp so a malformed backend
+    // value can never render as a nonsense percentage.
+    joinRate = joinRate.coerceIn(0f, 1f),
+    cancelRate = cancelRate.coerceIn(0f, 1f),
     memberSince = memberSinceSeconds,
 )

@@ -3,7 +3,8 @@ package com.walcker.games.features.domain.repository
 import com.walcker.games.features.domain.model.PlayerDetails
 import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.PlayerSearchResult
-import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.RatingSort
+import com.walcker.games.features.domain.model.RatingsPage
 
 /**
  * Repository for player-related data access.
@@ -30,16 +31,19 @@ internal interface PlayerRepository {
     /**
      * Fetch ratings/reviews received by a player.
      *
-     * Paginated with optional cursor for "load more".
+     * Paginated with an opaque cursor for "load more"; ordering is applied
+     * server-side so paging never reshuffles what the user already scrolled past.
      *
      * @param userId ID of the player being rated
      * @param limit Number of ratings to fetch (default 20)
-     * @param cursor Optional pagination cursor (from previous call)
-     * @return List of ratings in descending order by creation time
+     * @param sort Ordering applied to the whole result set
+     * @param cursor Optional pagination cursor (from the previous page)
+     * @return A page of ratings plus the cursor for the next one
      */
     suspend fun getPlayerRatings(
         userId: String,
         limit: Int = 20,
+        sort: RatingSort = RatingSort.RECENT,
         cursor: String? = null,
-    ): Result<List<Rating>>
+    ): Result<RatingsPage>
 }

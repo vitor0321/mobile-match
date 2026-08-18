@@ -1,7 +1,8 @@
 package com.walcker.games.features.data.source
 
 import com.walcker.games.features.domain.model.PlayerSearchFilters
-import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.RatingSort
+import com.walcker.games.features.domain.model.RatingsPage
 
 /**
  * Data source interface for player-related remote operations.
@@ -26,18 +27,20 @@ internal interface PlayerSource {
     suspend fun getPlayerDetails(userId: String): Result<PlayerDetailsDto>
 
     /**
-     * Fetch ratings received by a player.
+     * Fetch a page of ratings received by a player.
      *
      * @param userId Player being rated
-     * @param limit Number to fetch
-     * @param cursor Optional pagination cursor
-     * @return List of rating DTOs
+     * @param limit Page size
+     * @param sort Server-side ordering
+     * @param cursor Opaque cursor from the previous page; `null` for the first
+     * @return A page of ratings plus the cursor for the next one
      */
     suspend fun getPlayerRatings(
         userId: String,
         limit: Int = 20,
+        sort: RatingSort = RatingSort.RECENT,
         cursor: String? = null,
-    ): Result<List<Rating>>
+    ): Result<RatingsPage>
 }
 
 /**

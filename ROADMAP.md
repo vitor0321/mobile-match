@@ -1,6 +1,6 @@
 # Mobile Match — Roadmap Consolidado
 
-**Último atualizado:** 2026-08-18 · **Status:** Phase 4 complete, Phase 5 planning
+**Último atualizado:** 2026-08-18 · **Status:** Phase 5 Sprint 1-2 complete, Sprint 3 (polish) next
 
 ---
 
@@ -138,17 +138,19 @@ functions/                  Cloud Functions (triggers, callables)
 - 🎯 **Leaderboard:** Top players (opcional, bonus)
 
 **Sprints:**
-1. **Player Search + Filters** (6-8h)
+1. **Player Search + Filters** (6-8h) ✅
    - `SearchPlayersUseCase`, `GetPlayerDetailsUseCase`
    - `PlayerSearchStep` + `PlayerFiltersPanel`
    - Queries otimizadas por raio, esporte, rating
 
-2. **Player Details & Ratings** (6-8h)
-   - Enhanced `PlayerDetailsStep` com ratings section
-   - `PlayerRatingsListStep` (paginated, 20 por página)
-   - `RatingStars`, `RatingSummary` components
+2. **Player Details & Ratings** (6-8h) ✅
+   - `PlayerDetailsStep` com header, stats, histograma e preview de avaliações
+   - `PlayerRatingsListStep` (paginado, 20 por página, ordenação servidor-side)
+   - `RatingStars` e `RatingSummary` no cedarDS
+   - `GetPlayerRatingsUseCase` + cursor opaco (`RatingCursor`)
+   - Strings pt-BR/en-US e testes de StepModel
 
-3. **Polish & Integration** (2-4h)
+3. **Polish & Integration** (2-4h) ⏳
    - Caching em memória (TTL 5 min)
    - Pagination nos resultados de busca
    - Pre-loading de jogadores próximos
@@ -444,41 +446,41 @@ Fase 7
 
 ## Próximas Ações
 
-### Imediato (Semana 1)
+### Concluído (Sprint 1 e 2)
 
-1. **Iniciar Phase 5 - Player Search**
-   - [ ] `SearchPlayersUseCase`, `GetPlayerDetailsUseCase`
-   - [ ] Firestore queries otimizadas (rating, sports, matches count)
-   - [ ] `PlayerSearchStep` + `PlayerSearchResultCard`
+1. **Phase 5 - Player Search** ✅
+   - [x] `SearchPlayersUseCase`, `GetPlayerDetailsUseCase`
+   - [x] Firestore queries (rating, sports, matches count)
+   - [x] `PlayerSearchStep` + `PlayerSearchResultCard`
 
-2. **Criar `PlayerFiltersPanel`**
-   - [ ] Rating range slider (0-5 ⭐)
-   - [ ] Sport multi-select
-   - [ ] Min matches (organized, participated)
-   - [ ] Sort dropdown (rating, recent, matches, name)
+2. **`PlayerFiltersPanel`** ✅
+   - [x] Rating range slider (0-5 ⭐)
+   - [x] Sport multi-select
+   - [x] Min matches (organized, participated)
+   - [x] Sort dropdown (rating, recent, matches, name)
 
-3. **Atualizar `PlayerDetailsStep`**
-   - [ ] Ratings section com estrelas e comentários
-   - [ ] Distribution histogram (1-5 ⭐)
-   - [ ] Latest 5 reviews (scrollable)
-   - [ ] [See All Reviews] → paginated list
+3. **`PlayerDetailsStep`** ✅
+   - [x] Ratings section com estrelas e comentários
+   - [x] Distribution histogram (1-5 ⭐) via `RatingSummary`
+   - [x] Latest 5 reviews
+   - [x] [Ver todas as avaliações] → lista paginada
 
-### Semana 2
+4. **Ratings Display & List** ✅
+   - [x] `PlayerRatingsListStep` (paginado, 20/página, prefetch + botão)
+   - [x] `RatingStars`, `RatingSummary` no cedarDS
+   - [x] Sort filters (Recentes, Melhores, Piores) — ordenação no servidor
 
-4. **Ratings Display & List**
-   - [ ] `PlayerRatingsListStep` (paginated, 20/page)
-   - [ ] `RatingStars`, `RatingSummary` components
-   - [ ] Sort filters (Recent, Highest, Lowest)
+6. **Testes & Strings** ✅
+   - [x] Unit tests (`RatingDistribution`, `RatingCursor`, formatters de `core`)
+   - [x] Turbine tests (`PlayerDetailsStepModel`, `PlayerRatingsListStepModel`)
+   - [x] Strings pt-BR/en-US (`PlayerDetailsStrings`, `PlayerRatingsStrings`)
+
+### Próximo (Sprint 3 — Polish)
 
 5. **Caching & Performance**
    - [ ] In-memory cache (TTL 5 min)
-   - [ ] Pagination nos resultados
+   - [ ] Pagination nos resultados de busca de jogadores
    - [ ] Pre-loading de jogadores próximos
-
-6. **Testes & Strings**
-   - [ ] Unit tests (SearchPlayersUseCase, GetPlayerDetailsUseCase)
-   - [ ] Turbine tests (PlayerSearchStepModel)
-   - [ ] Strings pt-BR/en-US
 
 ### Semana 3
 
@@ -602,6 +604,9 @@ Direto na chave Pix do organizador
 | **D8** | Pagamentos | Pix P2P (sem gateway) | Rateio direto, sem escrow |
 | **D9** | Search raio | Geohash (GeoFire padrão) | Firestore não tem query por distância |
 | **D10** | Ratings | Não agregados no server | Client-side reduce, recalcula ao submeter |
+| **D11** | Timestamp de rating | Campo numérico `createdAtMs` | Sobrevive ao interop Android/iOS e serve de cursor `startAfter` |
+| **D12** | Paginação de ratings | Cursor opaco + `orderBy` no servidor | Ordenar página parcial no cliente reembaralha a lista ao carregar mais |
+| **D13** | Formatação numérica | `core/format` próprio | `String.format` é JVM-only e quebra o build iOS |
 
 ---
 

@@ -12,4 +12,6 @@ internal val PtBrGamesStrings = GamesStrings(
     playerProfile = playerProfileStringsPt,
     notificationHistory = PtBrNotificationHistoryStrings(),
     playerSearch = playerSearchStringsPt,
+    playerDetails = playerDetailsStringsPt,
+    playerRatings = playerRatingsStringsPt,
 )

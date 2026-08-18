@@ -9,11 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,6 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage as CoilAsyncImage
 import com.walcker.games.features.domain.model.PlayerSearchResult
+import com.walcker.match.cedar.components.RatingStars
 
 /**
  * Card component displaying a player search result.
@@ -35,6 +33,8 @@ import com.walcker.games.features.domain.model.PlayerSearchResult
 @Composable
 internal fun PlayerSearchResultCard(
     player: PlayerSearchResult,
+    ratingLabel: String,
+    ratingAccessibilityLabel: String,
     onPlayerSelected: (userId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -90,14 +90,12 @@ internal fun PlayerSearchResultCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(16.dp),
+                    RatingStars(
+                        rating = player.averageRating,
+                        contentDescription = ratingAccessibilityLabel,
                     )
                     Text(
-                        text = String.format("%.1f", player.averageRating),
+                        text = ratingLabel,
                         style = MaterialTheme.typography.labelSmall,
                     )
                     Text(

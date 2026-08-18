@@ -34,6 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import com.walcker.games.features.ui.player_details.PlayerDetailsStep
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.EmptyState
@@ -50,6 +53,7 @@ internal class PlayerSearchStep : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
         val stepModel = koinScreenModel<PlayerSearchStepModel>()
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -61,10 +65,8 @@ internal class PlayerSearchStep : Screen {
                 when (effect) {
                     is PlayerSearchEffect.ShowMessage ->
                         snackbarHostState.showSnackbar(effect.message)
-                    is PlayerSearchEffect.NavigateToPlayer -> {
-                        // TODO: Navigate to PlayerDetailsStep(effect.userId)
-                        snackbarHostState.showSnackbar("Navegar para jogador: ${effect.userId}")
-                    }
+                    is PlayerSearchEffect.NavigateToPlayer ->
+                        navigator.push(PlayerDetailsStep(effect.userId))
                 }
             }
         }
@@ -180,6 +182,10 @@ internal class PlayerSearchStep : Screen {
                             ) { player ->
                                 PlayerSearchResultCard(
                                     player = player,
+                                    ratingLabel = strings.ratingValue(player.averageRating),
+                                    ratingAccessibilityLabel = strings.ratingAccessibility(
+                                        player.averageRating,
+                                    ),
                                     onPlayerSelected = { userId ->
                                         stepModel.onEvent(PlayerSearchEvents.SelectPlayer(userId))
                                     },

@@ -2,7 +2,8 @@ package com.walcker.games.features.data.source
 
 import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.PlayerSortBy
-import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.RatingSort
+import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.match.firestore.DocumentSnapshot
 import com.walcker.match.firestore.FirestoreClient
 
@@ -76,9 +77,15 @@ internal class FirestorePlayerSource(
     override suspend fun getPlayerRatings(
         userId: String,
         limit: Int,
+        sort: RatingSort,
         cursor: String?,
-    ): Result<List<Rating>> =
-        ratingSource.getUserRatings(userId, limit)
+    ): Result<RatingsPage> =
+        ratingSource.getUserRatingsPage(
+            userId = userId,
+            limit = limit,
+            sort = sort,
+            cursor = cursor,
+        )
 
     /**
      * Client-side filter: check if DTO matches all active filters.

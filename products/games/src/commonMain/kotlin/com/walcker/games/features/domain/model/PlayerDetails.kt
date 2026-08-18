@@ -20,7 +20,7 @@ internal data class PlayerDetails(
     val city: String?,
     val neighborhood: String?,
     val locationRadius: Int, // km
-    val joinRate: Float, // percentage: 0-100
-    val cancelRate: Float, // percentage: 0-100
+    val joinRate: Float, // fraction 0f..1f — format with formatPercent at the edge
+    val cancelRate: Float, // fraction 0f..1f
     val memberSince: Long, // unix epoch seconds
 )

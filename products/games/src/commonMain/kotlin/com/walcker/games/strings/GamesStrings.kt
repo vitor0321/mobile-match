@@ -8,4 +8,6 @@ internal data class GamesStrings(
     val playerProfile: PlayerProfileStrings,
     val notificationHistory: NotificationHistoryStrings,
     val playerSearch: PlayerSearchStrings,
+    val playerDetails: PlayerDetailsStrings,
+    val playerRatings: PlayerRatingsStrings,
 )
