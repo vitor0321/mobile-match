@@ -2,11 +2,14 @@ package com.walcker.games.features.ui.matchdetail
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.ParticipantsSummary
+import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.usecase.JoinGameUseCase
+import com.walcker.games.features.domain.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
@@ -41,6 +44,11 @@ internal data class MatchDetailState(
     val isJoining: Boolean = false,
     val joinOutcome: JoinMatchOutcome? = null,
     val successMessage: String? = null,
+    // Leave/Cancel states
+    val isLeavingMatch: Boolean = false,
+    val isCancellingMatch: Boolean = false,
+    val showLeaveConfirmDialog: Boolean = false,
+    val showCancelConfirmDialog: Boolean = false,
     // Rating UI state
     val showRatingSheet: Boolean = false,
     val selectedPlayerForRating: Pair<String, String>? = null, // userId to displayName
@@ -59,6 +67,18 @@ internal sealed interface MatchDetailEvent {
     data object JoinMatch : MatchDetailEvent
     /** Dismisses the success message. */
     data object DismissSuccess : MatchDetailEvent
+    /** Shows leave match confirmation dialog. */
+    data object RequestLeaveMatch : MatchDetailEvent
+    /** Confirms leaving the match. */
+    data object ConfirmLeaveMatch : MatchDetailEvent
+    /** Closes leave match confirmation dialog. */
+    data object CancelLeaveMatch : MatchDetailEvent
+    /** Shows cancel match confirmation dialog. */
+    data object RequestCancelMatch : MatchDetailEvent
+    /** Confirms cancelling the match. */
+    data object ConfirmCancelMatch : MatchDetailEvent
+    /** Closes cancel match confirmation dialog. */
+    data object CancelCancelMatch : MatchDetailEvent
     /** Opens rating sheet for a specific player. */
     data class OpenRatingSheet(val userId: String, val displayName: String) : MatchDetailEvent
     /** Closes rating sheet. */
@@ -83,6 +103,8 @@ internal class MatchDetailStepModel(
     private val observeMatch: ObserveMatchUseCase,
     private val observeParticipants: ObserveParticipantsUseCase,
     private val joinGame: JoinGameUseCase,
+    private val leaveMatch: LeaveMatchUseCase,
+    private val cancelMatch: CancelMatchUseCase,
     private val submitRating: SubmitRatingUseCase,
     private val sessionHolder: SessionHolder,
     private val promotionCoordinator: PromotionCoordinator,
@@ -118,6 +140,20 @@ internal class MatchDetailStepModel(
             MatchDetailEvent.JoinMatch -> joinMatchAction()
             MatchDetailEvent.DismissSuccess -> {
                 _state.update { it.copy(successMessage = null, joinOutcome = null) }
+            }
+            MatchDetailEvent.RequestLeaveMatch -> {
+                _state.update { it.copy(showLeaveConfirmDialog = true) }
+            }
+            MatchDetailEvent.ConfirmLeaveMatch -> leaveMatchAction()
+            MatchDetailEvent.CancelLeaveMatch -> {
+                _state.update { it.copy(showLeaveConfirmDialog = false) }
+            }
+            MatchDetailEvent.RequestCancelMatch -> {
+                _state.update { it.copy(showCancelConfirmDialog = true) }
+            }
+            MatchDetailEvent.ConfirmCancelMatch -> cancelMatchAction()
+            MatchDetailEvent.CancelCancelMatch -> {
+                _state.update { it.copy(showCancelConfirmDialog = false) }
             }
             is MatchDetailEvent.OpenRatingSheet -> {
                 _state.update {
@@ -190,6 +226,59 @@ internal class MatchDetailStepModel(
                         it.copy(
                             isJoining = false,
                             errorMessage = error.message ?: "Erro ao entrar na partida",
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun leaveMatchAction() {
+        screenModelScope.launch {
+            _state.update { it.copy(isLeavingMatch = true, showLeaveConfirmDialog = false, errorMessage = null) }
+
+            leaveMatch(matchId)
+                .onSuccess { outcome ->
+                    val message = "Você saiu da partida"
+                    _state.update {
+                        it.copy(
+                            isLeavingMatch = false,
+                            successMessage = message,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isLeavingMatch = false,
+                            errorMessage = error.message ?: "Erro ao sair da partida",
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun cancelMatchAction() {
+        screenModelScope.launch {
+            _state.update { it.copy(isCancellingMatch = true, showCancelConfirmDialog = false, errorMessage = null) }
+
+            cancelMatch(matchId)
+                .onSuccess { outcome ->
+                    val message = when (outcome) {
+                        is CancelMatchOutcome.Cancelled -> "Partida cancelada"
+                        is CancelMatchOutcome.AlreadyCancelled -> "Partida já foi cancelada"
+                    }
+                    _state.update {
+                        it.copy(
+                            isCancellingMatch = false,
+                            successMessage = message,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isCancellingMatch = false,
+                            errorMessage = error.message ?: "Erro ao cancelar partida",
                         )
                     }
                 }

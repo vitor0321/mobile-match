@@ -63,6 +63,8 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val stringsHolder: GamesStringsHolder = koinInject()
 
         val joinGame: com.walcker.games.features.domain.usecase.JoinGameUseCase = koinInject()
+        val leaveGame: com.walcker.games.features.domain.usecase.LeaveMatchUseCase = koinInject()
+        val cancelGame: com.walcker.games.features.domain.usecase.CancelMatchUseCase = koinInject()
 
         val stepModel = remember {
             MatchDetailStepModel(
@@ -70,6 +72,8 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 observeMatch = observeMatch,
                 observeParticipants = observeParticipants,
                 joinGame = joinGame,
+                leaveMatch = leaveGame,
+                cancelMatch = cancelGame,
                 submitRating = submitRating,
                 sessionHolder = sessionHolder,
                 promotionCoordinator = promotionCoordinator,
