@@ -62,11 +62,14 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val promotionCoordinator: PromotionCoordinator = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
 
+        val joinGame: com.walcker.games.features.domain.usecase.JoinGameUseCase = koinInject()
+
         val stepModel = remember {
             MatchDetailStepModel(
                 getGameById = getGameById,
                 observeMatch = observeMatch,
                 observeParticipants = observeParticipants,
+                joinGame = joinGame,
                 submitRating = submitRating,
                 sessionHolder = sessionHolder,
                 promotionCoordinator = promotionCoordinator,
@@ -107,6 +110,14 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                     )
                 }
 
+                // Success message banner — shown after successfully joining a match.
+                state.successMessage?.let { message ->
+                    SuccessBanner(
+                        message = message,
+                        onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissSuccess) },
+                    )
+                }
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     when {
                         state.isLoading -> {
@@ -127,10 +138,14 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                                 match = state.match!!,
                                 participants = state.participants,
                                 canRate = state.match!!.status == MatchStatus.FINISHED,
+                                isJoining = state.isJoining,
                                 onRatePlayer = { userId, displayName ->
                                     stepModel.onEvent(
                                         MatchDetailEvent.OpenRatingSheet(userId, displayName),
                                     )
+                                },
+                                onJoinMatch = {
+                                    stepModel.onEvent(MatchDetailEvent.JoinMatch)
                                 },
                             )
                         }
@@ -189,11 +204,47 @@ private fun PromotionBanner(
 }
 
 @Composable
+private fun SuccessBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.tertiaryContainer,
+                shape = MaterialTheme.shapes.small,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "✓",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onDismiss) {
+            Text("✕", color = MaterialTheme.colorScheme.onTertiaryContainer)
+        }
+    }
+}
+
+@Composable
 private fun MatchDetailContent(
     match: com.walcker.games.features.domain.model.Game,
     participants: ParticipantsSummary?,
     canRate: Boolean,
+    isJoining: Boolean,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
+    onJoinMatch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -312,12 +363,14 @@ private fun MatchDetailContent(
         val isClosed = match.status == MatchStatus.FINISHED || match.status == MatchStatus.CANCELLED
 
         JoinButton(
-            enabled = !isFull && !isClosed,
+            enabled = !isFull && !isClosed && !isJoining,
+            isLoading = isJoining,
             label = when {
                 isClosed -> "Partida encerrada"
                 isFull -> "Entrar na fila de espera"
                 else -> "Entrar na partida"
             },
+            onClick = onJoinMatch,
         )
     }
 }
@@ -350,15 +403,24 @@ private fun StatusBadge(
 @Composable
 private fun JoinButton(
     enabled: Boolean,
+    isLoading: Boolean,
     label: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Button(
-        onClick = { /* TODO Phase 4-ETAPA3: wire joinMatch callable */ },
-        enabled = enabled,
+        onClick = onClick,
+        enabled = enabled && !isLoading,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Text(text = label)
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+        } else {
+            Text(text = label)
+        }
     }
 }
 

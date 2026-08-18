@@ -3,8 +3,10 @@ package com.walcker.games.features.ui.matchdetail
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.model.Game
+import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
+import com.walcker.games.features.domain.usecase.JoinGameUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
@@ -35,6 +37,10 @@ internal data class MatchDetailState(
      * The UI uses this to show a transient banner ("Você foi promovido!").
      */
     val justPromoted: Boolean = false,
+    // Join match state
+    val isJoining: Boolean = false,
+    val joinOutcome: JoinMatchOutcome? = null,
+    val successMessage: String? = null,
     // Rating UI state
     val showRatingSheet: Boolean = false,
     val selectedPlayerForRating: Pair<String, String>? = null, // userId to displayName
@@ -49,6 +55,10 @@ internal sealed interface MatchDetailEvent {
     data object Dismiss : MatchDetailEvent
     /** Dismisses the "you were promoted" banner. */
     data object DismissPromotion : MatchDetailEvent
+    /** Joins the match. */
+    data object JoinMatch : MatchDetailEvent
+    /** Dismisses the success message. */
+    data object DismissSuccess : MatchDetailEvent
     /** Opens rating sheet for a specific player. */
     data class OpenRatingSheet(val userId: String, val displayName: String) : MatchDetailEvent
     /** Closes rating sheet. */
@@ -72,6 +82,7 @@ internal class MatchDetailStepModel(
     private val getGameById: GetGameByIdUseCase,
     private val observeMatch: ObserveMatchUseCase,
     private val observeParticipants: ObserveParticipantsUseCase,
+    private val joinGame: JoinGameUseCase,
     private val submitRating: SubmitRatingUseCase,
     private val sessionHolder: SessionHolder,
     private val promotionCoordinator: PromotionCoordinator,
@@ -103,6 +114,10 @@ internal class MatchDetailStepModel(
             }
             MatchDetailEvent.DismissPromotion -> {
                 _state.update { it.copy(justPromoted = false) }
+            }
+            MatchDetailEvent.JoinMatch -> joinMatchAction()
+            MatchDetailEvent.DismissSuccess -> {
+                _state.update { it.copy(successMessage = null, joinOutcome = null) }
             }
             is MatchDetailEvent.OpenRatingSheet -> {
                 _state.update {
@@ -148,6 +163,36 @@ internal class MatchDetailStepModel(
                     )
                 }
             }
+        }
+    }
+
+    private fun joinMatchAction() {
+        screenModelScope.launch {
+            _state.update { it.copy(isJoining = true, errorMessage = null) }
+
+            joinGame(matchId)
+                .onSuccess { outcome ->
+                    val message = when (outcome) {
+                        is JoinMatchOutcome.Confirmed -> "Você entrou na partida! ✓"
+                        is JoinMatchOutcome.Waitlist -> "Você foi adicionado à fila de espera (posição #${outcome.position})"
+                        is JoinMatchOutcome.AlreadyJoined -> "Você já é participante desta partida"
+                    }
+                    _state.update {
+                        it.copy(
+                            isJoining = false,
+                            joinOutcome = outcome,
+                            successMessage = message,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isJoining = false,
+                            errorMessage = error.message ?: "Erro ao entrar na partida",
+                        )
+                    }
+                }
         }
     }
 
