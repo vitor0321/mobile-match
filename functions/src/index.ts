@@ -404,6 +404,192 @@ interface CancelMatchResponse {
   status: "cancelled" | "already_cancelled";
 }
 
+// ---------------------------------------------------------------------------
+// submitPlayerRating — Callable (invocada por products/games)
+//
+// Fecha o ciclo de reputação. Grava a avaliação em dois lugares, na mesma
+// transação:
+//   matches/{matchId}/ratings/{raterUid}_{ratedUid} — registro canônico. O id
+//     composto é a própria trava de unicidade: um avaliador avalia cada colega
+//     no máximo uma vez por partida, sem precisar de query.
+//   profiles/{ratedUid}/ratings/{mesmo id} — modelo de leitura desnormalizado.
+//     A tela de perfil precisa das avaliações *recebidas* por alguém; varrer
+//     matches/* por collection group para montar isso sairia caro e obrigaria a
+//     abrir regra de leitura em toda a árvore de partidas.
+//
+// A média do perfil é recalculada aqui porque é reputação: o cliente não pode
+// escrever rating/ratingCount (ver firestore.rules).
+//
+// Retorna {status: "recorded" | "already_rated", averageRating, ratingCount}.
+// ---------------------------------------------------------------------------
+
+const MAX_RATING_COMMENT_LENGTH = 500;
+const RATING_AVERAGE_DECIMALS = 2;
+
+export const submitPlayerRating = onCall(
+  {region: REGION},
+  async (request): Promise<SubmitPlayerRatingResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+
+    const {matchId, ratedUserId, rating, comment} = parseSubmitRatingPayload(request.data, uid);
+
+    return db.runTransaction(async (txn) => {
+      const ratingId = `${uid}_${ratedUserId}`;
+      const matchRef = db.doc(`matches/${matchId}`);
+      const matchRatingRef = db.doc(`matches/${matchId}/ratings/${ratingId}`);
+      const ratedProfileRef = db.doc(`profiles/${ratedUserId}`);
+
+      // Todas as leituras antes de qualquer escrita — exigência da transação.
+      // getAll é a forma documentada de ler vários documentos de uma vez dentro
+      // de uma transação, em vez de encadear txn.get.
+      const [matchSnap, existingSnap, ratedProfileSnap] = await txn.getAll(
+        matchRef,
+        matchRatingRef,
+        ratedProfileRef,
+      );
+
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      const status = String(match.status ?? "OPEN");
+      if (status === "CANCELLED") {
+        throw new HttpsError("failed-precondition", "Cannot rate a cancelled match.");
+      }
+      requireMatchIsOver(match);
+
+      const participants: string[] = Array.isArray(match.participants)
+        ? match.participants.filter((x): x is string => typeof x === "string")
+        : [];
+      if (!participants.includes(uid)) {
+        throw new HttpsError("permission-denied", "Only participants can rate this match.");
+      }
+      if (!participants.includes(ratedUserId)) {
+        throw new HttpsError("failed-precondition", "The rated user did not play this match.");
+      }
+
+      if (!ratedProfileSnap.exists) {
+        throw new HttpsError("not-found", "Rated player profile not found.");
+      }
+      const ratedProfile = ratedProfileSnap.data() ?? {};
+
+      const previousCount = Number(ratedProfile.ratingCount ?? 0);
+      const previousAverage = Number(ratedProfile.rating ?? 0);
+
+      // Idempotente, como joinMatch/cancelMatch: reenviar não infla a média.
+      if (existingSnap.exists) {
+        return {
+          status: "already_rated" as const,
+          matchId,
+          ratedUserId,
+          averageRating: previousAverage,
+          ratingCount: previousCount,
+        };
+      }
+
+      const nextCount = previousCount + 1;
+      // Perfis nascem com rating 5 e ratingCount 0 (ver onUserCreate). Esse 5 é
+      // um placeholder de exibição, não uma avaliação: não pode entrar na média.
+      const nextAverage = previousCount === 0
+        ? rating
+        : roundTo((previousAverage * previousCount + rating) / nextCount, RATING_AVERAGE_DECIMALS);
+
+      const now = Date.now();
+      const ratingDocument = {
+        matchId,
+        ratedUserId,
+        raterUserId: uid,
+        rating,
+        comment,
+        // Número, não Timestamp: atravessa o interop Android/iOS sem conversão e
+        // serve direto como cursor startAfter na paginação de avaliações.
+        createdAtMs: now,
+        createdAt: FieldValue.serverTimestamp(),
+      };
+
+      txn.set(matchRatingRef, ratingDocument);
+      txn.set(db.doc(`profiles/${ratedUserId}/ratings/${ratingId}`), ratingDocument);
+      txn.update(ratedProfileRef, {
+        rating: nextAverage,
+        ratingCount: nextCount,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      return {
+        status: "recorded" as const,
+        matchId,
+        ratedUserId,
+        averageRating: nextAverage,
+        ratingCount: nextCount,
+      };
+    });
+  },
+);
+
+interface SubmitPlayerRatingResponse {
+  status: "recorded" | "already_rated";
+  matchId: string;
+  ratedUserId: string;
+  averageRating: number;
+  ratingCount: number;
+}
+
+interface SubmitRatingPayload {
+  matchId: string;
+  ratedUserId: string;
+  rating: number;
+  comment: string;
+}
+
+function parseSubmitRatingPayload(value: unknown, uid: string): SubmitRatingPayload {
+  const data = (value ?? {}) as Partial<SubmitRatingPayload>;
+
+  if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+    throw new HttpsError("invalid-argument", "matchId is required.");
+  }
+  if (typeof data.ratedUserId !== "string" || data.ratedUserId.length === 0) {
+    throw new HttpsError("invalid-argument", "ratedUserId is required.");
+  }
+  if (data.ratedUserId === uid) {
+    throw new HttpsError("failed-precondition", "You cannot rate yourself.");
+  }
+  if (typeof data.rating !== "number" || !Number.isInteger(data.rating) || data.rating < 1 || data.rating > 5) {
+    throw new HttpsError("invalid-argument", "rating must be an integer between 1 and 5.");
+  }
+  const comment = typeof data.comment === "string" ? data.comment.trim() : "";
+  if (comment.length > MAX_RATING_COMMENT_LENGTH) {
+    throw new HttpsError(
+      "invalid-argument",
+      `comment must be at most ${MAX_RATING_COMMENT_LENGTH} characters.`,
+    );
+  }
+
+  return {matchId: data.matchId, ratedUserId: data.ratedUserId, rating: data.rating, comment};
+}
+
+/**
+ * Avaliação é pós-partida. Não dá para exigir status FINISHED porque nada marca
+ * esse status ainda — então a verdade é o relógio: início + duração no passado.
+ */
+function requireMatchIsOver(match: Record<string, unknown>): void {
+  const startsAt = readEpochSeconds(match.startsAtSeconds ?? match.startsAt);
+  if (startsAt === null) {
+    throw new HttpsError("failed-precondition", "Match has no start time.");
+  }
+  const durationMin = Number(match.durationMin ?? 0);
+  const endsAtMillis = (startsAt + Math.max(durationMin, 0) * 60) * 1_000;
+  if (endsAtMillis > Date.now()) {
+    throw new HttpsError("failed-precondition", "Match has not finished yet.");
+  }
+}
+
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
 function readEpochSeconds(value: unknown): number | null {
   if (typeof value === "number") return value;
   if (value && typeof value === "object" && "seconds" in value && typeof (value as {seconds: unknown}).seconds === "number") {

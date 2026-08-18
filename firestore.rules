@@ -121,6 +121,20 @@ service cloud.firestore {
       match /private/{documentId} {
         allow read, write: if isOwner(userId);
       }
+
+      // -------------------------------------------------------------------
+      // profiles/{userId}/ratings/{ratingId} — avaliações RECEBIDAS
+      //
+      // Cópia desnormalizada do registro em matches/{matchId}/ratings, escrita
+      // pela mesma transação da callable submitPlayerRating. Mora sob profiles
+      // (público para quem está logado) e não sob users/ porque a tela de
+      // perfil precisa mostrar as avaliações de outra pessoa — users/ é a
+      // árvore privada do dono.
+      // -------------------------------------------------------------------
+      match /ratings/{ratingId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
     }
 
     // ---------------------------------------------------------------------
@@ -201,9 +215,10 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Avaliações da partida — gravadas pela callable submitRating, que
-      // recalcula a média do avaliado na mesma transação.
-      match /ratings/{raterId} {
+      // Avaliações da partida — registro canônico, id `{raterUid}_{ratedUid}`.
+      // Gravadas pela callable submitPlayerRating, que recalcula a média do
+      // avaliado na mesma transação. Reputação nunca vem do cliente.
+      match /ratings/{ratingId} {
         allow read: if isSignedIn();
         allow write: if false;
       }

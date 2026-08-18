@@ -403,6 +403,57 @@ describe("moderação e denúncias", () => {
   });
 });
 
+describe("avaliações recebidas — profiles/{uid}/ratings", () => {
+  it("qualquer usuário logado lê as avaliações de um jogador, mas ninguém escreve", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "ratings", `${ORGANIZER}_${PLAYER}`), {
+        matchId: MATCH_ID,
+        ratedUserId: PLAYER,
+        raterUserId: ORGANIZER,
+        rating: 5,
+        comment: "Pontual",
+        createdAtMs: Date.now(),
+      });
+    });
+
+    // A tela de perfil mostra as avaliações de outra pessoa: leitura é pública
+    // para quem está logado.
+    await assertSucceeds(getDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "ratings", `${ORGANIZER}_${PLAYER}`)));
+    await assertFails(getDoc(doc(asAnonymous(), "profiles", PLAYER, "ratings", `${ORGANIZER}_${PLAYER}`)));
+
+    // Reputação nunca vem do cliente — nem do próprio dono do perfil.
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "ratings", "forjada"), {
+        ratedUserId: PLAYER,
+        raterUserId: ORGANIZER,
+        rating: 5,
+      }),
+    );
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "profiles", PLAYER, "ratings", "autoelogio"), {
+        ratedUserId: PLAYER,
+        raterUserId: PLAYER,
+        rating: 5,
+      }),
+    );
+  });
+
+  it("o dono não consegue mexer na própria média nem na contagem", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), {
+        fullName: "Jogador",
+        rating: 3,
+        ratingCount: 10,
+        matchesPlayed: 4,
+        isBanned: false,
+      });
+    });
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {rating: 5}));
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {ratingCount: 999}));
+  });
+});
+
 describe("fechamento padrão", () => {
   it("nega qualquer caminho não previsto nas regras", async () => {
     const stray = doc(asUser(PLAYER), "colecao_desconhecida", "x");
