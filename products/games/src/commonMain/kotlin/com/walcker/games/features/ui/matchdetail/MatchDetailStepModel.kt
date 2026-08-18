@@ -6,6 +6,7 @@ import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.ParticipantsSummary
+import com.walcker.games.features.domain.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.usecase.JoinGameUseCase
@@ -55,6 +56,12 @@ internal data class MatchDetailState(
     val showRatingSheet: Boolean = false,
     val selectedPlayerForRating: Pair<String, String>? = null, // userId to displayName
     val isSubmittingRating: Boolean = false,
+    /**
+     * Failure of the rating submission only. Kept apart from [errorMessage]
+     * because that one replaces the whole screen with a retry page — a review
+     * that did not go through must not blank the match the user is looking at.
+     */
+    val ratingErrorMessage: String? = null,
 )
 
 /**
@@ -89,6 +96,8 @@ internal sealed interface MatchDetailEvent {
     data object CloseRatingSheet : MatchDetailEvent
     /** Submits a rating for a player. */
     data class SubmitRating(val rating: Int, val comment: String) : MatchDetailEvent
+    /** Dismisses the rating failure banner. */
+    data object DismissRatingError : MatchDetailEvent
 }
 
 /**
@@ -183,31 +192,48 @@ internal class MatchDetailStepModel(
             is MatchDetailEvent.SubmitRating -> {
                 submitPlayerRating(event.rating, event.comment)
             }
+            is MatchDetailEvent.DismissRatingError -> {
+                _state.update { it.copy(ratingErrorMessage = null) }
+            }
         }
     }
 
     private fun submitPlayerRating(rating: Int, comment: String) {
         val ratedUserId = _state.value.selectedPlayerForRating?.first ?: return
+        val strings = stringsHolder.resolveStringsOrDefault().ratings
+
         screenModelScope.launch {
-            _state.update { it.copy(isSubmittingRating = true) }
+            _state.update { it.copy(isSubmittingRating = true, ratingErrorMessage = null) }
             submitRating(
                 matchId = matchId,
                 ratedUserId = ratedUserId,
                 rating = rating,
                 comment = comment,
-            ).onSuccess {
+            ).onSuccess { outcome ->
+                // Resending is idempotent server-side. From the person who
+                // tapped the button, both outcomes mean "it is registered" —
+                // only the wording differs.
+                val message = when (outcome) {
+                    is SubmitRatingOutcome.Recorded -> strings.submitSuccess
+                    is SubmitRatingOutcome.AlreadyRated -> strings.alreadyRated
+                }
                 _state.update {
                     it.copy(
                         isSubmittingRating = false,
                         showRatingSheet = false,
                         selectedPlayerForRating = null,
+                        successMessage = message,
                     )
                 }
-            }.onFailure { error ->
+            }.onFailure {
+                // The callable transport drops the HttpsError code, so mapping
+                // the server text to a specific message would be guesswork.
+                // The sheet stays open so the person can retry without
+                // re-selecting the player.
                 _state.update {
                     it.copy(
                         isSubmittingRating = false,
-                        errorMessage = error.message ?: "Erro ao enviar avaliação",
+                        ratingErrorMessage = strings.submitError,
                     )
                 }
             }

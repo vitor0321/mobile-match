@@ -2,6 +2,7 @@ package com.walcker.games.features.data.repository
 
 import com.walcker.games.features.data.source.RatingSource
 import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.repository.RatingRepository
 
 /**
@@ -18,7 +19,8 @@ internal class RatingRepositoryImpl(
         ratedUserId: String,
         rating: Int,
         comment: String,
-    ): Result<Unit> = ratingSource.submitPlayerRating(matchId, ratedUserId, rating, comment)
+    ): Result<SubmitRatingOutcome> =
+        ratingSource.submitPlayerRating(matchId, ratedUserId, rating, comment)
 
     override suspend fun getUserRatings(userId: String, limit: Int): Result<List<Rating>> =
         ratingSource.getUserRatings(userId, limit)

@@ -1,6 +1,7 @@
 package com.walcker.games.features.domain.repository
 
 import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.SubmitRatingOutcome
 
 /**
  * Repository para gerenciar avaliações de jogadores e locais.
@@ -19,7 +20,7 @@ internal interface RatingRepository {
         ratedUserId: String,
         rating: Int,
         comment: String,
-    ): Result<Unit>
+    ): Result<SubmitRatingOutcome>
 
     /**
      * Obtém todas as avaliações recebidas por um usuário.

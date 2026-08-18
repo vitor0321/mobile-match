@@ -1,6 +1,6 @@
 # Mobile Match — Roadmap Consolidado
 
-**Último atualizado:** 2026-08-18 · **Status:** Phase 5 Sprint 1-2 complete, Sprint 3 (polish) next
+**Último atualizado:** 2026-08-18 · **Status:** Phase 5 Sprint 1-2 complete + backend de avaliação; Sprint 3 (polish) next
 
 ---
 
@@ -302,7 +302,9 @@ match /profiles/{uid}/private/{document=**} {
 // leaveMatch: transação, promove fila, notifica
 // onMatchCreated: busca por geohash, notifica, push
 // onParticipantChanged: notifica vaga, promove fila
-// submitRating: recalcula média em transação
+// submitPlayerRating: transação — valida partida encerrada, participação de
+//   quem avalia e de quem é avaliado, bloqueia autoavaliação, id composto
+//   {rater}_{rated} garante unicidade, recalcula rating/ratingCount do perfil
 // deleteAccount: estendido do identity, limpa match data
 ```
 
@@ -343,9 +345,17 @@ users/{uid}/notifications/{notifId}
   ├── title, body, matchId
   └── readAt, createdAt
 
-matches/{matchId}/ratings/{raterUid}
-  ├── ratedId, stars, punctuality, respect, fairPlay, behavior
-  └── comment, createdAt
+matches/{matchId}/ratings/{raterUid}_{ratedUid}   ← registro canônico
+  ├── matchId, ratedUserId, raterUserId
+  ├── rating (1-5), comment
+  └── createdAtMs (número), createdAt (serverTimestamp, auditoria)
+
+profiles/{uid}/ratings/{mesmo id}                 ← modelo de leitura
+  └── cópia escrita na mesma transação de submitPlayerRating
+      (a tela de perfil precisa das avaliações RECEBIDAS por alguém)
+
+  Nota: as dimensões pontualidade/respeito/fair play/comportamento ficam
+  para a Phase 6. A Phase 5 fecha o ciclo com nota única + comentário.
 
 reports/{reportId} (admin only)
   ├── reporterId, reportedUserId, matchId
@@ -474,6 +484,16 @@ Fase 7
    - [x] Unit tests (`RatingDistribution`, `RatingCursor`, formatters de `core`)
    - [x] Turbine tests (`PlayerDetailsStepModel`, `PlayerRatingsListStepModel`)
    - [x] Strings pt-BR/en-US (`PlayerDetailsStrings`, `PlayerRatingsStrings`)
+
+### Backend de avaliação ✅
+
+7. **`submitPlayerRating` (Cloud Function)**
+   - [x] Transação com validação de partida encerrada e de participação
+   - [x] Unicidade por id composto `{rater}_{rated}`, reenvio idempotente
+   - [x] Recalcula `rating`/`ratingCount` do perfil (cliente não escreve reputação)
+   - [x] Regras do Firestore para `profiles/{uid}/ratings`
+   - [x] Testes de emulador (callable) e de regras
+   - [ ] **Falta:** `firebase deploy --only functions,firestore:rules,firestore:indexes`
 
 ### Próximo (Sprint 3 — Polish)
 
@@ -607,6 +627,9 @@ Direto na chave Pix do organizador
 | **D11** | Timestamp de rating | Campo numérico `createdAtMs` | Sobrevive ao interop Android/iOS e serve de cursor `startAfter` |
 | **D12** | Paginação de ratings | Cursor opaco + `orderBy` no servidor | Ordenar página parcial no cliente reembaralha a lista ao carregar mais |
 | **D13** | Formatação numérica | `core/format` próprio | `String.format` é JVM-only e quebra o build iOS |
+| **D14** | Avaliações recebidas | Cópia em `profiles/{uid}/ratings` | `users/` é a árvore privada do dono; perfil é público pra quem está logado |
+| **D15** | Fim da partida | `startsAt + durationMin` no passado | Nada marca `status: FINISHED` ainda — exigir esse status travaria toda avaliação |
+| **D16** | Reenvio de avaliação | Idempotente (`already_rated`) | Mesmo padrão de `joinMatch`/`cancelMatch`; reenviar não infla a média |
 
 ---
 

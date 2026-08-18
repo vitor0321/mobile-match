@@ -20,11 +20,3 @@ internal data class Rating(
     val comment: String,
     val createdAtMs: Long,
 )
-
-/**
- * Resposta do servidor após submeter uma avaliação.
- */
-internal data class SubmitRatingResponse(
-    val success: Boolean,
-    val message: String,
-)

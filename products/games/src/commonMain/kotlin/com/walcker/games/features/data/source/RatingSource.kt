@@ -3,6 +3,7 @@ package com.walcker.games.features.data.source
 import com.walcker.games.features.domain.model.Rating
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
+import com.walcker.games.features.domain.model.SubmitRatingOutcome
 
 /**
  * Data source interface para operações de rating.
@@ -16,7 +17,7 @@ internal interface RatingSource {
         ratedUserId: String,
         rating: Int,
         comment: String,
-    ): Result<Unit>
+    ): Result<SubmitRatingOutcome>
 
     /**
      * Busca avaliações recebidas por um usuário (primeira página, mais recentes).

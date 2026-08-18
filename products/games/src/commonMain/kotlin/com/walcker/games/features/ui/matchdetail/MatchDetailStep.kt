@@ -131,6 +131,15 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                     )
                 }
 
+                // Rating failure — a banner, not the full-screen error state:
+                // the match itself loaded fine.
+                state.ratingErrorMessage?.let { message ->
+                    RatingErrorBanner(
+                        message = message,
+                        onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissRatingError) },
+                    )
+                }
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     when {
                         state.isLoading -> {
@@ -320,6 +329,35 @@ private fun SuccessBanner(
         )
         TextButton(onClick = onDismiss) {
             Text("✕", color = MaterialTheme.colorScheme.onTertiaryContainer)
+        }
+    }
+}
+
+@Composable
+private fun RatingErrorBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.errorContainer,
+                shape = MaterialTheme.shapes.small,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onDismiss) {
+            Text("✕", color = MaterialTheme.colorScheme.onErrorContainer)
         }
     }
 }

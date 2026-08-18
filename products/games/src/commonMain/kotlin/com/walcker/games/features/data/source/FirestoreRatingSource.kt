@@ -4,6 +4,7 @@ import com.walcker.games.features.domain.model.Rating
 import com.walcker.games.features.domain.model.RATING_FIELD_CREATED_AT_MS
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
+import com.walcker.games.features.domain.model.SubmitRatingOutcome
 import com.walcker.match.firestore.DocumentSnapshot
 import com.walcker.match.firestore.FirestoreClient
 import com.walcker.match.firestore.FirestoreQueryBuilder
@@ -11,8 +12,11 @@ import com.walcker.match.firestore.FirestoreQueryBuilder
 /**
  * Firestore implementation of [RatingSource].
  *
- * Ratings are stored in: users/{userId}/ratings subcollection
- * Each rating doc has: matchId, ratedUserId, raterUserId, rating, comment, createdAtMs
+ * Ratings a player *received* live in `profiles/{userId}/ratings`, a read model
+ * the `submitPlayerRating` function writes alongside the canonical record in
+ * `matches/{matchId}/ratings`. They sit under `profiles/` and not `users/`
+ * because a player's reviews are public to signed-in users, while `users/` is
+ * the owner's private tree (see firestore.rules).
  *
  * `createdAtMs` is a plain number (epoch millis), not a Firestore `Timestamp`:
  * numbers survive the Android/iOS interop boundary unchanged and can be used
@@ -28,9 +32,9 @@ internal class FirestoreRatingSource(
         ratedUserId: String,
         rating: Int,
         comment: String,
-    ): Result<Unit> = runCatching {
-        firestore.callFunction(
-            "submitPlayerRating",
+    ): Result<SubmitRatingOutcome> = firestore
+        .callFunction(
+            SUBMIT_RATING_FUNCTION,
             mapOf(
                 "matchId" to matchId,
                 "ratedUserId" to ratedUserId,
@@ -38,7 +42,23 @@ internal class FirestoreRatingSource(
                 "comment" to comment,
             ),
         )
-        Unit
+        .mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
+    /**
+     * The callable answers `recorded` or `already_rated` — resending is
+     * idempotent server-side, so it is a success here too.
+     */
+    private fun Map<String, Any?>.toSubmitRatingOutcome(): SubmitRatingOutcome {
+        val averageRating = (this["averageRating"] as? Number)?.toFloat() ?: 0f
+        val ratingCount = (this["ratingCount"] as? Number)?.toInt() ?: 0
+
+        return when (val status = this["status"]) {
+            "recorded" -> SubmitRatingOutcome.Recorded(averageRating, ratingCount)
+            "already_rated" -> SubmitRatingOutcome.AlreadyRated(averageRating, ratingCount)
+            else -> throw IllegalStateException(
+                "Unexpected submitPlayerRating response status: $status",
+            )
+        }
     }
 
     override suspend fun getUserRatings(userId: String, limit: Int): Result<List<Rating>> =
@@ -51,7 +71,7 @@ internal class FirestoreRatingSource(
         cursor: String?,
     ): Result<RatingsPage> = runCatching {
         val ratings = firestore
-            .collection("users/$userId/ratings")
+            .collection("profiles/$userId/ratings")
             .query()
             .applySort(sort)
             .applyCursor(cursor, sort)
@@ -122,6 +142,7 @@ internal class FirestoreRatingSource(
     }
 
     private companion object {
+        const val SUBMIT_RATING_FUNCTION = "submitPlayerRating"
         const val ASCENDING = "asc"
         const val DESCENDING = "desc"
 

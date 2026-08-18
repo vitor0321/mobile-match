@@ -10,4 +10,5 @@ internal data class GamesStrings(
     val playerSearch: PlayerSearchStrings,
     val playerDetails: PlayerDetailsStrings,
     val playerRatings: PlayerRatingsStrings,
+    val ratings: RatingStrings,
 )
