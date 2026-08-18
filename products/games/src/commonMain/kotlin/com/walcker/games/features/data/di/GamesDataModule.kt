@@ -9,17 +9,21 @@ import com.walcker.games.features.data.repository.GameRepositoryImpl
 import com.walcker.games.features.data.repository.NotificationRepositoryImpl
 import com.walcker.games.features.data.repository.PlayerRepositoryImpl
 import com.walcker.games.features.data.repository.RatingRepositoryImpl
+import com.walcker.games.features.data.repository.ReportRepositoryImpl
 import com.walcker.games.features.data.source.FirestoreGameSource
 import com.walcker.games.features.data.source.FirestoreNotificationSource
 import com.walcker.games.features.data.source.FirestoreRatingSource
+import com.walcker.games.features.data.source.FirestoreReportSource
 import com.walcker.games.features.data.source.GameSource
 import com.walcker.games.features.data.source.NotificationSource
 import com.walcker.games.features.data.source.PlayerSource
 import com.walcker.games.features.data.source.RatingSource
+import com.walcker.games.features.data.source.ReportSource
 import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.repository.NotificationRepository
 import com.walcker.games.features.domain.repository.PlayerRepository
 import com.walcker.games.features.domain.repository.RatingRepository
+import com.walcker.games.features.domain.repository.ReportRepository
 import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.CancelMatchUseCaseImpl
 import com.walcker.games.features.domain.usecase.CreateMatchUseCase
@@ -53,6 +57,8 @@ import com.walcker.games.features.domain.usecase.ObserveMatchUseCaseImpl
 import com.walcker.games.features.domain.usecase.SearchPlayersUseCase
 import com.walcker.games.features.domain.usecase.SearchPlayersUseCaseImpl
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
+import com.walcker.games.features.domain.usecase.SubmitReportUseCase
+import com.walcker.games.features.domain.usecase.SubmitReportUseCaseImpl
 import com.walcker.games.features.domain.usecase.GetUserRatingsUseCase
 import com.walcker.match.firestore.FirestoreClient
 import org.koin.dsl.module
@@ -90,6 +96,9 @@ internal val gamesDataModule = module {
     factory<DeleteNotificationUseCase> { DeleteNotificationUseCaseImpl(repository = get()) }
     factory<ObserveParticipantsUseCase> { ObserveParticipantsUseCaseImpl(repository = get()) }
     factory<ObserveMatchUseCase> { ObserveMatchUseCaseImpl(repository = get()) }
+    single<ReportSource> { FirestoreReportSource(firestore = get<FirestoreClient>()) }
+    single<ReportRepository> { ReportRepositoryImpl(source = get()) }
+    factory<SubmitReportUseCase> { SubmitReportUseCaseImpl(repository = get()) }
     factory { SubmitRatingUseCase(ratingRepository = get()) }
     factory { GetUserRatingsUseCase(ratingRepository = get()) }
 

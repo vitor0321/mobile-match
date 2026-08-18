@@ -292,3 +292,297 @@ describe("submitPlayerRating", () => {
     expect((await readProfile()).data()).toMatchObject({rating: 4, ratingCount: 1});
   });
 });
+
+describe("submitReport", () => {
+  const REPORTED = "reported-player";
+  const MATCH = "match-report";
+
+  async function seedMatch(participants: string[]) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH), {
+        organizerId: REPORTED,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        totalSlots: 10,
+        participants,
+      });
+    });
+  }
+
+  /** Reports from other people, so the threshold logic has something to count. */
+  async function seedOtherReports(count: number, atMs = Date.now()) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      for (let index = 0; index < count; index++) {
+        await setDoc(doc(database, "reports", `other-${index}`), {
+          reporterId: `reporter-${index}`,
+          reportedUserId: REPORTED,
+          matchId: "some-match",
+          reason: "no_show",
+          status: "open",
+          createdAtMs: atMs,
+        });
+      }
+    });
+  }
+
+  function readModeration() {
+    return testEnvironment.withSecurityRulesDisabled((context) =>
+      getDoc(doc(context.firestore(), "moderation", REPORTED)),
+    );
+  }
+
+  it("rejects unauthenticated requests", async () => {
+    const response = await call(
+      "submitReport",
+      {matchId: MATCH, reportedUserId: REPORTED, reason: "no_show"},
+      null,
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects an unknown reason", async () => {
+    await seedMatch([uid, REPORTED]);
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "i_dont_like_them",
+    });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("INVALID_ARGUMENT");
+  });
+
+  it("rejects reporting yourself", async () => {
+    await seedMatch([uid, REPORTED]);
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: uid,
+      reason: "no_show",
+    });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("rejects a reporter who did not play the match", async () => {
+    await seedMatch([REPORTED]);
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "no_show",
+    });
+    // Not being able to report a stranger is the main anti-abuse anchor.
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("PERMISSION_DENIED");
+  });
+
+  it("rejects reporting someone who did not play the match", async () => {
+    await seedMatch([uid]);
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "no_show",
+    });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("stores the report and trims the details", async () => {
+    await seedMatch([uid, REPORTED]);
+
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "no_show",
+      details: "  não apareceu e não avisou  ",
+    });
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({
+      result: {status: "recorded", moderationLevel: "none"},
+    });
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const stored = await getDoc(
+        doc(context.firestore(), "reports", `${MATCH}_${uid}_${REPORTED}`),
+      );
+      expect(stored.data()).toMatchObject({
+        reporterId: uid,
+        reportedUserId: REPORTED,
+        matchId: MATCH,
+        reason: "no_show",
+        details: "não apareceu e não avisou",
+        status: "open",
+      });
+    });
+  });
+
+  it("counts one reporter once per match", async () => {
+    await seedMatch([uid, REPORTED]);
+
+    expect(
+      (await call("submitReport", {matchId: MATCH, reportedUserId: REPORTED, reason: "no_show"})).ok,
+    ).toBe(true);
+
+    const second = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "harassment",
+    });
+    expect(second.ok).toBe(true);
+    expect(await second.json()).toMatchObject({result: {status: "already_reported"}});
+  });
+
+  it("warns once enough distinct people have reported", async () => {
+    await seedMatch([uid, REPORTED]);
+    await seedOtherReports(2);
+
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "no_show",
+    });
+
+    // Two others plus this caller = three distinct reporters.
+    expect(await response.json()).toMatchObject({result: {moderationLevel: "warning"}});
+    expect((await readModeration()).data()).toMatchObject({
+      level: "warning",
+      distinctReporters: 3,
+      requiresReview: false,
+    });
+  });
+
+  it("suspends, with a deadline, at the higher threshold", async () => {
+    await seedMatch([uid, REPORTED]);
+    await seedOtherReports(5);
+
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "aggressive_behavior",
+    });
+
+    expect(await response.json()).toMatchObject({result: {moderationLevel: "suspended"}});
+    const moderation = (await readModeration()).data();
+    expect(moderation).toMatchObject({level: "suspended", distinctReporters: 6});
+    expect(moderation?.untilMs).toBeGreaterThan(Date.now());
+  });
+
+  it("never bans automatically, only flags for review", async () => {
+    await seedMatch([uid, REPORTED]);
+    await seedOtherReports(20);
+
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "discrimination",
+    });
+
+    expect(await response.json()).toMatchObject({result: {moderationLevel: "suspended"}});
+    expect((await readModeration()).data()).toMatchObject({
+      level: "suspended",
+      requiresReview: true,
+    });
+  });
+
+  it("ignores reports older than the counting window", async () => {
+    await seedMatch([uid, REPORTED]);
+    // Old enough to fall outside REPORT_WINDOW_DAYS.
+    await seedOtherReports(5, Date.now() - 400 * 24 * 60 * 60 * 1_000);
+
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "no_show",
+    });
+
+    // Only the caller counts, so nothing escalates.
+    expect(await response.json()).toMatchObject({result: {moderationLevel: "none"}});
+  });
+
+  it("does not downgrade a ban set by a human", async () => {
+    await seedMatch([uid, REPORTED]);
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "moderation", REPORTED), {level: "banned"});
+    });
+
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: REPORTED,
+      reason: "no_show",
+    });
+
+    expect(await response.json()).toMatchObject({result: {moderationLevel: "banned"}});
+    expect((await readModeration()).data()).toMatchObject({level: "banned"});
+  });
+});
+
+describe("restricted accounts", () => {
+  const MATCH = "match-blocked";
+
+  async function suspendCaller(untilMs: number) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "moderation", uid), {
+        level: "suspended",
+        untilMs,
+      });
+    });
+  }
+
+  async function seedOpenMatch() {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH), {
+        organizerId: "someone-else",
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        totalSlots: 10,
+        confirmedCount: 1,
+        participants: ["someone-else"],
+      });
+    });
+  }
+
+  it("cannot join a match while suspended", async () => {
+    await seedOpenMatch();
+    await suspendCaller(Date.now() + 24 * 60 * 60 * 1_000);
+
+    const response = await call("joinMatch", {matchId: MATCH});
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("PERMISSION_DENIED");
+  });
+
+  it("can join again once the suspension has expired", async () => {
+    await seedOpenMatch();
+    await suspendCaller(Date.now() - 1_000);
+
+    const response = await call("joinMatch", {matchId: MATCH});
+
+    expect(response.ok).toBe(true);
+  });
+
+  it("cannot rate while suspended", async () => {
+    await seedOpenMatch();
+    await suspendCaller(Date.now() + 24 * 60 * 60 * 1_000);
+
+    const response = await call("submitPlayerRating", {
+      matchId: MATCH,
+      ratedUserId: "someone-else",
+      rating: 1,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("cannot report while suspended", async () => {
+    await seedOpenMatch();
+    await suspendCaller(Date.now() + 24 * 60 * 60 * 1_000);
+
+    const response = await call("submitReport", {
+      matchId: MATCH,
+      reportedUserId: "someone-else",
+      reason: "no_show",
+    });
+
+    // Reports from a restricted account are usually retaliation.
+    expect(response.status).toBe(403);
+  });
+});

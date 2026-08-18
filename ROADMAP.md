@@ -1,6 +1,6 @@
 # Mobile Match — Roadmap Consolidado
 
-**Último atualizado:** 2026-08-18 · **Status:** Phase 5 completa (Sprints 1-3 + backend de avaliação); Phase 6 next
+**Último atualizado:** 2026-08-18 · **Status:** Phase 5 completa; Phase 6 em andamento (denúncia, moderação e restrição prontas)
 
 ---
 
@@ -163,16 +163,32 @@ functions/                  Cloud Functions (triggers, callables)
 
 ---
 
-### Phase 6: Confiança e Segurança ⏳ PENDENTE (10-15h)
+### Phase 6: Confiança e Segurança 🚧 EM ANDAMENTO (10-15h)
 
 **Objetivo:** O produto sobrevive ao primeiro usuário mal-intencionado.
 
 **Escopo:**
-- 📋 **Avaliações pós-partida** (pontualidade, respeito, fair play, comportamento)
-- 🚨 **Denúncias** com 10 motivos customizados
-- 🛡️ **Moderação** (advertência → suspensão → banimento)
-- ✉️ **Verificação** de e-mail e telefone (SMS)
-- 🔐 **LGPD** (exclusão de conta, exportação, minimização de dados)
+- 🚨 **Denúncias** com 10 motivos ✅
+- 🛡️ **Moderação** (advertência → suspensão → revisão humana) ✅
+- 🔒 **Restrição efetiva** — joinMatch, submitPlayerRating, submitReport e a
+  regra de criar partida recusam conta banida ou suspensa ✅
+- 📋 **Avaliações pós-partida** multidimensionais (pontualidade, respeito,
+  fair play, comportamento) ⏳
+- ✉️ **Verificação** de e-mail e telefone (SMS) ⏳
+- 🔐 **LGPD** (exportação, exclusão estendida, minimização) ⏳
+
+**O que existia antes:** só a fachada. As coleções `reports` e `moderation`
+tinham regras, comentários e testes, mas ninguém escrevia nelas. `isBanned` era
+gravado uma única vez, como `false`, no cadastro. E o ROADMAP afirmava que
+`joinMatch` validava ban — não validava; o único lugar que consultava banimento
+era a regra de criar partida.
+
+**Anti-abuso, por construção:**
+- Só dá para denunciar quem jogou a mesma partida que você
+- O id `{matchId}_{reporter}_{reported}` limita a uma denúncia por par por partida
+- O escalonamento conta **denunciantes distintos**, não denúncias
+- Janela de 180 dias: sem ela a punição seria permanente na prática
+- Banimento **não** é automático (ver D22)
 
 ---
 
@@ -307,6 +323,8 @@ match /profiles/{uid}/private/{document=**} {
 // leaveMatch: transação, promove fila, notifica
 // onMatchCreated: busca por geohash, notifica, push
 // onParticipantChanged: notifica vaga, promove fila
+// submitReport: transação — exige partida em comum, id composto trava duplicidade,
+//   reconta denunciantes distintos na janela e reescreve moderation/{uid}
 // submitPlayerRating: transação — valida partida encerrada, participação de
 //   quem avalia e de quem é avaliado, bloqueia autoavaliação, id composto
 //   {rater}_{rated} garante unicidade, recalcula rating/ratingCount do perfil
@@ -436,7 +454,7 @@ Fase 7
 | **3** | Real-time + Join/Leave | 15-20h | ✅ DONE |
 | **4** | Cancel + UI Dialogs + Ratings | 10-15h | ✅ DONE |
 | **5** | Player Search & Filters | 15-20h | ✅ DONE |
-| **6** | Trust & Safety | 10-15h | ⏳ NEXT |
+| **6** | Trust & Safety | 10-15h | 🚧 EM ANDAMENTO |
 | **7** | Map + Polish | 8-12h | ⏳ |
 | **TOTAL** | Completo | **113-152h** | **~50% done** |
 
@@ -648,6 +666,10 @@ Direto na chave Pix do organizador
 | **D17** | Estatísticas de experiência | Fora do perfil de terceiros | Nada escreve os contadores; o perfil próprio deriva das próprias partidas, o de terceiros exigiria collection group + permissão. Volta na Phase 6 |
 | **D18** | Cache de jogador | Memória, TTL 5 min | Busca refaz query a cada filtro e a cada volta do perfil; TTL curto evita o repeteco sem segurar nome/nota velhos |
 | **D19** | Busca de jogadores | Debounce + teto, sem paginação | Filtro de nota/esporte roda no cliente: paginar em cima disso dá páginas de tamanho aleatório e um "tem mais" que mente. A UI avisa quando o teto é atingido |
+| **D20** | Escalonamento | Conta denunciantes distintos | Contar denúncias cruas deixaria uma pessoa sozinha derrubar outra abrindo dez |
+| **D21** | Fim da suspensão | `untilMs` comparado na hora da leitura | Nada roda para limpar o documento quando o prazo vence; a regra e o guard comparam a data |
+| **D22** | Banimento | Nunca automático | Banir por contagem é vetor de brigading: um grupo coordenado elimina qualquer jogador. No limiar mais alto a conta é suspensa e marcada para revisão humana |
+| **D23** | Sair e cancelar partida | Liberados para conta restrita | Bloquear a saída prenderia a pessoa segurando uma vaga — o oposto do que se quer |
 
 ---
 

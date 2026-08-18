@@ -15,4 +15,5 @@ internal val EnGamesStrings = GamesStrings(
     playerDetails = playerDetailsStringsEn,
     playerRatings = playerRatingsStringsEn,
     ratings = ratingStringsEn,
+    reports = reportStringsEn,
 )

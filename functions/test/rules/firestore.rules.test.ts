@@ -392,6 +392,34 @@ describe("moderação e denúncias", () => {
     await assertFails(getDoc(doc(asUser(ORGANIZER), "reports", "r1")));
   });
 
+  it("suspensão ativa impede criar partida; expirada não", async () => {
+    const inADay = Date.now() + 24 * 60 * 60 * 1_000;
+    const yesterday = Date.now() - 24 * 60 * 60 * 1_000;
+    const asPlayer = matchPayload({organizerId: PLAYER});
+
+    await seed(async (database) => {
+      await setDoc(doc(database, "moderation", PLAYER), {level: "suspended", untilMs: inADay});
+    });
+    await assertFails(setDoc(doc(asUser(PLAYER), "matches", "m-suspenso"), asPlayer));
+
+    await seed(async (database) => {
+      await setDoc(doc(database, "moderation", PLAYER), {level: "suspended", untilMs: yesterday});
+    });
+    // Suspensão vencida não bloqueia mais. Nada roda para limpar o documento,
+    // então a regra precisa comparar a data, não só o nível.
+    await assertSucceeds(setDoc(doc(asUser(PLAYER), "matches", "m-liberado"), asPlayer));
+  });
+
+  it("banimento impede criar partida mesmo sem prazo", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "moderation", PLAYER), {level: "banned"});
+    });
+
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "matches", "m-banido"), matchPayload({organizerId: PLAYER})),
+    );
+  });
+
   it("o usuário lê o próprio status de moderação, mas não o altera", async () => {
     await seed(async (database) => {
       await setDoc(doc(database, "moderation", PLAYER), {level: "suspended", reason: "denúncias"});

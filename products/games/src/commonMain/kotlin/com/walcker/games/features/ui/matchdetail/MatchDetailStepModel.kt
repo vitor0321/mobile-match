@@ -6,6 +6,8 @@ import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
 import com.walcker.games.features.domain.model.ParticipantsSummary
+import com.walcker.games.features.domain.model.ReportReason
+import com.walcker.games.features.domain.model.SubmitReportOutcome
 import com.walcker.games.features.domain.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
@@ -14,6 +16,7 @@ import com.walcker.games.features.domain.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
+import com.walcker.games.features.domain.usecase.SubmitReportUseCase
 import com.walcker.games.features.ui.notifications.getCurrentTimeMillis
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
@@ -62,6 +65,16 @@ internal data class MatchDetailState(
      * that did not go through must not blank the match the user is looking at.
      */
     val ratingErrorMessage: String? = null,
+    // Report UI state
+    val showReportSheet: Boolean = false,
+    val selectedPlayerForReport: Pair<String, String>? = null, // userId to displayName
+    val isSubmittingReport: Boolean = false,
+    val reportErrorMessage: String? = null,
+    /**
+     * Who the signed-in user is, so the participant list can hide "report" on
+     * their own row. Null until the session resolves.
+     */
+    val currentUserId: String? = null,
 )
 
 /**
@@ -98,6 +111,14 @@ internal sealed interface MatchDetailEvent {
     data class SubmitRating(val rating: Int, val comment: String) : MatchDetailEvent
     /** Dismisses the rating failure banner. */
     data object DismissRatingError : MatchDetailEvent
+    /** Opens the report sheet for a specific player. */
+    data class OpenReportSheet(val userId: String, val displayName: String) : MatchDetailEvent
+    /** Closes the report sheet. */
+    data object CloseReportSheet : MatchDetailEvent
+    /** Sends a report for the selected player. */
+    data class SubmitReport(val reason: ReportReason, val details: String) : MatchDetailEvent
+    /** Dismisses the report failure banner. */
+    data object DismissReportError : MatchDetailEvent
 }
 
 /**
@@ -119,6 +140,7 @@ internal class MatchDetailStepModel(
     private val leaveMatch: LeaveMatchUseCase,
     private val cancelMatch: CancelMatchUseCase,
     private val submitRating: SubmitRatingUseCase,
+    private val submitReport: SubmitReportUseCase,
     private val sessionHolder: SessionHolder,
     private val promotionCoordinator: PromotionCoordinator,
     private val stringsHolder: GamesStringsHolder,
@@ -194,6 +216,62 @@ internal class MatchDetailStepModel(
             }
             is MatchDetailEvent.DismissRatingError -> {
                 _state.update { it.copy(ratingErrorMessage = null) }
+            }
+            is MatchDetailEvent.OpenReportSheet -> {
+                _state.update {
+                    it.copy(
+                        showReportSheet = true,
+                        selectedPlayerForReport = event.userId to event.displayName,
+                        reportErrorMessage = null,
+                    )
+                }
+            }
+            is MatchDetailEvent.CloseReportSheet -> {
+                _state.update {
+                    it.copy(showReportSheet = false, selectedPlayerForReport = null)
+                }
+            }
+            is MatchDetailEvent.SubmitReport -> {
+                submitPlayerReport(event.reason, event.details)
+            }
+            is MatchDetailEvent.DismissReportError -> {
+                _state.update { it.copy(reportErrorMessage = null) }
+            }
+        }
+    }
+
+    private fun submitPlayerReport(reason: ReportReason, details: String) {
+        val reportedUserId = _state.value.selectedPlayerForReport?.first ?: return
+        val strings = stringsHolder.resolveStringsOrDefault().reports
+
+        screenModelScope.launch {
+            _state.update { it.copy(isSubmittingReport = true, reportErrorMessage = null) }
+
+            submitReport(
+                matchId = matchId,
+                reportedUserId = reportedUserId,
+                reason = reason,
+                details = details,
+            ).onSuccess { outcome ->
+                // Either way the complaint is on file — only the wording differs.
+                val message = when (outcome) {
+                    SubmitReportOutcome.Recorded -> strings.success
+                    SubmitReportOutcome.AlreadyReported -> strings.alreadyReported
+                }
+                _state.update {
+                    it.copy(
+                        isSubmittingReport = false,
+                        showReportSheet = false,
+                        selectedPlayerForReport = null,
+                        successMessage = message,
+                    )
+                }
+            }.onFailure {
+                // Sheet stays open so the person can retry without picking the
+                // player and the reason again.
+                _state.update {
+                    it.copy(isSubmittingReport = false, reportErrorMessage = strings.error)
+                }
             }
         }
     }
@@ -359,6 +437,9 @@ internal class MatchDetailStepModel(
             // Resolve the current user once; subsequent emissions use the same id.
             if (currentUserId == null) {
                 currentUserId = sessionHolder.currentUser.first()?.uid
+                // Mirrored into the state so the participant list can hide
+                // "report" on the signed-in user's own row.
+                _state.update { it.copy(currentUserId = currentUserId) }
             }
 
             observeParticipants(matchId)

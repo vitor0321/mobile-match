@@ -15,10 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,11 +41,14 @@ import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.games.features.domain.model.ParticipantsSummary
 import com.walcker.games.features.ui.ratings.RatingBottomSheet
+import com.walcker.games.features.ui.reports.ReportBottomSheet
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
+import com.walcker.games.features.domain.usecase.SubmitReportUseCase
 import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.games.strings.ReportStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.navigator.PromotionCoordinator
@@ -59,6 +66,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val observeMatch: ObserveMatchUseCase = koinInject()
         val observeParticipants: ObserveParticipantsUseCase = koinInject()
         val submitRating: SubmitRatingUseCase = koinInject()
+        val submitReport: SubmitReportUseCase = koinInject()
         val sessionHolder: SessionHolder = koinInject()
         val promotionCoordinator: PromotionCoordinator = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
@@ -76,6 +84,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 leaveMatch = leaveGame,
                 cancelMatch = cancelGame,
                 submitRating = submitRating,
+                submitReport = submitReport,
                 sessionHolder = sessionHolder,
                 promotionCoordinator = promotionCoordinator,
                 stringsHolder = stringsHolder,
@@ -140,6 +149,14 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                     )
                 }
 
+                // Same treatment for a failed report.
+                state.reportErrorMessage?.let { message ->
+                    RatingErrorBanner(
+                        message = message,
+                        onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissReportError) },
+                    )
+                }
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     when {
                         state.isLoading -> {
@@ -163,6 +180,13 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                                 isJoining = state.isJoining,
                                 isLeavingMatch = state.isLeavingMatch,
                                 isCancellingMatch = state.isCancellingMatch,
+                                currentUserId = state.currentUserId,
+                                reportStrings = strings.reports,
+                                onReportPlayer = { userId, displayName ->
+                                    stepModel.onEvent(
+                                        MatchDetailEvent.OpenReportSheet(userId, displayName),
+                                    )
+                                },
                                 onRatePlayer = { userId, displayName ->
                                     stepModel.onEvent(
                                         MatchDetailEvent.OpenRatingSheet(userId, displayName),
@@ -187,6 +211,18 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 }
             }
         }
+
+        // Report bottom sheet — shown when user taps the flag on a participant.
+        ReportBottomSheet(
+            isVisible = state.showReportSheet,
+            playerName = state.selectedPlayerForReport?.second ?: "",
+            strings = strings.reports,
+            isSubmitting = state.isSubmittingReport,
+            onDismiss = { stepModel.onEvent(MatchDetailEvent.CloseReportSheet) },
+            onSubmit = { reason, details ->
+                stepModel.onEvent(MatchDetailEvent.SubmitReport(reason, details))
+            },
+        )
 
         // Rating bottom sheet — shown when user taps "Rate" on a participant.
         RatingBottomSheet(
@@ -400,6 +436,9 @@ private fun MatchDetailContent(
     match: com.walcker.games.features.domain.model.Game,
     participants: ParticipantsSummary?,
     canRate: Boolean,
+    currentUserId: String?,
+    reportStrings: ReportStrings,
+    onReportPlayer: (userId: String, displayName: String) -> Unit,
     isJoining: Boolean,
     isLeavingMatch: Boolean,
     isCancellingMatch: Boolean,
@@ -509,6 +548,9 @@ private fun MatchDetailContent(
             ParticipantsList(
                 participants = participants,
                 canRate = canRate,
+                currentUserId = currentUserId,
+                reportStrings = reportStrings,
+                onReportPlayer = onReportPlayer,
                 onRatePlayer = onRatePlayer,
             )
         } else {
@@ -630,6 +672,9 @@ private fun JoinButton(
 private fun ParticipantsList(
     participants: ParticipantsSummary,
     canRate: Boolean,
+    currentUserId: String?,
+    reportStrings: ReportStrings,
+    onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -653,6 +698,9 @@ private fun ParticipantsList(
                     participant = participant,
                     statusLabel = "✓ Confirmed",
                     canRate = canRate,
+                    canReport = participant.userId != currentUserId,
+                    reportStrings = reportStrings,
+                    onReportPlayer = onReportPlayer,
                     onRatePlayer = onRatePlayer,
                 )
             }
@@ -673,6 +721,9 @@ private fun ParticipantsList(
                     participant = participant,
                     statusLabel = "#$pos in queue",
                     canRate = false, // Only rate confirmed players
+                    canReport = participant.userId != currentUserId,
+                    reportStrings = reportStrings,
+                    onReportPlayer = onReportPlayer,
                     onRatePlayer = onRatePlayer,
                 )
             }
@@ -705,6 +756,9 @@ private fun ParticipantRow(
     participant: Participant,
     statusLabel: String,
     canRate: Boolean,
+    canReport: Boolean,
+    reportStrings: ReportStrings,
+    onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -762,6 +816,20 @@ private fun ParticipantRow(
                 onClick = { onRatePlayer(participant.userId, participant.displayName) },
             ) {
                 Text("⭐ Avaliar")
+            }
+        }
+
+        // Report is available regardless of match status: bad behaviour does
+        // not wait for the final whistle. Hidden only on the user's own row.
+        if (canReport) {
+            IconButton(
+                onClick = { onReportPlayer(participant.userId, participant.displayName) },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Flag,
+                    contentDescription = reportStrings.reportAction,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
