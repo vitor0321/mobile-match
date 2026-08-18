@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -130,13 +129,18 @@ internal class CreateMatchStep : Screen {
                     }
 
                     // Sport selection
+                    //
+                    // Column, not LazyColumn: a lazy list inside a LazyColumn
+                    // item is measured with infinite height and crashes at
+                    // runtime. Sport is a small fixed enum anyway — there is
+                    // nothing to virtualize.
                     item {
                         Text("Esporte", style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
-                        LazyColumn(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            items(items = Sport.values().toList()) { sport ->
+                            Sport.entries.forEach { sport ->
                                 FilterChip(
                                     selected = state.selectedSport == sport,
                                     onClick = { stepModel.onEvent(CreateMatchEvents.SportSelected(sport)) },
