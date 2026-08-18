@@ -7,4 +7,5 @@ internal data class GamesStrings(
     val createMatch: CreateMatchStrings,
     val playerProfile: PlayerProfileStrings,
     val notificationHistory: NotificationHistoryStrings,
+    val playerSearch: PlayerSearchStrings,
 )

@@ -48,28 +48,85 @@ internal class SearchStepModel(
         when (event) {
             is SearchEvents.QueryChanged -> {
                 _state.update { it.copy(query = event.query) }
-                applyQuery(event.query)
+                applyFilters()
+            }
+            is SearchEvents.DateRangeChanged -> {
+                _state.update { it.copy(filters = it.filters.copy(startDateMs = event.startDateMs, endDateMs = event.endDateMs)) }
+                applyFilters()
+            }
+            is SearchEvents.SportFilterChanged -> {
+                _state.update { it.copy(filters = it.filters.copy(sports = event.sports)) }
+                applyFilters()
+            }
+            is SearchEvents.PriceRangeChanged -> {
+                _state.update { it.copy(filters = it.filters.copy(minPrice = event.minPrice, maxPrice = event.maxPrice)) }
+                applyFilters()
+            }
+            SearchEvents.ResetFilters -> {
+                _state.update { it.copy(query = "", filters = SearchFilters(), showFiltersPanel = false) }
+                applyFilters()
+            }
+            SearchEvents.ToggleFiltersPanel -> {
+                _state.update { it.copy(showFiltersPanel = !it.showFiltersPanel) }
             }
             is SearchEvents.JoinGame -> onJoinGame(event.gameId)
         }
     }
 
-    private fun applyQuery(query: String) {
-        val trimmed = query.trim()
-        val filtered = if (trimmed.isBlank()) {
-            allMatches
-        } else {
-            val needle = trimmed.lowercase()
-            allMatches.filter { game ->
-                game.venueName.lowercase().contains(needle) ||
-                    game.neighborhood.lowercase().contains(needle) ||
-                    game.city.lowercase().contains(needle) ||
-                    game.sport.label.lowercase().contains(needle)
+    private fun applyFilters() {
+        val state = _state.value
+        val trimmedQuery = state.query.trim().lowercase()
+        val filters = state.filters
+
+        val filtered = allMatches.filter { game ->
+            // Text search
+            val matchesText = if (trimmedQuery.isBlank()) {
+                true
+            } else {
+                game.venueName.lowercase().contains(trimmedQuery) ||
+                    game.neighborhood.lowercase().contains(trimmedQuery) ||
+                    game.city.lowercase().contains(trimmedQuery) ||
+                    game.sport.label.lowercase().contains(trimmedQuery)
             }
+
+            // Date range filter (convert seconds to milliseconds for comparison)
+            val gameStartMs = game.startsAtSeconds * 1000
+            val matchesDateRange = if (filters.startDateMs != null && gameStartMs < filters.startDateMs) {
+                false
+            } else if (filters.endDateMs != null && gameStartMs > filters.endDateMs) {
+                false
+            } else {
+                true
+            }
+
+            // Sport filter
+            val matchesSport = if (filters.sports.isEmpty()) {
+                true
+            } else {
+                game.sport in filters.sports
+            }
+
+            // Price filter (pricePerPlayer can be null for free matches)
+            val gamePrice = game.pricePerPlayer?.toFloatOrNull() ?: 0f
+            val matchesPrice = if (filters.minPrice != null && gamePrice < filters.minPrice) {
+                false
+            } else if (filters.maxPrice != null && gamePrice > filters.maxPrice) {
+                false
+            } else {
+                true
+            }
+
+            matchesText && matchesDateRange && matchesSport && matchesPrice
         }
+
         _state.update {
             it.copy(results = filtered.toImmutableList())
         }
+    }
+
+    private fun applyQuery(query: String) {
+        _state.update { it.copy(query = query) }
+        applyFilters()
     }
 
     private fun onJoinGame(gameId: String) {

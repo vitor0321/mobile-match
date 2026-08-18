@@ -2,18 +2,22 @@ package com.walcker.games.features.data.di
 
 import com.walcker.games.features.data.cache.InMemoryMatchCache
 import com.walcker.games.features.data.platform.GamesPlatformServices
+import com.walcker.games.features.data.platform.createPlayerSource
 import com.walcker.games.features.data.preferences.GamesPreferences
 import com.walcker.games.features.data.repository.GameRepositoryImpl
 import com.walcker.games.features.data.repository.NotificationRepositoryImpl
+import com.walcker.games.features.data.repository.PlayerRepositoryImpl
 import com.walcker.games.features.data.repository.RatingRepositoryImpl
 import com.walcker.games.features.data.source.FirestoreGameSource
 import com.walcker.games.features.data.source.FirestoreNotificationSource
 import com.walcker.games.features.data.source.FirestoreRatingSource
 import com.walcker.games.features.data.source.GameSource
 import com.walcker.games.features.data.source.NotificationSource
+import com.walcker.games.features.data.source.PlayerSource
 import com.walcker.games.features.data.source.RatingSource
 import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.repository.NotificationRepository
+import com.walcker.games.features.domain.repository.PlayerRepository
 import com.walcker.games.features.domain.repository.RatingRepository
 import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.CancelMatchUseCaseImpl
@@ -23,6 +27,8 @@ import com.walcker.games.features.domain.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.usecase.GetMyMatchesUseCaseImpl
 import com.walcker.games.features.domain.usecase.GetOpenGamesUseCase
 import com.walcker.games.features.domain.usecase.GetOpenGamesUseCaseImpl
+import com.walcker.games.features.domain.usecase.GetPlayerDetailsUseCase
+import com.walcker.games.features.domain.usecase.GetPlayerDetailsUseCaseImpl
 import com.walcker.games.features.domain.usecase.JoinGameUseCase
 import com.walcker.games.features.domain.usecase.JoinGameUseCaseImpl
 import com.walcker.games.features.domain.usecase.LeaveMatchUseCase
@@ -41,6 +47,8 @@ import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCaseImpl
+import com.walcker.games.features.domain.usecase.SearchPlayersUseCase
+import com.walcker.games.features.domain.usecase.SearchPlayersUseCaseImpl
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.usecase.GetUserRatingsUseCase
 import com.walcker.match.firestore.FirestoreClient
@@ -81,4 +89,17 @@ internal val gamesDataModule = module {
     factory<ObserveMatchUseCase> { ObserveMatchUseCaseImpl(repository = get()) }
     factory { SubmitRatingUseCase(ratingRepository = get()) }
     factory { GetUserRatingsUseCase(ratingRepository = get()) }
+
+    // Player search (Phase 5)
+    single<PlayerSource> {
+        createPlayerSource(
+            firestore = get<FirestoreClient>(),
+            ratingSource = get(),
+        )
+    }
+    single<PlayerRepository> {
+        PlayerRepositoryImpl(source = get())
+    }
+    factory<SearchPlayersUseCase> { SearchPlayersUseCaseImpl(repository = get()) }
+    factory<GetPlayerDetailsUseCase> { GetPlayerDetailsUseCaseImpl(repository = get()) }
 }

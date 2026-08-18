@@ -11,4 +11,5 @@ internal val EnGamesStrings = GamesStrings(
     createMatch = createMatchStringsEn,
     playerProfile = playerProfileStringsEn,
     notificationHistory = EnNotificationHistoryStrings(),
+    playerSearch = playerSearchStringsEn,
 )

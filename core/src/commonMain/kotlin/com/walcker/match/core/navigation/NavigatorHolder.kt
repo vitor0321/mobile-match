@@ -1,5 +1,6 @@
 package com.walcker.match.core.navigation
 
+import cafe.adriel.voyager.navigator.Navigator
 
 class NavigatorHolder {
     private val attachment = Attachment<Navigator>()

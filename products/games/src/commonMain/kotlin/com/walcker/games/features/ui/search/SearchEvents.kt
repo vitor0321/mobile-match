@@ -1,7 +1,14 @@
 package com.walcker.games.features.ui.search
 
+import com.walcker.games.features.domain.model.Sport
+
 internal sealed interface SearchEvents {
     data class QueryChanged(val query: String) : SearchEvents
+    data class DateRangeChanged(val startDateMs: Long?, val endDateMs: Long?) : SearchEvents
+    data class SportFilterChanged(val sports: Set<Sport>) : SearchEvents
+    data class PriceRangeChanged(val minPrice: Float?, val maxPrice: Float?) : SearchEvents
+    data object ResetFilters : SearchEvents
+    data object ToggleFiltersPanel : SearchEvents
     data class JoinGame(val gameId: String) : SearchEvents
 }
 

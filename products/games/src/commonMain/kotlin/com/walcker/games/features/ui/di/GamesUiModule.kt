@@ -5,6 +5,7 @@ import com.walcker.games.features.ui.gamelist.GameListStepModel
 import com.walcker.games.features.ui.map.MapStepModel
 import com.walcker.games.features.ui.mymatches.MyMatchesStepModel
 import com.walcker.games.features.ui.notifications.NotificationHistoryStepModel
+import com.walcker.games.features.ui.player_search.PlayerSearchStepModel
 import com.walcker.games.features.ui.playerprofile.PlayerProfileStepModel
 import com.walcker.games.features.ui.search.SearchStepModel
 import org.koin.dsl.module
@@ -64,6 +65,12 @@ internal val gamesUiModule = module {
             markNotificationAsRead = get(),
             deleteNotification = get(),
             sessionHolder = get(),
+            stringsHolder = get(),
+        )
+    }
+    factory {
+        PlayerSearchStepModel(
+            searchPlayersUseCase = get(),
             stringsHolder = get(),
         )
     }
