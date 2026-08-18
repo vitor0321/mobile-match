@@ -49,6 +49,26 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/profiles/$(uid())).data.isBanned == true;
     }
 
+    // Banido para sempre, ou com suspensão ainda valendo.
+    //
+    // Entrar e avaliar passam por callable e são barrados lá; criar partida é
+    // escrita direta do cliente, então a checagem precisa existir aqui também.
+    // As chamadas get() repetidas são resolvidas uma vez só por avaliação.
+    function isSuspendedUser() {
+      return exists(/databases/$(database)/documents/moderation/$(uid()))
+        && (
+          get(/databases/$(database)/documents/moderation/$(uid())).data.level == 'banned'
+          || (
+            get(/databases/$(database)/documents/moderation/$(uid())).data.level == 'suspended'
+            && get(/databases/$(database)/documents/moderation/$(uid())).data.untilMs > request.time.toMillis()
+          )
+        );
+    }
+
+    function isRestrictedUser() {
+      return isBannedUser() || isSuspendedUser();
+    }
+
     function isText(value, max) {
       return value is string && value.size() <= max;
     }
@@ -172,7 +192,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       allow create: if isSignedIn()
-        && !isBannedUser()
+        && !isRestrictedUser()
         && incoming().organizerId == uid()
         && isValidMatchContent(incoming())
         && incoming().startsAt > request.time

@@ -3,6 +3,19 @@ import {getAuth} from "firebase-admin/auth";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import * as functionsV1 from "firebase-functions/v1";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {
+  DAY_IN_MILLIS,
+  MAX_REPORT_DETAILS_LENGTH,
+  type ModerationLevel,
+  REPORT_WINDOW_DAYS,
+  SUSPENSION_DAYS,
+  blockedError,
+  isBlocked,
+  isReportReason,
+  levelForReporterCount,
+  requiresHumanReview,
+  type ReportReason,
+} from "./moderation.js";
 
 initializeApp();
 
@@ -143,6 +156,11 @@ export const joinMatch = onCall(
     const matchId = data.matchId;
 
     return db.runTransaction(async (txn) => {
+      // Entrar em partida nova é exatamente o que uma conta restrita não pode
+      // fazer. Sair e cancelar continuam liberados de propósito: bloquear a
+      // saída prenderia a pessoa segurando uma vaga.
+      await requireNotBlocked(txn, uid, Date.now());
+
       const matchRef = db.doc(`matches/${matchId}`);
       const participantRef = db.doc(`matches/${matchId}/participants/${uid}`);
       const matchSnap = await txn.get(matchRef);
@@ -435,6 +453,9 @@ export const submitPlayerRating = onCall(
     const {matchId, ratedUserId, rating, comment} = parseSubmitRatingPayload(request.data, uid);
 
     return db.runTransaction(async (txn) => {
+      // Uma conta restrita não mexe na reputação de ninguém.
+      await requireNotBlocked(txn, uid, Date.now());
+
       const ratingId = `${uid}_${ratedUserId}`;
       const matchRef = db.doc(`matches/${matchId}`);
       const matchRatingRef = db.doc(`matches/${matchId}/ratings/${ratingId}`);
@@ -588,6 +609,209 @@ function requireMatchIsOver(match: Record<string, unknown>): void {
 function roundTo(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
+}
+
+// ---------------------------------------------------------------------------
+// submitReport — Callable (invocada por products/games)
+//
+// Denunciar alguém com quem se jogou. Duas travas contra abuso, ambas
+// estruturais e não configuráveis:
+//   1. Denunciante e denunciado precisam estar na mesma partida. Não dá para
+//      denunciar um estranho.
+//   2. O id do documento é {matchId}_{reporter}_{reported}, então uma pessoa
+//      conta no máximo uma vez por partida contra a mesma pessoa.
+//
+// Depois de gravar, reavalia moderation/{reportedUserId} contando
+// DENUNCIANTES DISTINTOS na janela recente — ver ./moderation.ts para os
+// limiares e para por que o banimento não é automático.
+// ---------------------------------------------------------------------------
+
+export const submitReport = onCall(
+  {region: REGION},
+  async (request): Promise<SubmitReportResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+
+    const {matchId, reportedUserId, reason, details} = parseReportPayload(request.data, uid);
+    const nowMs = Date.now();
+    const windowStartMs = nowMs - REPORT_WINDOW_DAYS * DAY_IN_MILLIS;
+
+    return db.runTransaction(async (txn) => {
+      const reportId = `${matchId}_${uid}_${reportedUserId}`;
+      const matchRef = db.doc(`matches/${matchId}`);
+      const reportRef = db.doc(`reports/${reportId}`);
+      const moderationRef = db.doc(`moderation/${reportedUserId}`);
+
+      // Denúncia vinda de conta restrita costuma ser retaliação.
+      await requireNotBlocked(txn, uid, nowMs);
+
+      const [matchSnap, existingSnap, moderationSnap] = await txn.getAll(
+        matchRef,
+        reportRef,
+        moderationRef,
+      );
+
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const participants: string[] = Array.isArray(matchSnap.data()?.participants)
+        ? (matchSnap.data()?.participants as unknown[]).filter((x): x is string => typeof x === "string")
+        : [];
+
+      if (!participants.includes(uid)) {
+        throw new HttpsError("permission-denied", "Only participants can report in this match.");
+      }
+      if (!participants.includes(reportedUserId)) {
+        throw new HttpsError("failed-precondition", "The reported user did not play this match.");
+      }
+
+      const moderation = moderationSnap.data();
+
+      // Idempotente, como as outras callables: reenviar não conta de novo.
+      if (existingSnap.exists) {
+        return {
+          status: "already_reported" as const,
+          reportId,
+          moderationLevel: (moderation?.level as ModerationLevel) ?? "none",
+        };
+      }
+
+      // Denúncias recentes contra a mesma pessoa, lidas ainda na fase de leitura.
+      const recentReports = await txn.get(
+        db
+          .collection("reports")
+          .where("reportedUserId", "==", reportedUserId)
+          .where("createdAtMs", ">=", windowStartMs),
+      );
+
+      const reporters = new Set<string>([uid]);
+      for (const document of recentReports.docs) {
+        const reporterId = document.data().reporterId;
+        if (typeof reporterId === "string") reporters.add(reporterId);
+      }
+      const distinctReporters = reporters.size;
+
+      txn.set(reportRef, {
+        reporterId: uid,
+        reportedUserId,
+        matchId,
+        reason,
+        details,
+        status: "open",
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      const nextLevel = applyModeration({
+        txn,
+        moderationRef,
+        current: moderation,
+        distinctReporters,
+        nowMs,
+        reportedUserId,
+      });
+
+      return {status: "recorded" as const, reportId, moderationLevel: nextLevel};
+    });
+  },
+);
+
+interface SubmitReportResponse {
+  status: "recorded" | "already_reported";
+  reportId: string;
+  moderationLevel: ModerationLevel;
+}
+
+interface ReportPayload {
+  matchId: string;
+  reportedUserId: string;
+  reason: ReportReason;
+  details: string;
+}
+
+function parseReportPayload(value: unknown, uid: string): ReportPayload {
+  const data = (value ?? {}) as Partial<ReportPayload>;
+
+  if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+    throw new HttpsError("invalid-argument", "matchId is required.");
+  }
+  if (typeof data.reportedUserId !== "string" || data.reportedUserId.length === 0) {
+    throw new HttpsError("invalid-argument", "reportedUserId is required.");
+  }
+  if (data.reportedUserId === uid) {
+    throw new HttpsError("failed-precondition", "You cannot report yourself.");
+  }
+  if (!isReportReason(data.reason)) {
+    throw new HttpsError("invalid-argument", "reason is not a known report reason.");
+  }
+  const details = typeof data.details === "string" ? data.details.trim() : "";
+  if (details.length > MAX_REPORT_DETAILS_LENGTH) {
+    throw new HttpsError(
+      "invalid-argument",
+      `details must be at most ${MAX_REPORT_DETAILS_LENGTH} characters.`,
+    );
+  }
+
+  return {matchId: data.matchId, reportedUserId: data.reportedUserId, reason: data.reason, details};
+}
+
+/**
+ * Escreve o novo estado de moderação e devolve o nível resultante.
+ *
+ * Nunca rebaixa um `banned`: esse nível só vem de decisão humana, e uma
+ * recontagem automática não pode desfazê-la.
+ */
+function applyModeration(input: {
+  txn: FirebaseFirestore.Transaction;
+  moderationRef: FirebaseFirestore.DocumentReference;
+  current: FirebaseFirestore.DocumentData | undefined;
+  distinctReporters: number;
+  nowMs: number;
+  reportedUserId: string;
+}): ModerationLevel {
+  const {txn, moderationRef, current, distinctReporters, nowMs} = input;
+
+  if (current?.level === "banned") return "banned";
+
+  const level = levelForReporterCount(distinctReporters);
+  if (level === "none") return "none";
+
+  const untilMs = level === "suspended" ? nowMs + SUSPENSION_DAYS * DAY_IN_MILLIS : null;
+  const history = Array.isArray(current?.history) ? current.history : [];
+
+  txn.set(
+    moderationRef,
+    {
+      level,
+      untilMs,
+      distinctReporters,
+      requiresReview: requiresHumanReview(distinctReporters),
+      reason: "automatic_report_threshold",
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+      history: [...history, {level, distinctReporters, atMs: nowMs}].slice(-MAX_HISTORY_ENTRIES),
+    },
+    {merge: true},
+  );
+
+  return level;
+}
+
+const MAX_HISTORY_ENTRIES = 20;
+
+/**
+ * Recusa a ação quando a conta está banida ou com suspensão ativa.
+ *
+ * Roda dentro da transação de quem chama, junto das outras leituras — a decisão
+ * precisa ver o mesmo instante do resto da operação.
+ */
+async function requireNotBlocked(
+  txn: FirebaseFirestore.Transaction,
+  uid: string,
+  nowMs: number,
+): Promise<void> {
+  const snapshot = await txn.get(db.doc(`moderation/${uid}`));
+  if (isBlocked(snapshot.data(), nowMs)) throw blockedError();
 }
 
 function readEpochSeconds(value: unknown): number | null {
