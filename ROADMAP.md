@@ -1,6 +1,6 @@
 # Mobile Match — Roadmap Consolidado
 
-**Último atualizado:** 2026-08-18 · **Status:** Phase 5 completa; Phase 6 em andamento (denúncia, moderação e restrição prontas)
+**Último atualizado:** 2026-08-18 · **Status:** Phase 6 em andamento — denúncia, moderação, restrição e notificações prontas
 
 ---
 
@@ -172,10 +172,13 @@ functions/                  Cloud Functions (triggers, callables)
 - 🛡️ **Moderação** (advertência → suspensão → revisão humana) ✅
 - 🔒 **Restrição efetiva** — joinMatch, submitPlayerRating, submitReport e a
   regra de criar partida recusam conta banida ou suspensa ✅
+- 🔔 **Notificações** — `onMatchCreated` e `onParticipantChanged` ✅
 - 📋 **Avaliações pós-partida** multidimensionais (pontualidade, respeito,
   fair play, comportamento) ⏳
 - ✉️ **Verificação** de e-mail e telefone (SMS) ⏳
-- 🔐 **LGPD** (exportação, exclusão estendida, minimização) ⏳
+- 🔐 **LGPD** — exportação (`exportUserData`) ✅; exclusão estendida ⏳
+- ❌ **Contadores de experiência** — fora do produto (D26)
+- ❌ **Assinatura / limite de plano** — fora do MVP (D27)
 
 **O que existia antes:** só a fachada. As coleções `reports` e `moderation`
 tinham regras, comentários e testes, mas ninguém escrevia nelas. `isBanned` era
@@ -321,14 +324,17 @@ match /profiles/{uid}/private/{document=**} {
 // Regra: Decisões críticas no servidor, nunca no cliente
 // joinMatch: transação, valida ban, lotação, duplicidade
 // leaveMatch: transação, promove fila, notifica
-// onMatchCreated: busca por geohash, notifica, push
-// onParticipantChanged: notifica vaga, promove fila
+// onMatchCreated: faixas de geohash sobre collection group `private`, seleção
+//   por raio efetivo (B4) com teto de destinatários, histórico + push
+// onParticipantChanged: notifica quem subiu da fila (a promoção em si é do leaveMatch)
 // submitReport: transação — exige partida em comum, id composto trava duplicidade,
 //   reconta denunciantes distintos na janela e reescreve moderation/{uid}
 // submitPlayerRating: transação — valida partida encerrada, participação de
 //   quem avalia e de quem é avaliado, bloqueia autoavaliação, id composto
 //   {rater}_{rated} garante unicidade, recalcula rating/ratingCount do perfil
-// deleteAccount: estendido do identity, limpa match data
+// exportUserData: direito de acesso; denúncia contra a pessoa sai sem o denunciante
+// deleteAccount: HOJE só apaga profiles/{uid} e users/{uid}. NÃO remove participações,
+//   partidas organizadas, denúncias, nem o usuário do Firebase Auth
 ```
 
 ---
@@ -470,7 +476,7 @@ Fase 7
 | R4 | Mapa em CMP | Sem solução madura | expect/actual isolado; Fase 7 | ⏳ DEFER |
 | R5 | Assinatura por Pix → rejeitada | App rejeitado na App Store | RevenueCat (entitlements) | ✅ DECIDIDO |
 | R6 | Room KMP primeira adoção | Atrito de build, KSP iOS | Spike Fase 0 | ✅ FEITO |
-| R7 | Custo Firestore (notificações) | Conta cresce | Raio máximo, limite destinatários | ⏳ MONITOR |
+| R7 | Custo Firestore (notificações) | Conta cresce | Teto de 50 km e 60 destinatários por partida | ✅ IMPLEMENTADO |
 | R8 | Múltiplos Firebase pods (iOS) | Erros de linkagem | Módulo firestore/ único | ✅ IMPLEMENTADO |
 | R9 | QR Pix via API terceiro | Vazamento de chave | Gerar QR no dispositivo | ✅ IMPLEMENTADO |
 | R10 | AnalyticsTracker com métodos Bible | Confusão, erros | Limpar na Fase 0 | ✅ FEITO |
@@ -670,6 +676,11 @@ Direto na chave Pix do organizador
 | **D21** | Fim da suspensão | `untilMs` comparado na hora da leitura | Nada roda para limpar o documento quando o prazo vence; a regra e o guard comparam a data |
 | **D22** | Banimento | Nunca automático | Banir por contagem é vetor de brigading: um grupo coordenado elimina qualquer jogador. No limiar mais alto a conta é suspensa e marcada para revisão humana |
 | **D23** | Sair e cancelar partida | Liberados para conta restrita | Bloquear a saída prenderia a pessoa segurando uma vaga — o oposto do que se quer |
+| **D24** | Partida encerrada | Derivado do relógio, não persistido | Nada marcava `status: FINISHED`, então o botão de avaliar nunca aparecia. `startsAt + durationMin` no passado é a mesma verdade que o servidor já usa |
+| **D25** | Filtro de disponibilidade na notificação | Desligado por ora | `isAvailable` nasce `false` e o toggle (B5) não existe; filtrar por ele hoje seria não notificar ninguém, nunca |
+| **D26** | Contadores de experiência | Fora do produto | Decisão do Vitor: nem trigger, nem seção. Sai do escopo em vez de virar dívida |
+| **D27** | Assinatura e limite de plano | Fora do MVP | Sem RevenueCat ativo e sem limite de partidas por plano até haver decisão de monetização |
+| **D28** | Export LGPD de denúncia | Denunciante redigido | Direito de acesso é sobre os dados da pessoa; revelar quem denunciou entrega dado de terceiro e abre caminho para retaliação |
 
 ---
 

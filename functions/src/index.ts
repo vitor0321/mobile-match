@@ -2,7 +2,17 @@ import {initializeApp} from "firebase-admin/app";
 import {getAuth} from "firebase-admin/auth";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import * as functionsV1 from "firebase-functions/v1";
+import {getMessaging} from "firebase-admin/messaging";
+import {onDocumentCreated, onDocumentWritten} from "firebase-functions/v2/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {boundsForRadius} from "./geo.js";
+import {
+  MAX_NOTIFY_RADIUS_KM,
+  type NotificationCandidate,
+  isWaitlistPromotion,
+  parseCandidate,
+  selectRecipients,
+} from "./notifications.js";
 import {
   DAY_IN_MILLIS,
   MAX_REPORT_DETAILS_LENGTH,
@@ -129,6 +139,109 @@ export function requireEmptyPayload(value: unknown): void {
   if (Object.keys(value as Record<string, unknown>).length > 0) {
     throw new HttpsError("invalid-argument", "Payload must be empty.");
   }
+}
+
+// ---------------------------------------------------------------------------
+// exportUserData — Callable (LGPD, direito de acesso)
+//
+// Devolve tudo que o produto guarda sobre quem chama, em JSON. Somente leitura:
+// a contraparte destrutiva é o deleteAccount.
+//
+// Uma exceção deliberada: denúncias FEITAS pela pessoa saem inteiras, mas
+// denúncias CONTRA ela saem sem a identidade de quem denunciou. O direito de
+// acesso é sobre os dados dela; revelar o denunciante entregaria dado de
+// terceiro e abriria caminho para retaliação.
+// ---------------------------------------------------------------------------
+
+const EXPORT_COLLECTION_LIMIT = 500;
+
+export const exportUserData = onCall(
+  {region: REGION},
+  async (request): Promise<UserDataExport> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    requireRecentAuthentication(request.auth?.token.auth_time);
+    requireEmptyPayload(request.data);
+
+    const [
+      profile,
+      privateData,
+      moderation,
+      ratingsReceived,
+      notificationHistory,
+      devices,
+      subscription,
+      reportsFiled,
+      reportsAgainst,
+      organizedMatches,
+      participations,
+    ] = await Promise.all([
+      db.doc(`profiles/${uid}`).get(),
+      db.doc(`profiles/${uid}/private/data`).get(),
+      db.doc(`moderation/${uid}`).get(),
+      db.collection(`profiles/${uid}/ratings`).limit(EXPORT_COLLECTION_LIMIT).get(),
+      db.collection(`users/${uid}/notificationHistory`).limit(EXPORT_COLLECTION_LIMIT).get(),
+      db.collection(`users/${uid}/devices`).limit(EXPORT_COLLECTION_LIMIT).get(),
+      db.collection(`users/${uid}/subscription`).limit(EXPORT_COLLECTION_LIMIT).get(),
+      db.collection("reports").where("reporterId", "==", uid).limit(EXPORT_COLLECTION_LIMIT).get(),
+      db
+        .collection("reports")
+        .where("reportedUserId", "==", uid)
+        .limit(EXPORT_COLLECTION_LIMIT)
+        .get(),
+      db.collection("matches").where("organizerId", "==", uid).limit(EXPORT_COLLECTION_LIMIT).get(),
+      db
+        .collectionGroup("participants")
+        .where("userId", "==", uid)
+        .limit(EXPORT_COLLECTION_LIMIT)
+        .get(),
+    ]);
+
+    return {
+      exportedAtMs: Date.now(),
+      userId: uid,
+      profile: profile.data() ?? null,
+      private: privateData.data() ?? null,
+      moderation: moderation.data() ?? null,
+      ratingsReceived: documents(ratingsReceived),
+      notificationHistory: documents(notificationHistory),
+      devices: documents(devices),
+      subscription: documents(subscription),
+      reportsFiled: documents(reportsFiled),
+      reportsAgainst: documents(reportsAgainst).map(redactReporter),
+      organizedMatches: documents(organizedMatches),
+      participations: documents(participations),
+    };
+  },
+);
+
+interface UserDataExport {
+  exportedAtMs: number;
+  userId: string;
+  profile: FirebaseFirestore.DocumentData | null;
+  private: FirebaseFirestore.DocumentData | null;
+  moderation: FirebaseFirestore.DocumentData | null;
+  ratingsReceived: ExportedDocument[];
+  notificationHistory: ExportedDocument[];
+  devices: ExportedDocument[];
+  subscription: ExportedDocument[];
+  reportsFiled: ExportedDocument[];
+  reportsAgainst: ExportedDocument[];
+  organizedMatches: ExportedDocument[];
+  participations: ExportedDocument[];
+}
+
+type ExportedDocument = FirebaseFirestore.DocumentData & {id: string};
+
+function documents(snapshot: FirebaseFirestore.QuerySnapshot): ExportedDocument[] {
+  return snapshot.docs.map((document) => ({id: document.id, ...document.data()}));
+}
+
+/** Tira do export quem denunciou — é dado de terceiro, não da pessoa. */
+function redactReporter(report: ExportedDocument): ExportedDocument {
+  const {reporterId, ...rest} = report;
+  void reporterId;
+  return rest as ExportedDocument;
 }
 
 // ---------------------------------------------------------------------------
@@ -812,6 +925,184 @@ async function requireNotBlocked(
 ): Promise<void> {
   const snapshot = await txn.get(db.doc(`moderation/${uid}`));
   if (isBlocked(snapshot.data(), nowMs)) throw blockedError();
+}
+
+// ---------------------------------------------------------------------------
+// onMatchCreated — Trigger (matches/{matchId} criado)
+//
+// Avisa quem está por perto que abriu partida nova. A consulta é por faixas de
+// geohash sobre profiles/{uid}/private/data (collection group `private`), com o
+// teto de MAX_NOTIFY_RADIUS_KM; o recorte fino por distância e por raio de cada
+// jogador acontece em selectRecipients.
+//
+// A escrita no histórico é em lote e o push é best-effort: falhar em entregar
+// notificação não pode derrubar a criação da partida.
+// ---------------------------------------------------------------------------
+
+export const onMatchCreated = onDocumentCreated(
+  {region: REGION, document: "matches/{matchId}"},
+  async (event) => {
+    const match = event.data?.data();
+    if (!match) return;
+
+    const lat = typeof match.lat === "number" ? match.lat : null;
+    const lng = typeof match.lng === "number" ? match.lng : null;
+    const organizerId = typeof match.organizerId === "string" ? match.organizerId : "";
+    if (lat === null || lng === null || organizerId === "") return;
+
+    const candidates = await findNearbyCandidates({lat, lng});
+    const recipients = selectRecipients(candidates, {
+      matchId: event.params.matchId,
+      organizerId,
+      sport: String(match.sport ?? ""),
+      lat,
+      lng,
+    });
+    if (recipients.length === 0) return;
+
+    const title = "Partida nova perto de você";
+    const body = [match.sport, match.venue, match.neighborhood]
+      .filter((part): part is string => typeof part === "string" && part.length > 0)
+      .join(" · ");
+
+    await writeNotifications(
+      recipients.map((recipient) => recipient.userId),
+      {type: "new_match", title, body, matchId: event.params.matchId},
+    );
+  },
+);
+
+// ---------------------------------------------------------------------------
+// onParticipantChanged — Trigger (matches/{matchId}/participants/{uid} escrito)
+//
+// Avisa quem subiu da fila. A promoção em si já acontece na transação do
+// leaveMatch (regra B3) — aqui só entra a notificação, para que ela também
+// alcance quem estava com o app fechado.
+// ---------------------------------------------------------------------------
+
+export const onParticipantChanged = onDocumentWritten(
+  {region: REGION, document: "matches/{matchId}/participants/{participantId}"},
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+
+    if (!isWaitlistPromotion(before, after)) return;
+
+    const matchId = event.params.matchId;
+    const matchSnap = await db.doc(`matches/${matchId}`).get();
+    const match = matchSnap.data() ?? {};
+    const body = [match.sport, match.venue]
+      .filter((part): part is string => typeof part === "string" && part.length > 0)
+      .join(" · ");
+
+    await writeNotifications([event.params.participantId], {
+      type: "promoted",
+      title: "Você subiu da fila!",
+      body,
+      matchId,
+    });
+  },
+);
+
+/**
+ * Jogadores dentro do raio máximo, lidos por faixa de geohash.
+ *
+ * Cada faixa é uma consulta; o `boundsForRadius` já devolve o menor conjunto de
+ * faixas que cobre a caixa em volta do ponto.
+ */
+async function findNearbyCandidates(
+  center: {lat: number; lng: number},
+): Promise<NotificationCandidate[]> {
+  const ranges = boundsForRadius(center, MAX_NOTIFY_RADIUS_KM);
+
+  const snapshots = await Promise.all(
+    ranges.map((range) =>
+      db
+        .collectionGroup("private")
+        .orderBy("geohash")
+        .startAt(range.start)
+        .endAt(range.endInclusive)
+        .get(),
+    ),
+  );
+
+  const byUserId = new Map<string, NotificationCandidate>();
+
+  for (const snapshot of snapshots) {
+    for (const document of snapshot.docs) {
+      // profiles/{uid}/private/data -> o uid é o avô do documento.
+      const userId = document.ref.parent.parent?.id;
+      if (!userId) continue;
+
+      const candidate = parseCandidate(userId, document.data(), DEFAULT_RADIUS_KM);
+      // Faixas de geohash podem se sobrepor; o Map deduplica.
+      if (candidate) byUserId.set(userId, candidate);
+    }
+  }
+
+  return [...byUserId.values()];
+}
+
+interface NotificationPayload {
+  type: string;
+  title: string;
+  body: string;
+  matchId: string;
+}
+
+/**
+ * Grava o histórico de todos os destinatários e dispara o push.
+ *
+ * O histórico é a fonte da verdade: o push pode ser negado, o token pode estar
+ * morto, o aparelho pode estar offline. Por isso a entrega falha em silêncio e
+ * o item continua lá para o app mostrar quando abrir.
+ */
+async function writeNotifications(
+  userIds: string[],
+  payload: NotificationPayload,
+): Promise<void> {
+  const nowMs = Date.now();
+  const batch = db.batch();
+
+  for (const userId of userIds) {
+    batch.set(db.collection(`users/${userId}/notificationHistory`).doc(), {
+      type: payload.type,
+      title: payload.title,
+      body: payload.body,
+      data: {matchId: payload.matchId},
+      isRead: false,
+      receivedAt: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  await batch.commit();
+  await sendPush(userIds, payload);
+}
+
+async function sendPush(userIds: string[], payload: NotificationPayload): Promise<void> {
+  const tokenSnapshots = await Promise.all(
+    userIds.map((userId) => db.collection(`users/${userId}/devices`).get()),
+  );
+
+  const tokens = tokenSnapshots
+    .flatMap((snapshot) => snapshot.docs.map((document) => document.id))
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) return;
+
+  try {
+    await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: {title: payload.title, body: payload.body},
+      // Só strings: o FCM recusa qualquer outro tipo no data payload.
+      data: {type: payload.type, matchId: payload.matchId},
+    });
+  } catch (error) {
+    // Notificação é acessório. Uma falha de entrega não pode propagar para o
+    // trigger e provocar retentativa da escrita já feita.
+    console.error("push delivery failed", error);
+  }
 }
 
 function readEpochSeconds(value: unknown): number | null {

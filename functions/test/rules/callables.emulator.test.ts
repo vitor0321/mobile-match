@@ -1,6 +1,7 @@
 import {readFile} from "node:fs/promises";
 import {initializeTestEnvironment, type RulesTestEnvironment} from "@firebase/rules-unit-testing";
-import {doc, getDoc, setDoc} from "firebase/firestore";
+import {collection, doc, getDoc, getDocs, setDoc, updateDoc} from "firebase/firestore";
+import {encodeGeohash} from "../../src/geo.js";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 
 const projectId = "match-ci";
@@ -586,3 +587,201 @@ describe("restricted accounts", () => {
     expect(response.status).toBe(403);
   });
 });
+
+describe("exportUserData", () => {
+  it("rejects unauthenticated requests", async () => {
+    const response = await call("exportUserData", {}, null);
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a non-empty payload", async () => {
+    const response = await call("exportUserData", {includeEverything: true});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("INVALID_ARGUMENT");
+  });
+
+  it("returns the caller's own data", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "profiles", uid), {fullName: "Eu", rating: 4});
+      await setDoc(doc(database, "profiles", uid, "private", "data"), {phone: "+5511999999999"});
+      await setDoc(doc(database, "users", uid, "notificationHistory", "n1"), {
+        title: "Partida nova perto de você",
+        isRead: false,
+      });
+    });
+
+    const response = await call("exportUserData", {});
+    expect(response.ok).toBe(true);
+
+    const {result} = (await response.json()) as {result: Record<string, unknown>};
+    expect(result).toMatchObject({
+      userId: uid,
+      profile: {fullName: "Eu"},
+      private: {phone: "+5511999999999"},
+    });
+    expect(result.notificationHistory).toHaveLength(1);
+  });
+
+  it("hides who reported the caller", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "reports", "against"), {
+        reporterId: "quem-denunciou",
+        reportedUserId: uid,
+        reason: "no_show",
+        createdAtMs: Date.now(),
+      });
+      await setDoc(doc(database, "reports", "filed"), {
+        reporterId: uid,
+        reportedUserId: "outro",
+        reason: "late",
+        createdAtMs: Date.now(),
+      });
+    });
+
+    const {result} = (await (await call("exportUserData", {})).json()) as {
+      result: {
+        reportsAgainst: Record<string, unknown>[];
+        reportsFiled: Record<string, unknown>[];
+      };
+    };
+
+    // Direito de acesso é sobre os dados da pessoa. A identidade de quem
+    // denunciou é dado de terceiro e abriria caminho para retaliação.
+    expect(result.reportsAgainst).toHaveLength(1);
+    expect(result.reportsAgainst[0]).not.toHaveProperty("reporterId");
+    expect(result.reportsAgainst[0]).toMatchObject({reason: "no_show"});
+
+    // As que a própria pessoa fez saem inteiras.
+    expect(result.reportsFiled[0]).toMatchObject({reporterId: uid, reason: "late"});
+  });
+
+  it("does not leak another user's data", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "profiles", "outra-pessoa"), {fullName: "Outra"});
+    });
+
+    const {result} = (await (await call("exportUserData", {})).json()) as {
+      result: {profile: unknown};
+    };
+
+    expect(result.profile).toBeNull();
+  });
+});
+
+describe("onMatchCreated", () => {
+  const NEARBY = "vizinho";
+  const FAR = "distante";
+
+  /** Porto Alegre, centro. */
+  const CENTER = {lat: -30.0346, lng: -51.2177};
+
+  async function seedPlayerAt(userId: string, kmNorth: number, radiusKm = 15) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const lat = CENTER.lat + kmNorth * 0.009;
+      await setDoc(doc(database, "profiles", userId), {fullName: userId});
+      await setDoc(doc(database, "profiles", userId, "private", "data"), {
+        lat,
+        lng: CENTER.lng,
+        geohash: encodeGeohash({lat, lng: CENTER.lng}),
+        radiusKm,
+        availableSports: [],
+      });
+    });
+  }
+
+  function historyOf(userId: string) {
+    return testEnvironment.withSecurityRulesDisabled((context) =>
+      getDocs(collection(context.firestore(), "users", userId, "notificationHistory")),
+    );
+  }
+
+  it("avisa quem está dentro do raio e ignora quem está fora", async () => {
+    await seedPlayerAt(NEARBY, 5);
+    // Além do raio efetivo (mínimo de 20 km da regra B4).
+    await seedPlayerAt(FAR, 40, 10);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", "m-nova"), {
+        organizerId: uid,
+        sport: "futsal",
+        venue: "Green Ball",
+        neighborhood: "Centro",
+        lat: CENTER.lat,
+        lng: CENTER.lng,
+        totalSlots: 10,
+        participants: [uid],
+        status: "OPEN",
+      });
+    });
+
+    await waitFor(async () => (await historyOf(NEARBY)).size > 0);
+
+    const nearby = await historyOf(NEARBY);
+    expect(nearby.docs[0].data()).toMatchObject({
+      type: "new_match",
+      isRead: false,
+      data: {matchId: "m-nova"},
+    });
+
+    expect((await historyOf(FAR)).size).toBe(0);
+    // O organizador nunca é avisado da própria partida.
+    expect((await historyOf(uid)).size).toBe(0);
+  });
+});
+
+describe("onParticipantChanged", () => {
+  const PROMOTED = "promovido";
+  const MATCH = "m-fila";
+
+  it("avisa quem sobe da fila, e só nessa transição", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: uid,
+        sport: "futsal",
+        venue: "Green Ball",
+        status: "OPEN",
+        participants: [uid, PROMOTED],
+      });
+      // Entra na fila: não é promoção, não deve notificar.
+      await setDoc(doc(database, "matches", MATCH, "participants", PROMOTED), {
+        userId: PROMOTED,
+        isConfirmed: false,
+        positionInWaitlist: 1,
+      });
+    });
+
+    const history = () =>
+      testEnvironment.withSecurityRulesDisabled((context) =>
+        getDocs(collection(context.firestore(), "users", PROMOTED, "notificationHistory")),
+      );
+
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    expect((await history()).size).toBe(0);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(
+        doc(context.firestore(), "matches", MATCH, "participants", PROMOTED),
+        {isConfirmed: true, positionInWaitlist: null},
+      );
+    });
+
+    await waitFor(async () => (await history()).size > 0);
+    expect((await history()).docs[0].data()).toMatchObject({
+      type: "promoted",
+      data: {matchId: MATCH},
+    });
+  });
+});
+
+/** Triggers são assíncronos: espera a condição em vez de dormir um tempo fixo. */
+async function waitFor(condition: () => Promise<boolean>, attempts = 30): Promise<void> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (await condition()) return;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw new Error("Condition was not met within the timeout.");
+}
