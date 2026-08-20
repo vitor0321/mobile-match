@@ -12,6 +12,14 @@ internal data class GameListStrings(
     val joinButton: String,
     val perPlayer: (String) -> String,
     val playersAndSlots: (confirmed: Int, total: Int, openSlots: Int, slotWord: String) -> String,
+    /**
+     * Short label for the slot badge on a match card: "2 vagas", "1 vaga", "Lotado".
+     *
+     * Pluralisation lives here rather than in the design system, which has no
+     * strings layer — the old `SlotBadge` hardcoded pt-BR and could not be
+     * translated.
+     */
+    val slotsBadge: (openSlots: Int) -> String,
 )
 
 internal val gameListStringsEn = GameListStrings(
@@ -26,6 +34,13 @@ internal val gameListStringsEn = GameListStrings(
     joinButton = "JOIN MATCH",
     perPlayer = { price -> "$price per player" },
     playersAndSlots = { c, t, _, _ -> "$c/$t players" },
+    slotsBadge = { open ->
+        when (open) {
+            0 -> "Full"
+            1 -> "1 slot"
+            else -> "$open slots"
+        }
+    },
 )
 
 internal val gameListStringsPt = GameListStrings(
@@ -40,4 +55,11 @@ internal val gameListStringsPt = GameListStrings(
     joinButton = "ENTRAR NO JOGO",
     perPlayer = { price -> "$price por jogador" },
     playersAndSlots = { c, t, open, word -> "$c/$t jogadores · $open $word" },
+    slotsBadge = { open ->
+        when (open) {
+            0 -> "Lotado"
+            1 -> "1 vaga"
+            else -> "$open vagas"
+        }
+    },
 )

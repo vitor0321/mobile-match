@@ -4,16 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -27,28 +24,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.Sport
 import com.walcker.games.strings.GameListStrings
 import com.walcker.games.strings.rememberGamesStrings
-import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.components.SportChip
+import com.walcker.match.cedar.tokens.CedarTokens
 import kotlinx.collections.immutable.ImmutableList
 
 /**
  * Home screen of the games product.
  *
- * Shows open matches with sport chips filter, radius slider, and
- * pull-to-refresh. Delegates strings to Lyricist (ETAPA9).
+ * Shows open matches with a sport filter and a radius slider.
+ *
+ * The title scrolls with the content instead of sitting in an app bar: the redesign
+ * has no opaque bar on list screens, so the tinted canvas runs to the top edge and
+ * the cards are what the eye lands on.
  */
 internal class GameListStep : Screen {
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val stepModel = koinScreenModel<GameListStepModel>()
@@ -66,15 +65,23 @@ internal class GameListStep : Screen {
         }
 
         Scaffold(
-            topBar = {
-                CedarTopBar(
-                    title = strings.title,
-                    subtitle = strings.subtitle,
-                )
-            },
+            containerColor = CedarTokens.colors.canvas,
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
-            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                CedarScreenTitle(
+                    title = strings.title,
+                    subtitle = strings.subtitle,
+                    modifier = Modifier.padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
+                )
+
                 if (state.preferencesLoaded) {
                     FilterBar(
                         strings = strings,
@@ -84,6 +91,7 @@ internal class GameListStep : Screen {
                         onRadiusChange = { stepModel.onEvent(GameListEvents.SetRadius(it)) },
                     )
                 }
+
                 when {
                     state.isLoading && state.games.isEmpty() ->
                         LoadingContent(Modifier.fillMaxSize())
@@ -119,9 +127,13 @@ private fun FilterBar(
     onSelectSport: (Sport?) -> Unit,
     onRadiusChange: (Double) -> Unit,
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(
+        modifier = Modifier.padding(bottom = CedarTokens.spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+    ) {
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+            contentPadding = PaddingValues(horizontal = CedarTokens.spacing.lg),
         ) {
             item {
                 SportChip(
@@ -130,7 +142,7 @@ private fun FilterBar(
                     onClick = { onSelectSport(null) },
                 )
             }
-            items(items = Sport.values().toList()) { sport ->
+            items(items = Sport.entries) { sport ->
                 SportChip(
                     label = sport.label,
                     selected = selectedSport == sport,
@@ -138,15 +150,17 @@ private fun FilterBar(
                 )
             }
         }
-        Spacer(Modifier.height(8.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = CedarTokens.spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = strings.radiusLabel(radiusKm.toInt()),
                 style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(end = 12.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = CedarTokens.spacing.sm),
             )
             Slider(
                 value = radiusKm.toFloat(),
@@ -166,28 +180,22 @@ private fun GameList(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(
+            horizontal = CedarTokens.spacing.lg,
+            vertical = CedarTokens.spacing.xs,
+        ),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
     ) {
         items(items = games, key = { it.id }) { game ->
-            val playersLabel = strings.playersAndSlots(
-                game.confirmedPlayers,
-                game.totalPlayers,
-                game.openSlots,
-                if (game.openSlots == 1) "vaga" else "vagas",
-            )
             MatchCard(
-                sportLabel = game.sport.label,
                 venueName = game.venueName,
-                neighborhood = game.neighborhood,
                 startsAtSeconds = game.startsAtSeconds,
-                confirmedPlayers = game.confirmedPlayers,
-                totalPlayers = game.totalPlayers,
+                metaLabel = "${game.sport.label} · ${game.neighborhood}",
+                priceLabel = game.pricePerPlayer?.let { strings.perPlayer(it) },
+                slotsLabel = strings.slotsBadge(game.openSlots),
                 openSlots = game.openSlots,
-                pricePerPlayer = game.pricePerPlayer,
+                // TODO(fase 2): trocar por onClick abrindo o detalhe da partida.
                 joinButtonLabel = strings.joinButton,
-                playersAndSlotsLabel = playersLabel,
-                perPlayerLabel = game.pricePerPlayer?.let { strings.perPlayer(it) },
                 onJoinClick = { onJoin(game.id) },
             )
         }

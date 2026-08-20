@@ -16,4 +16,5 @@ internal val PtBrGamesStrings = GamesStrings(
     playerRatings = playerRatingsStringsPt,
     ratings = ratingStringsPt,
     reports = reportStringsPt,
+    matchConfirmed = matchConfirmedStringsPt,
 )
