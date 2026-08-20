@@ -39,10 +39,15 @@ internal data class PaywallStrings(
     val yearlyPeriodLabel: String,
 )
 
+// ATENÇÃO: os benefícios do Match Pro ainda não estão definidos (decisão D27 —
+// assinatura e limite de plano estão fora do MVP). O texto abaixo é deliberadamente
+// genérico: o anterior era do Lexis e prometia números Strong's e versículos
+// favoritos, coisas que este produto não tem. Prometer benefício que não existe
+// numa tela de cobrança é pior do que não detalhar. Trocar quando D27 for decidida.
 internal val paywallStringsEn = PaywallStrings(
     title = "Match Pro",
-    headline = "Unlock full Strong's access",
-    description = "Purchase Match Pro to view Strong's numbers without limits, save more favorite verses, and add comments to your verses.",
+    headline = "Support Match with Pro",
+    description = "Match Pro keeps the app running and gets you first access to what comes next. You can cancel any time from the store.",
     proHeadline = "You are PRO",
     proDescription = "Your Match Pro benefits are active. You can switch plans or manage your subscription on the store.",
     changePlanButton = "Change plan",
@@ -80,8 +85,8 @@ internal val paywallStringsEn = PaywallStrings(
 
 internal val paywallStringsPt = PaywallStrings(
     title = "Match Pro",
-    headline = "Desbloqueie o acesso completo ao Strong's",
-    description = "Assine o Match Pro para ver os números Strong's sem limites, salvar mais versículos favoritos e fazer comentários nos versículos.",
+    headline = "Apoie o Match com o Pro",
+    description = "O Match Pro mantém o app de pé e te dá acesso antecipado ao que vem por aí. Dá para cancelar quando quiser, direto na loja.",
     proHeadline = "Você é PRO",
     proDescription = "Seus benefícios do Match Pro estão ativos. Você pode trocar de plano ou gerenciar a assinatura na loja.",
     changePlanButton = "Mudar de plano",

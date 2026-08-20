@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -40,17 +39,18 @@ import cafe.adriel.voyager.core.screen.Screen
 import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.games.features.domain.model.ParticipantsSummary
-import com.walcker.games.features.ui.ratings.RatingBottomSheet
-import com.walcker.games.features.ui.reports.ReportBottomSheet
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.usecase.SubmitReportUseCase
+import com.walcker.games.features.ui.ratings.RatingBottomSheet
+import com.walcker.games.features.ui.reports.ReportBottomSheet
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.ReportStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
+import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.navigator.PromotionCoordinator
 import org.koin.compose.koinInject
 
@@ -70,6 +70,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val sessionHolder: SessionHolder = koinInject()
         val promotionCoordinator: PromotionCoordinator = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
+        val analytics: AnalyticsTracker = koinInject()
 
         val joinGame: com.walcker.games.features.domain.usecase.JoinGameUseCase = koinInject()
         val leaveGame: com.walcker.games.features.domain.usecase.LeaveMatchUseCase = koinInject()
@@ -88,6 +89,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 sessionHolder = sessionHolder,
                 promotionCoordinator = promotionCoordinator,
                 stringsHolder = stringsHolder,
+                analytics = analytics,
                 matchId = matchId,
             )
         }
@@ -176,7 +178,8 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                             MatchDetailContent(
                                 match = state.match!!,
                                 participants = state.participants,
-                                canRate = state.match!!.status == MatchStatus.FINISHED,
+                                canRate = state.canRate,
+                                isMatchOver = state.isMatchOver,
                                 isJoining = state.isJoining,
                                 isLeavingMatch = state.isLeavingMatch,
                                 isCancellingMatch = state.isCancellingMatch,
@@ -228,9 +231,10 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         RatingBottomSheet(
             isVisible = state.showRatingSheet,
             playerName = state.selectedPlayerForRating?.second ?: "",
+            strings = strings.ratings,
             onDismiss = { stepModel.onEvent(MatchDetailEvent.CloseRatingSheet) },
-            onSubmit = { rating, comment ->
-                stepModel.onEvent(MatchDetailEvent.SubmitRating(rating, comment))
+            onSubmit = { rating, comment, dimensions ->
+                stepModel.onEvent(MatchDetailEvent.SubmitRating(rating, comment, dimensions))
             },
             isLoading = state.isSubmittingRating,
         )
@@ -436,6 +440,7 @@ private fun MatchDetailContent(
     match: com.walcker.games.features.domain.model.Game,
     participants: ParticipantsSummary?,
     canRate: Boolean,
+    isMatchOver: Boolean,
     currentUserId: String?,
     reportStrings: ReportStrings,
     onReportPlayer: (userId: String, displayName: String) -> Unit,
@@ -485,7 +490,7 @@ private fun MatchDetailContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Live status badge (from realtime match subscription)
-        StatusBadge(status = match.status)
+        StatusBadge(status = match.status, isMatchOver = isMatchOver)
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -564,7 +569,11 @@ private fun MatchDetailContent(
         val confirmed = participants?.confirmedCount ?: match.confirmedPlayers
         val total = participants?.totalSlots ?: match.totalPlayers
         val isFull = confirmed >= total || match.status == MatchStatus.FULL
-        val isClosed = match.status == MatchStatus.FINISHED || match.status == MatchStatus.CANCELLED
+        // `FINISHED` continua aqui por segurança, mas quem realmente fecha a
+        // partida é o relógio: nada escreve esse status (ver Game.isOver).
+        val isClosed = isMatchOver ||
+            match.status == MatchStatus.FINISHED ||
+            match.status == MatchStatus.CANCELLED
 
         JoinButton(
             enabled = !isFull && !isClosed && !isJoining,
@@ -622,13 +631,21 @@ private fun MatchDetailContent(
 @Composable
 private fun StatusBadge(
     status: MatchStatus,
+    isMatchOver: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val (label, color) = when (status) {
-        MatchStatus.OPEN -> "Aberta" to MaterialTheme.colorScheme.primary
-        MatchStatus.FULL -> "Lotada" to MaterialTheme.colorScheme.error
-        MatchStatus.FINISHED -> "Encerrada" to MaterialTheme.colorScheme.onSurfaceVariant
-        MatchStatus.CANCELLED -> "Cancelada" to MaterialTheme.colorScheme.error
+    // Cancelada vence o relógio: uma partida cancelada não vira "Encerrada"
+    // depois do horário. Fora isso, quem passou do fim está encerrada, mesmo
+    // com `status` ainda em OPEN/FULL — nada escreve FINISHED.
+    val (label, color) = when {
+        status == MatchStatus.CANCELLED ->
+            "Cancelada" to MaterialTheme.colorScheme.error
+        status == MatchStatus.FINISHED || isMatchOver ->
+            "Encerrada" to MaterialTheme.colorScheme.onSurfaceVariant
+        status == MatchStatus.FULL ->
+            "Lotada" to MaterialTheme.colorScheme.error
+        else ->
+            "Aberta" to MaterialTheme.colorScheme.primary
     }
 
     Box(

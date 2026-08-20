@@ -19,7 +19,12 @@ const MATCH: MatchInvite = {
   lng: -51.2177,
 };
 
-/** ~1 km por 0.009 grau de latitude nessa faixa. */
+/**
+ * ~1 km por 0.009 grau de latitude nessa faixa.
+ *
+ * Nasce disponível porque os testes de raio, esporte e teto são sobre outra
+ * coisa — a disponibilidade tem os testes dela mais abaixo.
+ */
 function candidateAtKm(userId: string, km: number, overrides: Partial<NotificationCandidate> = {}) {
   return {
     userId,
@@ -27,6 +32,8 @@ function candidateAtKm(userId: string, km: number, overrides: Partial<Notificati
     lng: MATCH.lng,
     radiusKm: 15,
     availableSports: [],
+    isAvailable: true,
+    availableUntilMs: null,
     ...overrides,
   } satisfies NotificationCandidate;
 }
@@ -134,13 +141,93 @@ describe("selectRecipients", () => {
   });
 });
 
+describe("selectRecipients — disponibilidade (regra B5)", () => {
+  const NOW = 1_700_000_000_000;
+
+  it("não avisa quem está com o toggle desligado", () => {
+    const recipients = selectRecipients(
+      [candidateAtKm("indisponivel", 1, {isAvailable: false})],
+      MATCH,
+      undefined,
+      NOW,
+    );
+
+    expect(recipients).toEqual([]);
+  });
+
+  it("avisa quem está disponível sem vencimento", () => {
+    // `availableUntilMs` nulo é "até eu desligar", que é o que o toggle grava.
+    const recipients = selectRecipients(
+      [candidateAtKm("disponivel", 1, {availableUntilMs: null})],
+      MATCH,
+      undefined,
+      NOW,
+    );
+
+    expect(recipients.map((r) => r.userId)).toEqual(["disponivel"]);
+  });
+
+  it("não avisa quem tem a janela vencida, mesmo com o toggle ligado", () => {
+    // Vencer vale como desligado sem ninguém precisar varrer a base.
+    const recipients = selectRecipients(
+      [candidateAtKm("vencido", 1, {isAvailable: true, availableUntilMs: NOW - 1})],
+      MATCH,
+      undefined,
+      NOW,
+    );
+
+    expect(recipients).toEqual([]);
+  });
+
+  it("a janela vale até o último instante", () => {
+    const aberta = selectRecipients(
+      [candidateAtKm("u", 1, {availableUntilMs: NOW + 1})],
+      MATCH,
+      undefined,
+      NOW,
+    );
+    const fechada = selectRecipients(
+      [candidateAtKm("u", 1, {availableUntilMs: NOW})],
+      MATCH,
+      undefined,
+      NOW,
+    );
+
+    expect(aberta).toHaveLength(1);
+    expect(fechada).toHaveLength(0);
+  });
+
+  it("o filtro convive com raio e esporte, sem atropelar nenhum", () => {
+    const recipients = selectRecipients(
+      [
+        candidateAtKm("perto-disponivel", 1),
+        candidateAtKm("perto-indisponivel", 2, {isAvailable: false}),
+        candidateAtKm("longe-disponivel", 999),
+        candidateAtKm("outro-esporte", 3, {availableSports: ["VOLEI"]}),
+      ],
+      MATCH,
+      undefined,
+      NOW,
+    );
+
+    expect(recipients.map((r) => r.userId)).toEqual(["perto-disponivel"]);
+  });
+});
+
 describe("parseCandidate", () => {
   const DEFAULT_RADIUS = 15;
 
   it("lê os campos do documento privado", () => {
     const candidate = parseCandidate(
       "u1",
-      {lat: -30, lng: -51, radiusKm: 30, availableSports: ["futsal", "volei"]},
+      {
+        lat: -30,
+        lng: -51,
+        radiusKm: 30,
+        availableSports: ["futsal", "volei"],
+        isAvailable: true,
+        availableUntil: 1_700_000_000_000,
+      },
       DEFAULT_RADIUS,
     );
 
@@ -150,7 +237,34 @@ describe("parseCandidate", () => {
       lng: -51,
       radiusKm: 30,
       availableSports: ["futsal", "volei"],
+      isAvailable: true,
+      availableUntilMs: 1_700_000_000_000,
     });
+  });
+
+  it("trata disponibilidade ausente ou de tipo errado como indisponível", () => {
+    // Na dúvida, não incomodar: é o lado seguro do erro para notificação.
+    expect(parseCandidate("u1", {lat: -30, lng: -51}, DEFAULT_RADIUS)?.isAvailable).toBe(false);
+    expect(
+      parseCandidate("u1", {lat: -30, lng: -51, isAvailable: "true"}, DEFAULT_RADIUS)?.isAvailable,
+    ).toBe(false);
+    expect(
+      parseCandidate("u1", {lat: -30, lng: -51, isAvailable: 1}, DEFAULT_RADIUS)?.isAvailable,
+    ).toBe(false);
+  });
+
+  it("aceita availableUntil como número ou Timestamp, e ignora o resto", () => {
+    const read = (availableUntil: unknown) =>
+      parseCandidate("u1", {lat: -30, lng: -51, availableUntil}, DEFAULT_RADIUS)?.availableUntilMs;
+
+    expect(read(1_700_000_000_000)).toBe(1_700_000_000_000);
+    // É o que o SDK devolve quando o campo foi gravado como data.
+    expect(read({toMillis: () => 1_700_000_000_000})).toBe(1_700_000_000_000);
+    // Sem vencimento é null, e não zero — zero seria "venceu em 1970".
+    expect(read(undefined)).toBeNull();
+    expect(read(null)).toBeNull();
+    expect(read("amanhã")).toBeNull();
+    expect(read(Number.NaN)).toBeNull();
   });
 
   it("descarta quem não tem coordenada", () => {

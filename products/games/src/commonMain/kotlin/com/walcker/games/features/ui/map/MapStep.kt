@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,12 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.walcker.match.core.geo.formatDistance
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
 import org.koin.compose.koinInject
-import com.walcker.match.core.geo.formatDistance
 
 /**
  * Map view showing open matches as live pins.
@@ -54,12 +55,16 @@ internal class MapStep : Screen {
         val state by stepModel.state.collectAsState()
         var showNearbySheet by remember { mutableStateOf(false) }
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = state.isRefreshing)
 
         Box(modifier = Modifier.fillMaxSize()) {
-            SwipeRefresh(
-                state = swipeRefreshState,
+            // PullToRefreshBox do Material3, e não o SwipeRefresh do
+            // Accompanist: Accompanist é biblioteca Android, e este arquivo
+            // está em commonMain — o alvo iOS não compilava por causa desses
+            // dois imports.
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
                 onRefresh = { stepModel.onRefresh() },
+                modifier = Modifier.fillMaxSize(),
             ) {
                 MatchMapView(
                     pins = state.pins,
@@ -75,6 +80,18 @@ internal class MapStep : Screen {
 
             if (state.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+
+            // Sem posição, "partidas próximas" fica vazio para sempre e a
+            // câmera não sai da Paulista. Dizer isso é melhor do que deixar a
+            // pessoa achar que não há partida perto dela.
+            if (state.locationUnavailable) {
+                LocationUnavailableCard(
+                    onRetry = { stepModel.onRetryLocation() },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                )
             }
         }
 
@@ -92,6 +109,30 @@ internal class MapStep : Screen {
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocationUnavailableCard(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Sem acesso à sua localização",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = "O mapa abre em São Paulo e a lista de partidas próximas " +
+                    "fica vazia até você liberar a localização.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(onClick = onRetry) {
+                Text("Tentar de novo")
             }
         }
     }

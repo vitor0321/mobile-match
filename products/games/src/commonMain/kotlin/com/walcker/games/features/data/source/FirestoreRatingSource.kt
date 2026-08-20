@@ -1,7 +1,9 @@
 package com.walcker.games.features.data.source
 
-import com.walcker.games.features.domain.model.Rating
 import com.walcker.games.features.domain.model.RATING_FIELD_CREATED_AT_MS
+import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.RatingDimension
+import com.walcker.games.features.domain.model.RatingDimensions
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.games.features.domain.model.SubmitRatingOutcome
@@ -32,15 +34,23 @@ internal class FirestoreRatingSource(
         ratedUserId: String,
         rating: Int,
         comment: String,
+        dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome> = firestore
         .callFunction(
             SUBMIT_RATING_FUNCTION,
-            mapOf(
-                "matchId" to matchId,
-                "ratedUserId" to ratedUserId,
-                "rating" to rating,
-                "comment" to comment,
-            ),
+            buildMap {
+                put("matchId", matchId)
+                put("ratedUserId", ratedUserId)
+                put("rating", rating)
+                put("comment", comment)
+                // As quatro têm de estar aqui: `parseRatingDimensions` nas
+                // Functions recusa ausente com o mesmo erro de valor inválido.
+                // Quem trava isso antes é `RatingDimensions.isComplete`, no
+                // botão do formulário.
+                dimensions.answers.forEach { (dimension, stars) ->
+                    put(dimension.wireName, stars)
+                }
+            },
         )
         .mapCatching { payload -> payload.toSubmitRatingOutcome() }
 
@@ -136,10 +146,24 @@ internal class FirestoreRatingSource(
             createdAtMs = getLong(RATING_FIELD_CREATED_AT_MS)
                 ?: getTimestamp(LEGACY_CREATED_AT_FIELD)
                 ?: 0L,
+            dimensions = readDimensions(),
         )
     } catch (e: Exception) {
         null
     }
+
+    /**
+     * Dimensão ausente ou fora de 1..5 é descartada em silêncio, e não derruba
+     * a avaliação inteira: quase todo o histórico foi gravado antes das
+     * dimensões existirem, e uma nota estragada num campo novo não pode sumir
+     * com a nota principal e o comentário.
+     */
+    private fun DocumentSnapshot.readDimensions(): RatingDimensions = RatingDimensions(
+        answers = RatingDimension.entries.mapNotNull { dimension ->
+            val stars = getLong(dimension.wireName)?.toInt()
+            if (stars != null && stars in RatingDimensions.VALID_RANGE) dimension to stars else null
+        }.toMap(),
+    )
 
     private companion object {
         const val SUBMIT_RATING_FUNCTION = "submitPlayerRating"

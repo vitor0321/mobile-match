@@ -6,6 +6,8 @@ import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.usecase.CreateMatchUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.geo.Coordinates
 import com.walcker.match.core.geo.encodeGeoHash
 import com.walcker.match.navigator.MainTab
@@ -25,6 +27,7 @@ internal class CreateMatchStepModel(
     private val stringsHolder: GamesStringsHolder,
     private val sessionHolder: com.walcker.identity.api.SessionHolder,
     private val tabCoordinator: TabCoordinator,
+    private val analytics: AnalyticsTracker,
 ) : ScreenModel {
 
     private val strings get() = stringsHolder.resolveStringsOrDefault().gameList
@@ -115,6 +118,9 @@ internal class CreateMatchStepModel(
 
                 createMatch(request)
                     .onSuccess { matchId ->
+                        // A outra ponta do marketplace: sem oferta, o funil de
+                        // entrada não tem do que viver.
+                        analytics.track(AnalyticsEvent.MatchCreated(request.sport.name))
                         _effects.send(CreateMatchEffect.ShowMessage(strings.joinSuccess))
                         _effects.send(CreateMatchEffect.NavigateToMyMatches(matchId))
                         // Ask the navigation shell to switch to the My Matches tab.

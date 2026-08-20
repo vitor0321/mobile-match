@@ -39,6 +39,13 @@ export type NotificationCandidate = {
    * Esportes que o jogador marcou em disponibilidade. Vazio = qualquer esporte.
    */
   availableSports: string[];
+  /** O toggle "estou disponível" (regra B5). */
+  isAvailable: boolean;
+  /**
+   * Fim da janela de disponibilidade, em epoch millis. `null` = "até eu
+   * desligar", que é o que o toggle grava hoje.
+   */
+  availableUntilMs: number | null;
 };
 
 export type MatchInvite = {
@@ -65,15 +72,24 @@ export function effectiveRadiusKm(candidateRadiusKm: unknown): number {
 /**
  * Quem deve ser avisado da partida, do mais perto para o mais longe.
  *
- * NÃO filtra por `isAvailable` de propósito. Esse campo nasce `false` em
- * onUserCreate e nada no app o liga ainda (regra B5, o toggle "estou
- * disponível", segue pendente) — filtrar por ele hoje significaria não notificar
- * ninguém, nunca. Quando o toggle existir, este é o lugar de apertar a regra.
+ * Agora filtra por `isAvailable` (regra B5): o toggle existe no app, então o
+ * campo finalmente quer dizer alguma coisa. Antes o filtro estava desligado
+ * porque `isAvailable` nascia `false` em onUserCreate e nada o ligava —
+ * aplicá-lo teria zerado todas as notificações.
+ *
+ * Cuidado que sobra: `onUserCreate` continua criando o documento privado com
+ * `isAvailable: false`. Quem se cadastra e nunca abre o perfil não recebe aviso
+ * nenhum. Se isso for indesejável, o lugar de mudar é o padrão em onUserCreate,
+ * não aqui.
+ *
+ * @param nowMs relógio para a janela de disponibilidade; injetado para o teste
+ *   conseguir atravessar o vencimento sem esperar
  */
 export function selectRecipients(
   candidates: NotificationCandidate[],
   match: MatchInvite,
   maxRecipients: number = MAX_RECIPIENTS,
+  nowMs: number = Date.now(),
 ): Recipient[] {
   const center: Coordinates = {lat: match.lat, lng: match.lng};
 
@@ -81,6 +97,7 @@ export function selectRecipients(
 
   for (const candidate of candidates) {
     if (candidate.userId === match.organizerId) continue;
+    if (!isAvailableAt(candidate, nowMs)) continue;
     if (!matchesSportPreference(candidate, match.sport)) continue;
 
     const distance = distanceKm(center, {lat: candidate.lat, lng: candidate.lng});
@@ -94,6 +111,18 @@ export function selectRecipients(
   return recipients
     .sort((a, b) => a.distanceKm - b.distanceKm)
     .slice(0, maxRecipients);
+}
+
+/**
+ * Disponível agora: o toggle ligado e a janela ainda aberta.
+ *
+ * `availableUntilMs` nulo é "até eu desligar", não "já venceu" — é o que o
+ * toggle grava. Janela vencida vale como indisponível sem ninguém precisar
+ * varrer a base para desligar o campo.
+ */
+function isAvailableAt(candidate: NotificationCandidate, nowMs: number): boolean {
+  if (!candidate.isAvailable) return false;
+  return candidate.availableUntilMs === null || candidate.availableUntilMs > nowMs;
 }
 
 /** Lista de esportes vazia significa "tanto faz", não "nenhum". */
@@ -130,7 +159,28 @@ export function parseCandidate(
     availableSports: Array.isArray(data.availableSports)
       ? data.availableSports.filter((sport): sport is string => typeof sport === "string")
       : [],
+    // Ausente ou de tipo errado conta como indisponível: na dúvida, não
+    // incomodar. É o lado seguro do erro para notificação.
+    isAvailable: data.isAvailable === true,
+    availableUntilMs: readEpochMillis(data.availableUntil),
   };
+}
+
+/**
+ * Aceita número (epoch millis) e `Timestamp` do Firestore, que é o que o SDK
+ * devolve quando o campo foi gravado como data. Qualquer outra coisa vira
+ * `null`, ou seja "sem vencimento".
+ */
+function readEpochMillis(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+
+  const timestamp = value as {toMillis?: () => number} | null | undefined;
+  if (timestamp && typeof timestamp.toMillis === "function") {
+    const millis = timestamp.toMillis();
+    return Number.isFinite(millis) ? millis : null;
+  }
+
+  return null;
 }
 
 /**

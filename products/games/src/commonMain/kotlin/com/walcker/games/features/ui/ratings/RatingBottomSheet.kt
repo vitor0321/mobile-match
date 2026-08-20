@@ -5,6 +5,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.walcker.games.features.domain.model.RatingDimensions
+import com.walcker.games.strings.RatingStrings
 
 /**
  * Bottom sheet modal para avaliar um jogador após partida.
@@ -12,7 +14,8 @@ import androidx.compose.ui.Modifier
  * @param isVisible Se o modal está visível
  * @param playerName Nome do jogador sendo avaliado
  * @param onDismiss Chamado quando modal fecha
- * @param onSubmit Chamado quando usuário submete avaliação (rating, comment)
+ * @param onSubmit Chamado quando usuário submete avaliação. `dimensions` vem
+ *   vazio quando ele só deu estrelas — o servidor aceita assim
  * @param isLoading Se está enviando (mostra loading state)
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,8 +23,9 @@ import androidx.compose.ui.Modifier
 internal fun RatingBottomSheet(
     isVisible: Boolean,
     playerName: String,
+    strings: RatingStrings,
     onDismiss: () -> Unit,
-    onSubmit: (rating: Int, comment: String) -> Unit,
+    onSubmit: (rating: Int, comment: String, dimensions: RatingDimensions) -> Unit,
     isLoading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -34,6 +38,7 @@ internal fun RatingBottomSheet(
         ) {
             RatingForm(
                 playerName = playerName,
+                strings = strings,
                 onSubmit = onSubmit,
                 isLoading = isLoading,
                 modifier = modifier,

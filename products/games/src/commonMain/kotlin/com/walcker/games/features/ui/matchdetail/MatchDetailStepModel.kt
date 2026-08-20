@@ -5,10 +5,13 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.model.CancelMatchOutcome
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.JoinMatchOutcome
+import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.ParticipantsSummary
+import com.walcker.games.features.domain.model.RatingDimensions
 import com.walcker.games.features.domain.model.ReportReason
-import com.walcker.games.features.domain.model.SubmitReportOutcome
 import com.walcker.games.features.domain.model.SubmitRatingOutcome
+import com.walcker.games.features.domain.model.SubmitReportOutcome
+import com.walcker.games.features.domain.model.canBeRatedBy
 import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.usecase.JoinGameUseCase
@@ -21,6 +24,9 @@ import com.walcker.games.features.ui.notifications.getCurrentTimeMillis
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.JoinOutcome
 import com.walcker.match.navigator.PromotionCoordinator
 import com.walcker.match.navigator.PromotionNotice
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,6 +81,20 @@ internal data class MatchDetailState(
      * their own row. Null until the session resolves.
      */
     val currentUserId: String? = null,
+    /**
+     * Libera os botões de avaliar. Calculado pelo relógio (ver [Game.isOver]),
+     * não por `status == FINISHED` — esse status nunca é escrito, e enquanto a
+     * tela olhava para ele o botão não aparecia nunca.
+     *
+     * Reflete as três condições que o servidor checa em `submitPlayerRating`:
+     * a partida acabou, não foi cancelada, e quem está olhando jogou.
+     */
+    val canRate: Boolean = false,
+    /**
+     * A partida já passou do fim, pelo relógio. Separado de [canRate] porque
+     * fecha entrar/sair para qualquer um que olhe a tela, não só para quem jogou.
+     */
+    val isMatchOver: Boolean = false,
 )
 
 /**
@@ -108,7 +128,11 @@ internal sealed interface MatchDetailEvent {
     /** Closes rating sheet. */
     data object CloseRatingSheet : MatchDetailEvent
     /** Submits a rating for a player. */
-    data class SubmitRating(val rating: Int, val comment: String) : MatchDetailEvent
+    data class SubmitRating(
+        val rating: Int,
+        val comment: String,
+        val dimensions: RatingDimensions,
+    ) : MatchDetailEvent
     /** Dismisses the rating failure banner. */
     data object DismissRatingError : MatchDetailEvent
     /** Opens the report sheet for a specific player. */
@@ -144,7 +168,15 @@ internal class MatchDetailStepModel(
     private val sessionHolder: SessionHolder,
     private val promotionCoordinator: PromotionCoordinator,
     private val stringsHolder: GamesStringsHolder,
+    private val analytics: AnalyticsTracker,
     private val matchId: String,
+    /**
+     * Relógio injetável para o teste conseguir cruzar o fim da partida sem
+     * esperar. O padrão serve produção, então o Koin não precisa saber disso.
+     */
+    private val nowSeconds: () -> Long = {
+        kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000L
+    },
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(MatchDetailState())
@@ -160,7 +192,33 @@ internal class MatchDetailStepModel(
      * Previous match status; used to detect status transitions.
      * `null` until the first snapshot lands, so we don't fire on initial load.
      */
-    private var previousStatus: com.walcker.games.features.domain.model.MatchStatus? = null
+    private var previousStatus: MatchStatus? = null
+
+    /**
+     * `match_viewed` é uma por abertura de tela, não uma por emissão. O
+     * documento é observado em tempo real e reemite a cada mudança de contador;
+     * sem esta trava o topo do funil contaria movimento de vaga como
+     * visualização.
+     */
+    private var viewTracked = false
+
+    /**
+     * Recalcula [MatchDetailState.canRate] a partir da partida, do usuário e do
+     * relógio. Aplicar em todo ponto que muda `match` ou `currentUserId`.
+     *
+     * Só é reavaliado quando o estado muda: uma partida que termina com a tela
+     * aberta e parada não faz o botão aparecer sozinho. Como o documento da
+     * partida é observado em tempo real, na prática a próxima emissão resolve;
+     * se um dia isso incomodar, o lugar de mexer é aqui, com um ticker.
+     */
+    private fun MatchDetailState.withCanRate(): MatchDetailState {
+        val game = match ?: return copy(canRate = false, isMatchOver = false)
+        val now = nowSeconds()
+        return copy(
+            isMatchOver = game.isOver(now),
+            canRate = game.canBeRatedBy(userId = currentUserId, nowSeconds = now),
+        )
+    }
 
     init {
         loadMatch()
@@ -212,7 +270,7 @@ internal class MatchDetailStepModel(
                 }
             }
             is MatchDetailEvent.SubmitRating -> {
-                submitPlayerRating(event.rating, event.comment)
+                submitPlayerRating(event.rating, event.comment, event.dimensions)
             }
             is MatchDetailEvent.DismissRatingError -> {
                 _state.update { it.copy(ratingErrorMessage = null) }
@@ -276,7 +334,11 @@ internal class MatchDetailStepModel(
         }
     }
 
-    private fun submitPlayerRating(rating: Int, comment: String) {
+    private fun submitPlayerRating(
+        rating: Int,
+        comment: String,
+        dimensions: RatingDimensions,
+    ) {
         val ratedUserId = _state.value.selectedPlayerForRating?.first ?: return
         val strings = stringsHolder.resolveStringsOrDefault().ratings
 
@@ -287,6 +349,7 @@ internal class MatchDetailStepModel(
                 ratedUserId = ratedUserId,
                 rating = rating,
                 comment = comment,
+                dimensions = dimensions,
             ).onSuccess { outcome ->
                 // Resending is idempotent server-side. From the person who
                 // tapped the button, both outcomes mean "it is registered" —
@@ -318,12 +381,39 @@ internal class MatchDetailStepModel(
         }
     }
 
+    private fun trackViewOnce(game: Game) {
+        if (viewTracked) return
+        viewTracked = true
+        analytics.track(
+            AnalyticsEvent.MatchViewed(
+                sport = game.sport.name,
+                hasOpenSlots = game.hasOpenSlots,
+            ),
+        )
+    }
+
     private fun joinMatchAction() {
+        val sport = _state.value.match?.sport?.name ?: UNKNOWN_SPORT
+
         screenModelScope.launch {
             _state.update { it.copy(isJoining = true, errorMessage = null) }
+            analytics.track(AnalyticsEvent.MatchJoinAttempted(sport))
 
             joinGame(matchId)
                 .onSuccess { outcome ->
+                    analytics.track(
+                        AnalyticsEvent.MatchJoinResult(
+                            sport = sport,
+                            outcome = when (outcome) {
+                                is JoinMatchOutcome.Confirmed -> JoinOutcome.CONFIRMED
+                                is JoinMatchOutcome.Waitlist -> JoinOutcome.WAITLIST
+                                // Reenvio idempotente: quem já estava dentro
+                                // continua confirmado, e contar como falha
+                                // inventaria um buraco no funil que não existe.
+                                is JoinMatchOutcome.AlreadyJoined -> JoinOutcome.CONFIRMED
+                            },
+                        ),
+                    )
                     val message = when (outcome) {
                         is JoinMatchOutcome.Confirmed -> "Você entrou na partida! ✓"
                         is JoinMatchOutcome.Waitlist -> "Você foi adicionado à fila de espera (posição #${outcome.position})"
@@ -338,6 +428,9 @@ internal class MatchDetailStepModel(
                     }
                 }
                 .onFailure { error ->
+                    analytics.track(
+                        AnalyticsEvent.MatchJoinResult(sport, JoinOutcome.FAILED),
+                    )
                     _state.update {
                         it.copy(
                             isJoining = false,
@@ -407,7 +500,8 @@ internal class MatchDetailStepModel(
 
             val result = getGameById(matchId)
             result.onSuccess { game ->
-                _state.update { it.copy(isLoading = false, match = game) }
+                trackViewOnce(game)
+                _state.update { it.copy(isLoading = false, match = game).withCanRate() }
             }.onFailure { error ->
                 _state.update {
                     it.copy(
@@ -425,8 +519,12 @@ internal class MatchDetailStepModel(
                 .catch { /* ignore flow errors - keep last known state */ }
                 .collect { result ->
                     result.onSuccess { game ->
+                        trackViewOnce(game)
                         detectStatusChange(game.status)
-                        _state.update { it.copy(match = game, isLoading = false, errorMessage = null) }
+                        _state.update {
+                            it.copy(match = game, isLoading = false, errorMessage = null)
+                                .withCanRate()
+                        }
                     }
                 }
         }
@@ -439,7 +537,7 @@ internal class MatchDetailStepModel(
                 currentUserId = sessionHolder.currentUser.first()?.uid
                 // Mirrored into the state so the participant list can hide
                 // "report" on the signed-in user's own row.
-                _state.update { it.copy(currentUserId = currentUserId) }
+                _state.update { it.copy(currentUserId = currentUserId).withCanRate() }
             }
 
             observeParticipants(matchId)
@@ -493,7 +591,7 @@ internal class MatchDetailStepModel(
      * Detects match status transitions and shows appropriate notifications.
      * Fires only when status actually changes, not on first load.
      */
-    private fun detectStatusChange(currentStatus: com.walcker.games.features.domain.model.MatchStatus) {
+    private fun detectStatusChange(currentStatus: MatchStatus) {
         val prevStatus = previousStatus ?: run {
             // First snapshot — record the baseline but don't fire.
             previousStatus = currentStatus
@@ -504,16 +602,16 @@ internal class MatchDetailStepModel(
         if (prevStatus != currentStatus) {
             val message = when {
                 // Match became full
-                prevStatus == com.walcker.games.features.domain.model.MatchStatus.OPEN &&
-                currentStatus == com.walcker.games.features.domain.model.MatchStatus.FULL -> {
+                prevStatus == MatchStatus.OPEN &&
+                currentStatus == MatchStatus.FULL -> {
                     "Partida lotada! 🔴 Novas entradas serão na fila de espera."
                 }
                 // Match was finished
-                currentStatus == com.walcker.games.features.domain.model.MatchStatus.FINISHED -> {
+                currentStatus == MatchStatus.FINISHED -> {
                     "Partida encerrada ✓"
                 }
                 // Match was cancelled
-                currentStatus == com.walcker.games.features.domain.model.MatchStatus.CANCELLED -> {
+                currentStatus == MatchStatus.CANCELLED -> {
                     "Partida foi cancelada ✕"
                 }
                 // Any other transition
@@ -524,5 +622,14 @@ internal class MatchDetailStepModel(
         }
 
         previousStatus = currentStatus
+    }
+
+    private companion object {
+        /**
+         * A tela pode disparar entrar/sair antes do documento da partida
+         * chegar. Marcar assim mantém o evento comparável, em vez de
+         * sumir com ele do funil.
+         */
+        const val UNKNOWN_SPORT = "unknown"
     }
 }

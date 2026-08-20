@@ -24,7 +24,7 @@ class PaywallComponentsTest {
         offeringId = "default",
         packageId = "\$rc_monthly",
         title = "Plano mensal",
-        description = "Acesso ilimitado ao Strong's.",
+        description = "Apoie o Match e tenha acesso antecipado ao que vem.",
         priceLabel = "R\$ 14,90",
     )
 

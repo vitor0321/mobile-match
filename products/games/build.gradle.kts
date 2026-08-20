@@ -51,7 +51,6 @@ kotlin {
             implementation(libs.kotlinx.datetime)
 
             implementation(libs.datastore.preferences)
-            implementation(libs.accompanist.swiperefresh)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

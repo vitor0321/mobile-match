@@ -38,7 +38,39 @@ internal data class Game(
 
     val hasOpenSlots: Boolean
         get() = openSlots > 0
+
+    /**
+     * Fim da partida, em segundos desde a época. Duração negativa conta como
+     * zero, espelhando o `Math.max(durationMin, 0)` do servidor.
+     */
+    val endsAtSeconds: Long
+        get() = startsAtSeconds + durationMin.coerceAtLeast(0).toLong() * 60
+
+    /**
+     * A partida já acabou, pelo relógio.
+     *
+     * [status] nunca vira [MatchStatus.FINISHED]: nada no produto escreve esse
+     * valor. Quem decide é o horário, e o critério tem de ser exatamente o do
+     * `requireMatchIsOver` das Functions — que roda antes de aceitar
+     * `submitPlayerRating`. Se divergir, a tela oferece uma ação que o servidor
+     * recusa.
+     */
+    fun isOver(nowSeconds: Long): Boolean = endsAtSeconds <= nowSeconds
 }
+
+/**
+ * As três condições que `submitPlayerRating` checa no servidor, na mesma ordem:
+ * a partida acabou, não foi cancelada, e quem está avaliando jogou.
+ *
+ * Fica aqui, e não dentro do StepModel, para a regra poder ser testada sem
+ * montar a tela inteira — e para a próxima tela que precisar dela não
+ * reimplementar por conta própria.
+ */
+internal fun Game.canBeRatedBy(userId: String?, nowSeconds: Long): Boolean =
+    isOver(nowSeconds) &&
+        status != MatchStatus.CANCELLED &&
+        userId != null &&
+        userId in participants
 
 /**
  * Role do usuário logado em relação a uma partida.

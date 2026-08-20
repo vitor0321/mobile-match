@@ -1,7 +1,9 @@
 package com.walcker.games.features.data.source
 
+import com.walcker.games.features.domain.model.DimensionAverage
 import com.walcker.games.features.domain.model.PROFILE_FIELD_IS_BANNED
 import com.walcker.games.features.domain.model.PlayerSearchFilters
+import com.walcker.games.features.domain.model.RatingDimension
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.match.firestore.DocumentSnapshot
@@ -74,6 +76,26 @@ internal class FirestorePlayerSource(
             cursor = cursor,
         )
 
+    /**
+     * A contagem é o `ratingCount` do perfil, não um contador por dimensão: como
+     * toda avaliação traz as quatro, elas caminham juntas e o servidor nem grava
+     * `<dim>Count`.
+     *
+     * Sem avaliação nenhuma não devolve nada — exibir "0,0 de pontualidade" para
+     * quem nunca foi avaliado é pior do que omitir a linha. O mesmo vale para
+     * perfil avaliado antes das dimensões existirem: o campo não está lá, e a
+     * seção some inteira em vez de mostrar zeros.
+     */
+    private fun DocumentSnapshot.readDimensionAverages(): Map<RatingDimension, DimensionAverage> {
+        val count = (getLong(FIELD_RATING_COUNT) ?: 0L).toInt()
+        if (count <= 0) return emptyMap()
+
+        return RatingDimension.entries.mapNotNull { dimension ->
+            val average = getDouble(dimension.averageField)?.toFloat() ?: return@mapNotNull null
+            dimension to DimensionAverage(average = average, count = count)
+        }.toMap()
+    }
+
     /** Client-side leg of the filtering — see the class docs for why. */
     private fun PlayerSearchResultDto.matches(filters: PlayerSearchFilters): Boolean {
         val query = filters.query.trim()
@@ -116,6 +138,7 @@ internal class FirestorePlayerSource(
             neighborhood = getString(FIELD_NEIGHBORHOOD),
             // createdAt is a Firestore Timestamp; getTimestamp unwraps it to millis.
             createdAtMs = getTimestamp(FIELD_CREATED_AT) ?: 0L,
+            dimensionAverages = readDimensionAverages(),
         )
     } catch (e: Exception) {
         null

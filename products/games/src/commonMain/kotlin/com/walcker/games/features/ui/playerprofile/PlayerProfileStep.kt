@@ -4,12 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -20,6 +17,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -34,9 +32,8 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
-import com.walcker.match.navigator.IdentityDestination
-import org.koin.compose.koinInject
 import com.walcker.match.core.format.formatDecimal
 
 internal class PlayerProfileStep : Screen {
@@ -52,6 +49,13 @@ internal class PlayerProfileStep : Screen {
             state.errorMessage?.let {
                 snackbarHostState.showSnackbar(it)
                 model.onEvent(PlayerProfileEvent.DismissError)
+            }
+        }
+
+        LaunchedEffect(state.availabilityErrorMessage) {
+            state.availabilityErrorMessage?.let {
+                snackbarHostState.showSnackbar(it)
+                model.onEvent(PlayerProfileEvent.DismissAvailabilityError)
             }
         }
 
@@ -111,6 +115,20 @@ internal class PlayerProfileStep : Screen {
                                 }
                             }
                         }
+                    }
+
+                    // Disponibilidade (regra B5) — logo abaixo da identificação
+                    // porque é o único controle da tela que muda o que a pessoa
+                    // recebe, e não só o que ela vê.
+                    item {
+                        AvailabilityCard(
+                            isAvailable = state.isAvailable,
+                            isUpdating = state.isUpdatingAvailability,
+                            strings = strings,
+                            onCheckedChange = { checked ->
+                                model.onEvent(PlayerProfileEvent.AvailabilityChanged(checked))
+                            },
+                        )
                     }
 
                     // Stats grid
@@ -176,6 +194,54 @@ internal class PlayerProfileStep : Screen {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * O switch é otimista — acompanha o dedo e o StepModel reverte se a gravação
+ * falhar — mas fica travado enquanto a escrita está em voo, para um toque
+ * repetido não virar uma fila de escritas concorrentes no mesmo documento.
+ */
+@Composable
+private fun AvailabilityCard(
+    isAvailable: Boolean,
+    isUpdating: Boolean,
+    strings: PlayerProfileStrings,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = strings.availabilityTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    // Descreve a consequência, não o estado: "desligado" não
+                    // diz a ninguém que vai parar de receber aviso de partida.
+                    text = if (isAvailable) {
+                        strings.availabilityOnDescription
+                    } else {
+                        strings.availabilityOffDescription
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Switch(
+                checked = isAvailable,
+                onCheckedChange = onCheckedChange,
+                enabled = !isUpdating,
+            )
         }
     }
 }

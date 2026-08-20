@@ -3,11 +3,13 @@ package com.walcker.games.features.ui.gamelist
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.data.preferences.GamesPreferences
-import com.walcker.games.features.domain.model.Sport
 import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.usecase.JoinGameUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.MatchListSource
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +28,15 @@ internal class GameListStepModel(
     private val preferences: GamesPreferences,
     private val joinGame: JoinGameUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val analytics: AnalyticsTracker,
 ) : ScreenModel {
+
+    init {
+        // Topo do funil. No init, e não a cada emissão da lista: filtro e raio
+        // reemitem o tempo todo, e contar isso como visualização nova encheria
+        // o topo de movimento que ninguém fez.
+        analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.HOME))
+    }
 
     private val strings get() = stringsHolder.resolveStringsOrDefault().gameList
 

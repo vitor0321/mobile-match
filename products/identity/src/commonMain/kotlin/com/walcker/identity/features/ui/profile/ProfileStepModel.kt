@@ -29,7 +29,7 @@ internal class ProfileStepModel(
     private val stringsHolder: IdentityStringsHolder,
 ) : StateScreenModel<ProfileState>(ProfileState()), KoinComponent {
 
-    // Try to get LanguageProvider from Koin (registered by bible module)
+    // Try to get LanguageProvider from Koin (registered by the app module)
     private val languageProvider: LanguageProvider? = try {
         inject<LanguageProvider>().value
     } catch (e: Exception) {

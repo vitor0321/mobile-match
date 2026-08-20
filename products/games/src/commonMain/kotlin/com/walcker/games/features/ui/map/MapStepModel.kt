@@ -4,7 +4,11 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.data.preferences.GamesPreferences
 import com.walcker.games.features.domain.repository.GameRepository
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.MatchListSource
 import com.walcker.match.core.geo.Coordinates
+import com.walcker.match.core.geo.distanceKm
 import com.walcker.match.core.location.LocationProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +29,15 @@ internal data class MapState(
     val userLocation: MapCamera? = null,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    /**
+     * A permissão de localização foi negada, ou o GPS não respondeu.
+     *
+     * Precisa ser estado, e não silêncio: sem posição a lista de "próximas"
+     * fica vazia para sempre e a câmera fica parada na Paulista. Antes disso
+     * aparecer aqui, a tela não tinha como dizer se não havia partida perto ou
+     * se ela simplesmente não sabia onde o usuário estava.
+     */
+    val locationUnavailable: Boolean = false,
 ) {
     internal companion object {
         // São Paulo center (Av. Paulista area) until the user's GPS resolves.
@@ -45,12 +58,26 @@ internal class MapStepModel(
     private val repository: GameRepository,
     private val preferences: GamesPreferences,
     private val locationProvider: LocationProvider,
+    private val analytics: AnalyticsTracker,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(MapState())
     val state: StateFlow<MapState> = _state.asStateFlow()
 
+    /**
+     * Posição do usuário como fluxo próprio.
+     *
+     * Antes o `combine` das partidas incluía o `_state` inteiro só para ler a
+     * localização — e o `onEach` dele escrevia de volta no `_state`. Isso é um
+     * laço: toda escrita de estado, inclusive ligar e desligar o `isRefreshing`
+     * do pull-to-refresh, remontava a lista de pinos e recalculava todas as
+     * distâncias. Terminava só porque `MapPin` é data class e o StateFlow
+     * conflaciona valor igual — dependia de sorte, não de desenho.
+     */
+    private val userCoordinates = MutableStateFlow<Coordinates?>(null)
+
     init {
+        analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.MAP))
         observeMatches()
         refresh()
         requestLocationPermissionAndTrack()
@@ -60,22 +87,26 @@ internal class MapStepModel(
         combine(
             preferences.selectedSport,
             repository.observeMatches(),
-            _state,
-        ) { sport, games, currentState ->
+            userCoordinates,
+        ) { sport, games, userCoords ->
             val filtered = games.filter { game -> sport == null || game.sport == sport }
 
-            // Calculate distances if user location is available
-            val nearby = if (currentState.userLocation != null) {
-                val userCoords = Coordinates(lat = currentState.userLocation.lat, lng = currentState.userLocation.lng)
+            // Sem posição não existe "próxima": ordenar por uma distância que
+            // não dá para medir seria inventar ordem.
+            val nearby = if (userCoords == null) {
+                emptyList()
+            } else {
                 filtered
                     .map { game ->
-                        val gameCoords = Coordinates(lat = game.lat, lng = game.lng)
-                        val distance = calculateDistance(userCoords, gameCoords)
-                        NearbyMatch(game, distance)
+                        NearbyMatch(
+                            game = game,
+                            distanceKm = distanceKm(
+                                userCoords,
+                                Coordinates(lat = game.lat, lng = game.lng),
+                            ),
+                        )
                     }
                     .sortedBy { it.distanceKm }
-            } else {
-                emptyList()
             }
 
             Pair(filtered, nearby)
@@ -98,6 +129,15 @@ internal class MapStepModel(
         }
     }
 
+    /**
+     * Nova tentativa de localizar, para quando a pessoa concede a permissão nos
+     * ajustes e volta para a tela. Sem isto, negar uma vez deixava o mapa cego
+     * até o app ser reiniciado.
+     */
+    fun onRetryLocation() {
+        requestLocationPermissionAndTrack()
+    }
+
     private fun refresh() {
         screenModelScope.launch {
             repository.refresh()
@@ -106,22 +146,31 @@ internal class MapStepModel(
 
     private fun requestLocationPermissionAndTrack() {
         screenModelScope.launch {
-            // Request GPS permission
-            val granted = locationProvider.requestPermission()
-            if (granted) {
-                // Get current location and update camera
-                locationProvider.currentLocation().onSuccess { coords ->
+            _state.update { it.copy(locationUnavailable = false) }
+
+            if (!locationProvider.requestPermission()) {
+                _state.update { it.copy(locationUnavailable = true) }
+                return@launch
+            }
+
+            locationProvider.currentLocation()
+                .onSuccess { coords ->
+                    userCoordinates.value = coords
                     val userCamera = MapCamera(lat = coords.lat, lng = coords.lng, zoom = 15f)
                     _state.update {
                         it.copy(
                             camera = userCamera,
                             userLocation = userCamera,
+                            locationUnavailable = false,
                         )
                     }
-                }.onFailure { e ->
-                    // Location unavailable; keep default camera
                 }
-            }
+                .onFailure {
+                    // Permissão concedida mas o GPS não resolveu: para a tela é
+                    // a mesma coisa que negar — ela continua sem saber onde
+                    // desenhar o usuário.
+                    _state.update { it.copy(locationUnavailable = true) }
+                }
         }
     }
 }

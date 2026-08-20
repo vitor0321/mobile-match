@@ -114,7 +114,7 @@ service cloud.firestore {
       // uma rede de segurança e por isso força os valores iniciais do servidor.
       allow create: if isOwner(userId)
         && isValidProfileContent(incoming())
-        && incoming().rating == 5
+        && incoming().rating == 0
         && incoming().ratingCount == 0
         && incoming().matchesPlayed == 0
         && incoming().isBanned == false

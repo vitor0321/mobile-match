@@ -1,6 +1,7 @@
 package com.walcker.games.features.data.source
 
 import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.RatingDimensions
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.games.features.domain.model.SubmitRatingOutcome
@@ -17,6 +18,7 @@ internal interface RatingSource {
         ratedUserId: String,
         rating: Int,
         comment: String,
+        dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome>
 
     /**

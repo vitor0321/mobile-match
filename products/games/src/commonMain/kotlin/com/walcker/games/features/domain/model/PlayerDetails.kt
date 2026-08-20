@@ -21,4 +21,10 @@ internal data class PlayerDetails(
     val city: String?,
     val neighborhood: String?,
     val memberSinceMs: Long,
+    /**
+     * Média por dimensão, só com as que alguém já respondeu. Vazio é o estado
+     * normal de perfil novo e de todo perfil avaliado antes das dimensões
+     * existirem — a tela some com a seção em vez de mostrar zeros.
+     */
+    val dimensionAverages: Map<RatingDimension, DimensionAverage> = emptyMap(),
 )

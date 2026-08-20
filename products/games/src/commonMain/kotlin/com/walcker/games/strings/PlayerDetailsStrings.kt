@@ -14,6 +14,14 @@ internal data class PlayerDetailsStrings(
     val memberSince: (String) -> String,
     val ratingValue: (Float) -> String,
     val ratingAccessibility: (Float) -> String,
+    /**
+     * Cabeçalho da seção de dimensões. Os rótulos das dimensões em si vivem em
+     * [RatingStrings], junto com o formulário que as coleta — texto de uma
+     * mesma coisa não deve morar em dois lugares.
+     */
+    val dimensionsTitle: String,
+    /** Quantas pessoas responderam **aquela** dimensão, não o total do perfil. */
+    val dimensionCount: (Int) -> String,
 )
 
 internal val playerDetailsStringsEn = PlayerDetailsStrings(
@@ -30,6 +38,8 @@ internal val playerDetailsStringsEn = PlayerDetailsStrings(
     ratingAccessibility = { value ->
         "Rated ${formatDecimal(value = value, decimals = 1, decimalSeparator = '.')} out of 5"
     },
+    dimensionsTitle = "Breakdown",
+    dimensionCount = { count -> if (count == 1) "1 answer" else "$count answers" },
 )
 
 internal val playerDetailsStringsPt = PlayerDetailsStrings(
@@ -46,4 +56,6 @@ internal val playerDetailsStringsPt = PlayerDetailsStrings(
     ratingAccessibility = { value ->
         "Nota ${formatDecimal(value = value, decimals = 1, decimalSeparator = ',')} de 5"
     },
+    dimensionsTitle = "Em detalhe",
+    dimensionCount = { count -> if (count == 1) "1 resposta" else "$count respostas" },
 )

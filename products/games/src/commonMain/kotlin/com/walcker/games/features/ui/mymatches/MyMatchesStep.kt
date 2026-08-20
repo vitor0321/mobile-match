@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -106,6 +105,7 @@ internal class MyMatchesStep : Screen {
                                 leaveActionLabel = strings.leaveAction,
                                 statusCancelledLabel = strings.statusCancelled,
                                 statusFinishedLabel = strings.statusFinished,
+                                isPast = state.activeTab == MyMatchesTab.PAST,
                                 onActionClick = {
                                     if (myMatch.role == com.walcker.games.features.domain.model.MatchRole.ORGANIZER) {
                                         model.onEvent(MyMatchesEvent.CancelRequested(myMatch.game.id))

@@ -1,6 +1,6 @@
 import {readFile} from "node:fs/promises";
 import {initializeTestEnvironment, type RulesTestEnvironment} from "@firebase/rules-unit-testing";
-import {collection, doc, getDoc, getDocs, setDoc, updateDoc} from "firebase/firestore";
+import {collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where} from "firebase/firestore";
 import {encodeGeohash} from "../../src/geo.js";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 
@@ -11,6 +11,8 @@ const authUrl = "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/account
 let testEnvironment: RulesTestEnvironment;
 let idToken: string;
 let uid: string;
+// Guardado porque adminSetModeration exige reautenticar depois de ganhar a claim.
+let userEmail: string;
 
 beforeAll(async () => {
   testEnvironment = await initializeTestEnvironment({
@@ -24,11 +26,12 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  userEmail = `callable-${Date.now()}-${Math.random()}@match.test`;
   const response = await fetch(authUrl, {
     method: "POST",
     headers: {"content-type": "application/json"},
     body: JSON.stringify({
-      email: `callable-${Date.now()}-${Math.random()}@match.test`,
+      email: userEmail,
       password: "correct-horse-battery-staple",
       returnSecureToken: true,
     }),
@@ -57,7 +60,7 @@ describe("onUserCreate", () => {
 
       const profile = await waitForDoc(() => getDoc(doc(database, "profiles", uid)));
       expect(profile.data()).toMatchObject({
-        rating: 5,
+        rating: 0,
         ratingCount: 0,
         matchesPlayed: 0,
         isBanned: false,
@@ -65,7 +68,10 @@ describe("onUserCreate", () => {
 
       const privateData = await getDoc(doc(database, "profiles", uid, "private", "data"));
       expect(privateData.exists()).toBe(true);
-      expect(privateData.data()).toMatchObject({isAvailable: false});
+      // Nasce disponível: o filtro de notificação (regra B5) consulta este
+      // campo, e `false` no cadastro calaria o produto para quem nunca abre o
+      // perfil. Ver o comentário em onUserCreate.
+      expect(privateData.data()).toMatchObject({isAvailable: true, availableUntil: null});
 
       const subscription = await getDoc(doc(database, "users", uid, "subscription", "current"));
       expect(subscription.data()).toMatchObject({plan: "free", status: "active"});
@@ -153,7 +159,7 @@ describe("submitPlayerRating", () => {
       });
       await setDoc(doc(database, "profiles", RATED), {
         fullName: "Avaliado",
-        rating: 5,
+        rating: 0,
         ratingCount: 0,
       });
     });
@@ -166,13 +172,13 @@ describe("submitPlayerRating", () => {
   }
 
   it("rejects unauthenticated requests", async () => {
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5}, null);
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5}, null);
     expect(response.status).toBe(401);
   });
 
   it("rejects rating yourself", async () => {
     await seedFinishedMatch();
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: uid, rating: 5});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: uid, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
@@ -180,7 +186,16 @@ describe("submitPlayerRating", () => {
   it("rejects a star count outside 1..5", async () => {
     await seedFinishedMatch();
     for (const rating of [0, 6, 4.5]) {
-      const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating});
+      // Com as dimensões válidas, um 400 aqui só pode ser da nota geral.
+      const response = await call("submitPlayerRating", {
+        matchId: MATCH,
+        ratedUserId: RATED,
+        rating,
+        punctuality: 5,
+        respect: 5,
+        fairPlay: 5,
+        behavior: 5,
+      });
       expect(response.status).toBe(400);
       expect(await response.text()).toContain("INVALID_ARGUMENT");
     }
@@ -192,6 +207,7 @@ describe("submitPlayerRating", () => {
       matchId: MATCH,
       ratedUserId: RATED,
       rating: 5,
+      punctuality: 5, respect: 5, fairPlay: 5, behavior: 5,
       comment: "x".repeat(501),
     });
     expect(response.status).toBe(400);
@@ -200,28 +216,28 @@ describe("submitPlayerRating", () => {
 
   it("rejects a match that has not finished yet", async () => {
     await seedFinishedMatch({startsAtSeconds: Math.floor(Date.now() / 1000) + 3600});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
 
   it("rejects a cancelled match", async () => {
     await seedFinishedMatch({status: "CANCELLED"});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
 
   it("rejects a caller who did not play the match", async () => {
     await seedFinishedMatch({participants: [RATED]});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
     expect(response.status).toBe(403);
     expect(await response.text()).toContain("PERMISSION_DENIED");
   });
 
   it("rejects rating someone who did not play the match", async () => {
     await seedFinishedMatch({participants: [uid]});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
@@ -233,6 +249,7 @@ describe("submitPlayerRating", () => {
       matchId: MATCH,
       ratedUserId: RATED,
       rating: 4,
+      punctuality: 5, respect: 5, fairPlay: 5, behavior: 5,
       comment: "  Jogou bem  ",
     });
     expect(response.ok).toBe(true);
@@ -258,8 +275,8 @@ describe("submitPlayerRating", () => {
       expect(readModel.data()).toMatchObject({rating: 4, raterUserId: uid});
     });
 
-    // The profile is seeded with rating 5 / ratingCount 0. That 5 is a display
-    // placeholder, not a review, so it must not drag the first average up.
+    // Perfil nasce com rating 0 / ratingCount 0, então a primeira nota é a
+    // própria média — sem semente para desviar.
     expect((await readProfile()).data()).toMatchObject({rating: 4, ratingCount: 1});
   });
 
@@ -273,7 +290,7 @@ describe("submitPlayerRating", () => {
       });
     });
 
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 3});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 3, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
     expect(response.ok).toBe(true);
     // (5*3 + 3) / 4 = 4.5
     expect(await response.json()).toMatchObject({result: {averageRating: 4.5, ratingCount: 4}});
@@ -282,9 +299,9 @@ describe("submitPlayerRating", () => {
   it("is idempotent — resending does not inflate the average", async () => {
     await seedFinishedMatch();
 
-    expect((await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 4})).ok).toBe(true);
+    expect((await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 4, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5})).ok).toBe(true);
 
-    const second = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 1});
+    const second = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 1, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
     expect(second.ok).toBe(true);
     expect(await second.json()).toMatchObject({
       result: {status: "already_rated", averageRating: 4, ratingCount: 1},
@@ -785,3 +802,533 @@ async function waitFor(condition: () => Promise<boolean>, attempts = 30): Promis
   }
   throw new Error("Condition was not met within the timeout.");
 }
+
+describe("adminSetModeration", () => {
+  const TARGET = "alvo";
+
+  /**
+   * Promove o usuário do teste a admin.
+   *
+   * A claim entra no token só na próxima emissão, então é obrigatório pegar um
+   * idToken novo depois — sem isso o teste falha por permissão e parece bug da
+   * função.
+   */
+  async function becomeAdmin(): Promise<string> {
+    await fetch(
+      `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:update?key=fake-api-key`,
+      {
+        method: "POST",
+        headers: {"content-type": "application/json", authorization: "Bearer owner"},
+        body: JSON.stringify({localId: uid, customAttributes: JSON.stringify({admin: true})}),
+      },
+    );
+
+    const response = await fetch(
+      "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key",
+      {
+        method: "POST",
+        headers: {"content-type": "application/json"},
+        body: JSON.stringify({
+          email: userEmail,
+          password: "correct-horse-battery-staple",
+          returnSecureToken: true,
+        }),
+      },
+    );
+    return ((await response.json()) as {idToken: string}).idToken;
+  }
+
+  async function seedTarget() {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "profiles", TARGET), {
+        fullName: "Alvo",
+        isBanned: false,
+      });
+    });
+  }
+
+  function readState() {
+    return testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const [moderation, profile] = await Promise.all([
+        getDoc(doc(database, "moderation", TARGET)),
+        getDoc(doc(database, "profiles", TARGET)),
+      ]);
+      return {moderation: moderation.data(), profile: profile.data()};
+    });
+  }
+
+  it("recusa quem não é admin", async () => {
+    await seedTarget();
+
+    const response = await call("adminSetModeration", {
+      userId: TARGET,
+      level: "banned",
+      reason: "teste",
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("PERMISSION_DENIED");
+  });
+
+  it("exige motivo e nível conhecido", async () => {
+    await seedTarget();
+    const adminToken = await becomeAdmin();
+
+    const semMotivo = await call(
+      "adminSetModeration",
+      {userId: TARGET, level: "banned", reason: "   "},
+      adminToken,
+    );
+    expect(semMotivo.status).toBe(400);
+
+    const nivelInvalido = await call(
+      "adminSetModeration",
+      {userId: TARGET, level: "shadowban", reason: "teste"},
+      adminToken,
+    );
+    expect(nivelInvalido.status).toBe(400);
+  });
+
+  it("impede um admin de moderar a si mesmo", async () => {
+    const adminToken = await becomeAdmin();
+
+    const response = await call(
+      "adminSetModeration",
+      {userId: uid, level: "banned", reason: "engano"},
+      adminToken,
+    );
+
+    // Banir a própria conta fecharia a porta do painel por dentro.
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("banir espelha isBanned no perfil e tira da fila de revisão", async () => {
+    await seedTarget();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "moderation", TARGET), {
+        level: "suspended",
+        requiresReview: true,
+        untilMs: Date.now() + 1_000,
+      });
+    });
+    const adminToken = await becomeAdmin();
+
+    const response = await call(
+      "adminSetModeration",
+      {userId: TARGET, level: "banned", reason: "reincidência"},
+      adminToken,
+    );
+    expect(response.ok).toBe(true);
+
+    const state = await readState();
+    expect(state.moderation).toMatchObject({
+      level: "banned",
+      untilMs: null,
+      requiresReview: false,
+      decidedBy: uid,
+      reason: "reincidência",
+    });
+    // profiles.isBanned é o que a regra de criar partida e a busca leem.
+    expect(state.profile).toMatchObject({isBanned: true});
+  });
+
+  it("suspende com o prazo informado", async () => {
+    await seedTarget();
+    const adminToken = await becomeAdmin();
+
+    await call(
+      "adminSetModeration",
+      {userId: TARGET, level: "suspended", days: 3, reason: "faltou"},
+      adminToken,
+    );
+
+    const {moderation, profile} = await readState();
+    expect(moderation?.untilMs).toBeGreaterThan(Date.now());
+    expect(moderation?.untilMs).toBeLessThan(Date.now() + 4 * 24 * 60 * 60 * 1_000);
+    expect(profile).toMatchObject({isBanned: false});
+  });
+
+  it("desfaz uma punição com level none", async () => {
+    await seedTarget();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "moderation", TARGET), {level: "banned", requiresReview: true});
+      await setDoc(doc(database, "profiles", TARGET), {fullName: "Alvo", isBanned: true});
+    });
+    const adminToken = await becomeAdmin();
+
+    await call(
+      "adminSetModeration",
+      {userId: TARGET, level: "none", reason: "denúncias improcedentes"},
+      adminToken,
+    );
+
+    const {moderation, profile} = await readState();
+    expect(moderation).toMatchObject({level: "none", untilMs: null, requiresReview: false});
+    expect(profile).toMatchObject({isBanned: false});
+  });
+
+  it("guarda quem decidiu no histórico", async () => {
+    await seedTarget();
+    const adminToken = await becomeAdmin();
+
+    await call(
+      "adminSetModeration",
+      {userId: TARGET, level: "warning", reason: "primeira vez"},
+      adminToken,
+    );
+
+    const {moderation} = await readState();
+    expect(moderation?.history).toHaveLength(1);
+    expect(moderation?.history[0]).toMatchObject({level: "warning", decidedBy: uid});
+  });
+
+  it("recusa alvo sem perfil", async () => {
+    const adminToken = await becomeAdmin();
+
+    const response = await call(
+      "adminSetModeration",
+      {userId: "nao-existe", level: "banned", reason: "teste"},
+      adminToken,
+    );
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe("leaveMatch — contador de confirmados", () => {
+  const MATCH = "m-contador";
+  const OTHER = "outro-confirmado";
+  const WAITING = "na-fila";
+
+  it("promoção não infla o contador", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: OTHER,
+        status: "FULL",
+        startsAtSeconds: Math.floor(Date.now() / 1_000) + 3_600,
+        totalSlots: 2,
+        confirmedCount: 2,
+        participants: [uid, OTHER, WAITING],
+      });
+      await setDoc(doc(database, "matches", MATCH, "participants", uid), {
+        userId: uid,
+        isConfirmed: true,
+      });
+      await setDoc(doc(database, "matches", MATCH, "participants", OTHER), {
+        userId: OTHER,
+        isConfirmed: true,
+      });
+      await setDoc(doc(database, "matches", MATCH, "participants", WAITING), {
+        userId: WAITING,
+        isConfirmed: false,
+        positionInWaitlist: 1,
+      });
+    });
+
+    const response = await call("leaveMatch", {matchId: MATCH});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({result: {promotedUserId: WAITING}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const match = await getDoc(doc(database, "matches", MATCH));
+
+      // Sai um confirmado, entra um da fila: o total não muda. Somar aqui
+      // inflava o contador a cada promoção e a partida ficava "cheia" com vaga
+      // sobrando — e depois passava de totalSlots.
+      expect(match.data()?.confirmedCount).toBe(2);
+
+      const promoted = await getDoc(doc(database, "matches", MATCH, "participants", WAITING));
+      expect(promoted.data()).toMatchObject({isConfirmed: true, positionInWaitlist: null});
+    });
+  });
+
+  it("sem ninguém na fila, o contador cai", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: OTHER,
+        status: "FULL",
+        startsAtSeconds: Math.floor(Date.now() / 1_000) + 3_600,
+        totalSlots: 2,
+        confirmedCount: 2,
+        participants: [uid, OTHER],
+      });
+      await setDoc(doc(database, "matches", MATCH, "participants", uid), {
+        userId: uid,
+        isConfirmed: true,
+      });
+    });
+
+    expect((await call("leaveMatch", {matchId: MATCH})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const match = await getDoc(doc(context.firestore(), "matches", MATCH));
+      expect(match.data()?.confirmedCount).toBe(1);
+    });
+  });
+});
+
+describe("deleteAccount — limpeza completa", () => {
+  const FUTURE = "m-futura";
+  const PAST = "m-passada";
+  const OTHER = "outra-pessoa";
+
+  async function seedEverything() {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const nowSeconds = Math.floor(Date.now() / 1_000);
+
+      await setDoc(doc(database, "profiles", uid), {fullName: "Eu", isBanned: false});
+
+      // Organiza uma futura e uma que já aconteceu.
+      await setDoc(doc(database, "matches", FUTURE), {
+        organizerId: uid,
+        organizerName: "Eu",
+        status: "OPEN",
+        startsAtSeconds: nowSeconds + 7_200,
+        participants: [uid],
+      });
+      await setDoc(doc(database, "matches", PAST), {
+        organizerId: uid,
+        organizerName: "Eu",
+        status: "OPEN",
+        startsAtSeconds: nowSeconds - 7_200,
+        participants: [uid],
+      });
+
+      // Avaliação que escreveu sobre outra pessoa.
+      await setDoc(doc(database, "profiles", OTHER, "ratings", `${uid}_${OTHER}`), {
+        raterUserId: uid,
+        ratedUserId: OTHER,
+        rating: 5,
+        createdAtMs: Date.now(),
+      });
+
+      // Denúncia que fez, e denúncia que recebeu.
+      await setDoc(doc(database, "reports", `${PAST}_${uid}_${OTHER}`), {
+        reporterId: uid,
+        reportedUserId: OTHER,
+        reason: "no_show",
+        createdAtMs: Date.now(),
+      });
+      await setDoc(doc(database, "reports", `${PAST}_${OTHER}_${uid}`), {
+        reporterId: OTHER,
+        reportedUserId: uid,
+        reason: "late",
+        createdAtMs: Date.now(),
+      });
+      await setDoc(doc(database, "moderation", uid), {level: "warning"});
+    });
+  }
+
+  it("cancela a partida futura e despersonaliza a passada", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const future = await getDoc(doc(database, "matches", FUTURE));
+      const past = await getDoc(doc(database, "matches", PAST));
+
+      // Partida futura sem organizador não tem como acontecer.
+      expect(future.data()).toMatchObject({status: "CANCELLED", organizerName: "Jogador removido"});
+      // A passada é histórico de quem jogou: fica, sem o nome.
+      expect(past.data()).toMatchObject({status: "OPEN", organizerName: "Jogador removido"});
+    });
+  });
+
+  it("mantém a avaliação sobre outra pessoa, sem o autor", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const ratings = await getDocs(
+        collection(context.firestore(), "profiles", OTHER, "ratings"),
+      );
+
+      // A nota também é dado de quem foi avaliado — apagar mexeria na média
+      // dele. Some o autor, não o conteúdo.
+      expect(ratings.size).toBe(1);
+      expect(ratings.docs[0].data().raterUserId).toBeNull();
+      expect(ratings.docs[0].id).not.toContain(uid);
+    });
+  });
+
+  it("mantém a denúncia que fez e apaga a que recebeu", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const filed = await getDocs(
+        query(collection(database, "reports"), where("reportedUserId", "==", OTHER)),
+      );
+      const against = await getDocs(
+        query(collection(database, "reports"), where("reportedUserId", "==", uid)),
+      );
+
+      // A denúncia é prova contra outra pessoa: apagá-la deixaria qualquer um
+      // limpar o próprio rastro excluindo a conta.
+      expect(filed.size).toBe(1);
+      expect(filed.docs[0].data().reporterId).toBeNull();
+      expect(filed.docs[0].id).not.toContain(uid);
+
+      // Já a denúncia contra quem não existe mais não protege ninguém.
+      expect(against.size).toBe(0);
+      expect((await getDoc(doc(database, "moderation", uid))).exists()).toBe(false);
+    });
+  });
+
+  it("apaga o usuário do Firebase Auth", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    const lookup = await fetch(
+      "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:lookup?key=fake-api-key",
+      {
+        method: "POST",
+        headers: {"content-type": "application/json", authorization: "Bearer owner"},
+        body: JSON.stringify({localId: [uid]}),
+      },
+    );
+
+    // Sem isto a conta continuava entrando e caía num estado sem perfil.
+    expect(((await lookup.json()) as {users?: unknown[]}).users ?? []).toHaveLength(0);
+  });
+
+  it("continua idempotente", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+    // O token ainda é válido por um tempo; repetir não pode explodir.
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+  });
+});
+
+describe("submitPlayerRating — dimensões", () => {
+  const RATED = "avaliado-dim";
+  const MATCH = "m-dimensoes";
+  const TODAS = {punctuality: 5, respect: 5, fairPlay: 3, behavior: 4};
+
+  async function seedFinished() {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: RATED,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1_000) - 7_200,
+        durationMin: 60,
+        totalSlots: 10,
+        participants: [uid, RATED],
+      });
+      await setDoc(doc(database, "profiles", RATED), {
+        fullName: "Avaliado",
+        rating: 0,
+        ratingCount: 0,
+      });
+    });
+  }
+
+  function readProfile() {
+    return testEnvironment.withSecurityRulesDisabled((context) =>
+      getDoc(doc(context.firestore(), "profiles", RATED)),
+    );
+  }
+
+  it("grava as quatro dimensões e agrega cada uma", async () => {
+    await seedFinished();
+
+    const response = await call("submitPlayerRating", {
+      matchId: MATCH,
+      ratedUserId: RATED,
+      rating: 4,
+      ...TODAS,
+    });
+    expect(response.ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const stored = await getDoc(
+        doc(context.firestore(), "matches", MATCH, "ratings", `${uid}_${RATED}`),
+      );
+      expect(stored.data()).toMatchObject({rating: 4, ...TODAS});
+    });
+
+    // Uma contagem só: as dimensões caminham com ratingCount, porque toda
+    // avaliação traz as quatro.
+    expect((await readProfile()).data()).toMatchObject({
+      rating: 4,
+      ratingCount: 1,
+      punctualityAverage: 5,
+      fairPlayAverage: 3,
+      behaviorAverage: 4,
+    });
+  });
+
+  it("a primeira nota vira a média, sem semente atrapalhando", async () => {
+    await seedFinished();
+
+    await call("submitPlayerRating", {
+      matchId: MATCH,
+      ratedUserId: RATED,
+      rating: 1,
+      punctuality: 1,
+      respect: 1,
+      fairPlay: 1,
+      behavior: 1,
+    });
+
+    // Perfil nasce com rating 0: a primeira nota 1 fica 1, não 3.
+    expect((await readProfile()).data()).toMatchObject({rating: 1, punctualityAverage: 1});
+  });
+
+  it("recusa avaliação sem as dimensões", async () => {
+    await seedFinished();
+
+    const response = await call("submitPlayerRating", {
+      matchId: MATCH,
+      ratedUserId: RATED,
+      rating: 4,
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("INVALID_ARGUMENT");
+  });
+
+  it("recusa avaliação pela metade", async () => {
+    await seedFinished();
+
+    const response = await call("submitPlayerRating", {
+      matchId: MATCH,
+      ratedUserId: RATED,
+      rating: 4,
+      punctuality: 5,
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("recusa dimensão fora de 1..5", async () => {
+    await seedFinished();
+
+    for (const invalida of [{punctuality: 0}, {respect: 6}, {fairPlay: 4.5}, {behavior: "bom"}]) {
+      const response = await call("submitPlayerRating", {
+        matchId: MATCH,
+        ratedUserId: RATED,
+        rating: 4,
+        ...TODAS,
+        ...invalida,
+      });
+      expect(response.status).toBe(400);
+      expect(await response.text()).toContain("INVALID_ARGUMENT");
+    }
+  });
+});

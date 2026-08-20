@@ -1,6 +1,7 @@
 package com.walcker.games.features.domain.repository
 
 import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.domain.model.RatingDimensions
 import com.walcker.games.features.domain.model.SubmitRatingOutcome
 
 /**
@@ -14,12 +15,15 @@ internal interface RatingRepository {
      * @param ratedUserId ID do jogador sendo avaliado
      * @param rating Estrelas (1-5)
      * @param comment Comentário opcional
+     * @param dimensions As quatro dimensões, todas preenchidas — o servidor
+     *   recusa payload incompleto
      */
     suspend fun submitPlayerRating(
         matchId: String,
         ratedUserId: String,
         rating: Int,
         comment: String,
+        dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome>
 
     /**

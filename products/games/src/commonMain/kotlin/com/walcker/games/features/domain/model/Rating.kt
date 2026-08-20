@@ -10,6 +10,9 @@ package com.walcker.games.features.domain.model
  * @param rating Estrelas (1-5)
  * @param comment Texto opcional da avaliação
  * @param createdAtMs Timestamp em milissegundos
+ * @param dimensions Respostas às dimensões opcionais. Vazio quando o avaliador
+ *   só deu estrelas — e também em toda avaliação gravada antes das dimensões
+ *   existirem, que é a maioria do histórico.
  */
 internal data class Rating(
     val id: String,
@@ -19,4 +22,5 @@ internal data class Rating(
     val rating: Int, // 1-5 stars
     val comment: String,
     val createdAtMs: Long,
+    val dimensions: RatingDimensions = RatingDimensions.None,
 )

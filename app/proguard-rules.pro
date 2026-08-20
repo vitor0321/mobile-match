@@ -60,9 +60,11 @@
 -dontwarn androidx.credentials.**
 -dontwarn com.google.android.libraries.identity.googleid.**
 
-# ─── App domain models (Room entities + domain models must survive reflection) ─
--keep class com.walcker.bible.data.local.entity.** { *; }
--keep class com.walcker.bible.domain.model.** { *; }
+# ─── App domain models ────────────────────────────────────────────────────────
+# As duas regras que estavam aqui apontavam para com.walcker.bible.**, pacote
+# que não existe neste projeto — resquício do Lexis, e portanto no-op.
+-keep class com.walcker.games.features.domain.model.** { *; }
+-keep class com.walcker.identity.features.domain.** { *; }
 
 # ─── BuildConfig ──────────────────────────────────────────────────────────────
 -keep class com.walcker.match.app.BuildConfig { *; }

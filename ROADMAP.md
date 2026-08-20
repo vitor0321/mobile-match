@@ -1,6 +1,6 @@
 # Mobile Match — Roadmap Consolidado
 
-**Último atualizado:** 2026-08-18 · **Status:** Phase 6 em andamento — denúncia, moderação, restrição e notificações prontas
+**Último atualizado:** 2026-08-18 · **Status:** Phase 6 em andamento — denúncia, moderação, restrição, notificações, export LGPD e painel de moderação prontos
 
 ---
 
@@ -173,10 +173,13 @@ functions/                  Cloud Functions (triggers, callables)
 - 🔒 **Restrição efetiva** — joinMatch, submitPlayerRating, submitReport e a
   regra de criar partida recusam conta banida ou suspensa ✅
 - 🔔 **Notificações** — `onMatchCreated` e `onParticipantChanged` ✅
+- 🖥️ **Painel de moderação** — fila de revisão e decisão humana ✅
+- ⏱️ **Partida encerrada pelo relógio** (D34) — servidor ✅, UI ⏳
 - 📋 **Avaliações pós-partida** multidimensionais (pontualidade, respeito,
-  fair play, comportamento) ⏳
-- ✉️ **Verificação** de e-mail e telefone (SMS) ⏳
-- 🔐 **LGPD** — exportação (`exportUserData`) ✅; exclusão estendida ⏳
+  fair play, comportamento) — servidor ✅ (obrigatórias), UI ⏳
+- ✉️ **Verificação** de e-mail e telefone — servidor ✅ (`syncVerificationStatus`,
+  selo espelhado no perfil, política de exigência **desligada**), UI ⏳
+- 🔐 **LGPD** — exportação e exclusão estendida ✅
 - ❌ **Contadores de experiência** — fora do produto (D26)
 - ❌ **Assinatura / limite de plano** — fora do MVP (D27)
 
@@ -204,7 +207,7 @@ era a regra de criar partida.
 - 🎨 **Tema Cedar** (identidade esportiva, remover Lexis/Bible leftovers)
 - 🏆 **Ícones** Android/iOS personalizados
 - 📊 **Analytics** de funil (view → join → confirm → play)
-- 📱 **Painel Admin** (fora do app, web separado)
+- 📱 **Painel Admin** — moderação ✅ (`admin/index.html`, Firebase Hosting); demais áreas ⏳
 
 ---
 
@@ -333,8 +336,9 @@ match /profiles/{uid}/private/{document=**} {
 //   quem avalia e de quem é avaliado, bloqueia autoavaliação, id composto
 //   {rater}_{rated} garante unicidade, recalcula rating/ratingCount do perfil
 // exportUserData: direito de acesso; denúncia contra a pessoa sai sem o denunciante
-// deleteAccount: HOJE só apaga profiles/{uid} e users/{uid}. NÃO remove participações,
-//   partidas organizadas, denúncias, nem o usuário do Firebase Auth
+// deleteAccount: sai das partidas (promovendo a fila), cancela as futuras que
+//   organizava, despersonaliza as passadas, anonimiza avaliações e denúncias que
+//   escreveu, apaga a trilha de moderação e o usuário do Firebase Auth
 ```
 
 ---
@@ -361,6 +365,7 @@ matches/{matchId}
 
 profiles/{uid}
   ├── fullName, nickname, avatarUrl, position, level
+  ├── emailVerified, phoneVerified (só Functions — sinal de confiança)
   ├── sports[], city, neighborhood
   ├── rating, ratingCount, matchesPlayed
   ├── isBanned, createdAt, updatedAt
@@ -377,14 +382,16 @@ users/{uid}/notifications/{notifId}
 matches/{matchId}/ratings/{raterUid}_{ratedUid}   ← registro canônico
   ├── matchId, ratedUserId, raterUserId
   ├── rating (1-5), comment
+  ├── punctuality, respect, fairPlay, behavior (1-5, obrigatórias)
   └── createdAtMs (número), createdAt (serverTimestamp, auditoria)
 
 profiles/{uid}/ratings/{mesmo id}                 ← modelo de leitura
   └── cópia escrita na mesma transação de submitPlayerRating
       (a tela de perfil precisa das avaliações RECEBIDAS por alguém)
 
-  Nota: as dimensões pontualidade/respeito/fair play/comportamento ficam
-  para a Phase 6. A Phase 5 fecha o ciclo com nota única + comentário.
+  As quatro dimensões são obrigatórias — não existe cliente antigo para
+  acomodar. Cada uma agrega em `<dim>Average` no perfil, compartilhando o mesmo
+  `ratingCount`: toda avaliação traz as quatro, então as contagens não divergem.
 
 reports/{reportId} (admin only)
   ├── reporterId, reportedUserId, matchId
@@ -472,7 +479,7 @@ Fase 7
 |---|---|---|---|---|
 | R1 | firestore.rules do Lexis nega tudo | Bloqueia Phase 1 | Reescrita completa | ✅ RESOLVIDO |
 | R2 | Busca por raio (Firestore) | Sem matchmaking | Geohash + testes | ✅ IMPLEMENTADO |
-| R3 | Overbooking na última vaga | Quebra de confiança | joinMatch callable + transação | ✅ IMPLEMENTADO |
+| R3 | Overbooking na última vaga | Quebra de confiança | joinMatch callable + transação; contador corrigido na promoção (2026-08-18) | ✅ IMPLEMENTADO |
 | R4 | Mapa em CMP | Sem solução madura | expect/actual isolado; Fase 7 | ⏳ DEFER |
 | R5 | Assinatura por Pix → rejeitada | App rejeitado na App Store | RevenueCat (entitlements) | ✅ DECIDIDO |
 | R6 | Room KMP primeira adoção | Atrito de build, KSP iOS | Spike Fase 0 | ✅ FEITO |
@@ -480,6 +487,7 @@ Fase 7
 | R8 | Múltiplos Firebase pods (iOS) | Erros de linkagem | Módulo firestore/ único | ✅ IMPLEMENTADO |
 | R9 | QR Pix via API terceiro | Vazamento de chave | Gerar QR no dispositivo | ✅ IMPLEMENTADO |
 | R10 | AnalyticsTracker com métodos Bible | Confusão, erros | Limpar na Fase 0 | ✅ FEITO |
+| R11 | CI apontava para `:products:bible` | Nada era compilado nem testado | Workflow reescrito para `:products:games` + gatilho de push | ✅ RESOLVIDO |
 
 ---
 
@@ -582,10 +590,13 @@ Notifica: "Você subiu da fila!"
 ### B4: Raio Mínimo de Notificação = 20km
 
 ```
-notifyRadius = max(userRadiusKm, 20)
+notifyRadius = min(max(userRadiusKm, 20), 50)
 ```
 
-**Status:** ⏳ Implementada em Phase 4
+Teto de 50 km além do mínimo: sem ele um perfil com raio absurdo faria toda
+criação de partida varrer a base inteira. Ver `functions/src/notifications.ts`.
+
+**Status:** ✅ Implementada (Phase 6, `selectRecipients`)
 
 ### B5: Janela de Disponibilidade = now + 6h
 
@@ -594,7 +605,9 @@ Toggle "Estou disponível" abre dialog
 availableUntil = now + 6 horas
 ```
 
-**Status:** ⏳ Phase 2
+**Status:** ⏳ PENDENTE — nada liga `isAvailable`, que nasce `false`. Enquanto
+não existir, o filtro de disponibilidade em `selectRecipients` fica desligado e
+todo mundo no raio recebe aviso de qualquer partida (D25).
 
 ### B6: Organizador Auto-entra como Confirmed+Paid
 
@@ -681,6 +694,16 @@ Direto na chave Pix do organizador
 | **D26** | Contadores de experiência | Fora do produto | Decisão do Vitor: nem trigger, nem seção. Sai do escopo em vez de virar dívida |
 | **D27** | Assinatura e limite de plano | Fora do MVP | Sem RevenueCat ativo e sem limite de partidas por plano até haver decisão de monetização |
 | **D28** | Export LGPD de denúncia | Denunciante redigido | Direito de acesso é sobre os dados da pessoa; revelar quem denunciou entrega dado de terceiro e abre caminho para retaliação |
+| **D29** | Quem vira admin | Script fora do produto | A claim `admin` só é concedida por `scripts/grant-admin.mjs` com credencial de serviço. Não há caminho pelo app: quem pode banir se decide fora do produto |
+| **D30** | Decisão de moderação | Callable, nunca escrita direta | `moderation/{uid}` e o espelho `profiles.isBanned` têm de mudar juntos; duas escritas acopladas não saem do cliente, nem do admin |
+| **D31** | Conteúdo autoral na exclusão | Anonimizar, não apagar | A avaliação também é dado de quem foi avaliado, e a denúncia é prova contra outro. Apagar deixaria qualquer um limpar o próprio rastro excluindo a conta |
+| **D32** | Partidas do organizador excluído | Futura cancela, passada despersonaliza | Apagar levaria junto o histórico de todo mundo que jogou; o que precisa sumir é o nome, não o registro |
+| **D33** | CI | Roda também em `push` para `main`/`developer` | O workflow só tinha gatilho de `pull_request` e o trabalho vai direto para `developer` — nunca rodou uma vez |
+| **D34** | Partida encerrada | Calculada pelo relógio na UI, `status` nunca vira `FINISHED` | Nada escrevia esse status, então `canRate` nunca ligava e todo o fluxo de avaliação ficou inalcançável. `startsAt + durationMin` no passado é a mesma verdade que o servidor já usa em `submitPlayerRating` — uma fonte só, sem cron |
+| **D35** | Exigir verificação | Capacidade pronta, política desligada | Ligar tranca de uma hora para outra todo mundo que já usa o app e nunca verificou. Construir e exigir são decisões separadas; a segunda precisa de aviso antes |
+| **D36** | Fonte do selo | Claim do ID token, não campo do perfil | O espelho no perfil serve para os outros verem; a decisão de barrar lê o token, que é assinado e não fica desatualizado |
+| **D37** | Semente da reputação | `rating: 0`, não `5` | O 5 era placeholder de exibição e obrigava um caso especial na média para não transformar a primeira nota 1 em 3. Com 0 a conta natural já dá certo. Quem exibe decide o que mostrar com `ratingCount == 0` |
+| **D38** | Dimensões da avaliação | Obrigatórias | O ramo opcional existia para um cliente anterior que nunca existiu em produção. Mantê-lo significaria duas formas de avaliação para sempre e perfis com metade das médias agregadas |
 
 ---
 
@@ -710,7 +733,7 @@ Direto na chave Pix do organizador
 - [ ] Um confirma, outro vai para waitlist
 - [ ] Ao sair: fila é promovida
 - [ ] Realtime com snapshots()
-- [ ] Limites por plano (free = 1 ativa)
+- [x] ~~Limites por plano (free = 1 ativa)~~ — fora do MVP (D27); nunca existiu no código
 
 ### Phase 4 Acceptance
 
@@ -720,13 +743,41 @@ Direto na chave Pix do organizador
 - [ ] Sem overbooking / race conditions
 - [ ] Notificações funcionam
 
+### Phase 6 Acceptance
+
+- [ ] Denunciar exige partida em comum; denunciar estranho é recusado
+- [ ] Mesma pessoa não conta duas vezes na mesma partida
+- [ ] 3 denunciantes distintos → advertência; 6 → suspensão com prazo
+- [ ] Banimento só sai do painel, nunca da contagem
+- [ ] Conta suspensa não entra em partida, não avalia, não denuncia, não cria
+- [ ] Conta suspensa AINDA consegue sair de partida (não pode ficar presa)
+- [ ] Suspensão vencida destrava sem ninguém rodar nada
+- [ ] Painel: fila de revisão carrega, decisão aplica, `isBanned` espelha no perfil
+- [ ] `exportUserData` devolve os dados da pessoa sem revelar quem a denunciou
+- [ ] `deleteAccount` libera as vagas, promove a fila e apaga o usuário do Auth
+- [ ] Avaliação nas quatro dimensões grava e agrega
+- [ ] App dispara verificação de e-mail e de telefone
+- [ ] Selo de verificado aparece no perfil de outra pessoa
+- [ ] Decidir SE exigir verificação para entrar/criar partida (hoje desligado, D35)
+
+### Phase 7 Acceptance
+
+- [ ] Mapa renderiza pins reais no Android e no iOS
+- [ ] Tema Cedar aplicado; nenhum resquício visual do Lexis
+- [ ] Ícones próprios nas duas lojas
+- [ ] Funil view → join → confirm → play chega no analytics
+- [ ] Job de CI para iOS (hoje nada compila o alvo iOS — ver [CI](#))
+
 ### Phase 5 Acceptance
 
 - [ ] Search jogadores por nome, esporte, rating
 - [ ] Filtros avançados funcionam
 - [ ] Player details mostra stats + reviews
 - [ ] Rating distribution visível
-- [ ] Pagination 20 resultados
+- [ ] Avaliações do jogador paginam de 20 em 20
+- [x] ~~Pagination nos resultados de busca~~ — decidido contra (D19): o filtro de
+      nota e esporte roda no cliente, então paginar daria páginas de tamanho
+      aleatório. A UI avisa quando o teto de leitura é atingido
 - [ ] Testes E2E passam
 
 ---

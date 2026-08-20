@@ -7,23 +7,15 @@ internal class FirebaseAnalyticsTracker(
     private val analytics: FirebaseAnalytics,
 ) : AnalyticsTracker {
 
-    override fun trackVerseRead(bookId: Int, chapter: Int) {
-        analytics.logEvent("verse_read") {
-            param("book_id", bookId.toLong())
-            param("chapter", chapter.toLong())
-        }
-    }
-
-    override fun trackStrongViewed(strongNumber: String, language: String) {
-        analytics.logEvent("strong_viewed") {
-            param("strong_number", strongNumber)
-            param("language", language)
-        }
-    }
-
-    override fun trackChapterNavigated(direction: String) {
-        analytics.logEvent("chapter_navigated") {
-            param("direction", direction)
+    /**
+     * Repassa nome e parâmetros como vieram. Toda a decisão de o que medir está
+     * em [AnalyticsEvent]; aqui não existe regra, e é de propósito — quando a
+     * tradução para o SDK tem opinião própria, o evento no painel deixa de ser
+     * o evento que o código diz que é.
+     */
+    override fun track(event: AnalyticsEvent) {
+        analytics.logEvent(event.name) {
+            event.params.forEach { (key, value) -> param(key, value) }
         }
     }
 }

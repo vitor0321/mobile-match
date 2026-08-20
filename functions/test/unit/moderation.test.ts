@@ -1,12 +1,18 @@
 import {describe, expect, it} from "vitest";
 import {
   DAY_IN_MILLIS,
+  MODERATION_LEVELS,
   REPORT_REASONS,
+  SUSPENSION_DAYS,
   SUSPENSION_THRESHOLD,
   WARNING_THRESHOLD,
   REVIEW_THRESHOLD,
   isBlocked,
+  isModerationLevel,
   isReportReason,
+  manualModerationState,
+  nextRatingAverage,
+  parseRatingDimensions,
   levelForReporterCount,
   requiresHumanReview,
 } from "../../src/moderation.js";
@@ -91,5 +97,131 @@ describe("isBlocked", () => {
   it("blocks a ban forever", () => {
     expect(isBlocked({level: "banned"}, now)).toBe(true);
     expect(isBlocked({level: "banned", untilMs: now - DAY_IN_MILLIS}, now)).toBe(true);
+  });
+});
+
+describe("manualModerationState", () => {
+  const now = 1_700_000_000_000;
+
+  it("suspende com prazo, usando o padrão quando não vem duração", () => {
+    const state = manualModerationState("suspended", null, now);
+
+    expect(state.untilMs).toBe(now + SUSPENSION_DAYS * DAY_IN_MILLIS);
+    expect(state.isBanned).toBe(false);
+  });
+
+  it("respeita a duração informada", () => {
+    expect(manualModerationState("suspended", 3, now).untilMs).toBe(now + 3 * DAY_IN_MILLIS);
+  });
+
+  it("ignora duração inválida em vez de gravar um prazo no passado", () => {
+    expect(manualModerationState("suspended", -5, now).untilMs).toBe(
+      now + SUSPENSION_DAYS * DAY_IN_MILLIS,
+    );
+    expect(manualModerationState("suspended", 0, now).untilMs).toBe(
+      now + SUSPENSION_DAYS * DAY_IN_MILLIS,
+    );
+  });
+
+  it("banimento não tem prazo e liga o espelho isBanned", () => {
+    const state = manualModerationState("banned", 7, now);
+
+    // profiles/{uid}.isBanned é o que a regra de criar partida e o filtro da
+    // busca de jogadores leem.
+    expect(state.isBanned).toBe(true);
+    expect(state.untilMs).toBeNull();
+  });
+
+  it("none limpa punição e prazo", () => {
+    const state = manualModerationState("none", 7, now);
+
+    expect(state).toMatchObject({level: "none", untilMs: null, isBanned: false});
+  });
+
+  it("advertência não bloqueia nem marca prazo", () => {
+    expect(manualModerationState("warning", null, now)).toMatchObject({
+      untilMs: null,
+      isBanned: false,
+    });
+  });
+
+  it("decisão humana sempre tira a conta da fila de revisão", () => {
+    // Se ficasse ligado, a conta voltaria ao painel para sempre.
+    for (const level of MODERATION_LEVELS) {
+      expect(manualModerationState(level, null, now).requiresReview).toBe(false);
+    }
+  });
+});
+
+describe("isModerationLevel", () => {
+  it("aceita só os quatro níveis conhecidos", () => {
+    expect(MODERATION_LEVELS.every(isModerationLevel)).toBe(true);
+    expect(isModerationLevel("shadowban")).toBe(false);
+    expect(isModerationLevel("BANNED")).toBe(false);
+    expect(isModerationLevel(undefined)).toBe(false);
+  });
+});
+
+describe("nextRatingAverage", () => {
+  it("a primeira nota é a própria média", () => {
+    // Perfis nascem com rating 0 e ratingCount 0, então a conta natural já dá
+    // certo — não há caso especial de semente para desviar.
+    expect(nextRatingAverage(0, 0, 4)).toBe(4);
+    expect(nextRatingAverage(0, 0, 1)).toBe(1);
+  });
+
+  it("faz média corrente com o histórico", () => {
+    // (5*3 + 3) / 4
+    expect(nextRatingAverage(5, 3, 3)).toBe(4.5);
+  });
+
+  it("arredonda na casa pedida", () => {
+    // (4*2 + 5) / 3 = 4.333...
+    expect(nextRatingAverage(4, 2, 5)).toBe(4.33);
+    expect(nextRatingAverage(4, 2, 5, 1)).toBe(4.3);
+  });
+
+  it("contador corrompido não propaga lixo para a média", () => {
+    expect(nextRatingAverage(5, -1, 2)).toBe(2);
+  });
+});
+
+describe("parseRatingDimensions", () => {
+  const boom = (dimension: string) => {
+    throw new Error(`invalid ${dimension}`);
+  };
+  const todas = {punctuality: 4, respect: 5, fairPlay: 3, behavior: 4};
+
+  it("devolve as quatro dimensões", () => {
+    expect(parseRatingDimensions({rating: 5, ...todas}, boom)).toEqual(todas);
+  });
+
+  it("exige todas — avaliação pela metade não existe", () => {
+    // Aceitar parcial deixaria perfis com metade das médias agregadas e a outra
+    // metade não, para sempre.
+    expect(() => parseRatingDimensions({rating: 5}, boom)).toThrow("invalid punctuality");
+    expect(() => parseRatingDimensions({...todas, respect: undefined}, boom)).toThrow(
+      "invalid respect",
+    );
+    expect(() => parseRatingDimensions({...todas, behavior: null}, boom)).toThrow(
+      "invalid behavior",
+    );
+  });
+
+  it("recusa valor fora de 1..5", () => {
+    expect(() => parseRatingDimensions({...todas, punctuality: 0}, boom)).toThrow(
+      "invalid punctuality",
+    );
+    expect(() => parseRatingDimensions({...todas, respect: 6}, boom)).toThrow("invalid respect");
+    expect(() => parseRatingDimensions({...todas, fairPlay: 4.5}, boom)).toThrow(
+      "invalid fairPlay",
+    );
+    expect(() => parseRatingDimensions({...todas, behavior: "ótimo"}, boom)).toThrow(
+      "invalid behavior",
+    );
+  });
+
+  it("ignora chaves que não são dimensão", () => {
+    expect(parseRatingDimensions({...todas, matchId: "m1", velocidade: 5}, boom)).toEqual(todas);
   });
 });

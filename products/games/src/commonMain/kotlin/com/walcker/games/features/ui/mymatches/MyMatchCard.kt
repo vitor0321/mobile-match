@@ -36,6 +36,12 @@ internal fun MyMatchCard(
     leaveActionLabel: String,
     statusCancelledLabel: String,
     statusFinishedLabel: String,
+    /**
+     * O card veio da aba Passadas. É a única fonte de "acabou": `status` nunca
+     * vira [MatchStatus.FINISHED], então sem isto uma partida de ontem aparecia
+     * sem rótulo nenhum. Quem faz o corte pelo relógio é `GetMyMatchesUseCase`.
+     */
+    isPast: Boolean,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -72,9 +78,9 @@ internal fun MyMatchCard(
                 text = "${game.confirmedPlayers}/${game.totalPlayers}",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            val statusLabel = when (game.status) {
-                MatchStatus.CANCELLED -> statusCancelledLabel
-                MatchStatus.FINISHED -> statusFinishedLabel
+            val statusLabel = when {
+                game.status == MatchStatus.CANCELLED -> statusCancelledLabel
+                game.status == MatchStatus.FINISHED || isPast -> statusFinishedLabel
                 else -> null
             }
             statusLabel?.let {

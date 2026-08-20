@@ -5,7 +5,10 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.error.GamesError
 import com.walcker.games.features.domain.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.usecase.GetUserRatingsUseCase
+import com.walcker.games.features.domain.usecase.ObserveAvailabilityUseCase
+import com.walcker.games.features.domain.usecase.SetAvailabilityUseCase
 import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.SessionHolder
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,19 +23,75 @@ internal class PlayerProfileStepModel(
     private val getUserRatings: GetUserRatingsUseCase,
     private val stringsHolder: GamesStringsHolder,
     private val logoutService: LogoutService,
+    private val observeAvailability: ObserveAvailabilityUseCase,
+    private val setAvailability: SetAvailabilityUseCase,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(PlayerProfileState())
     val state: StateFlow<PlayerProfileState> = _state.asStateFlow()
 
+    /**
+     * Guardado porque o toggle precisa do uid a cada toque, e a sessão só é
+     * lida no `collect` do init.
+     */
+    private var currentUserId: String? = null
+
     init {
         screenModelScope.launch {
             sessionHolder.currentUser.collect { session ->
                 if (session != null) {
+                    currentUserId = session.uid
                     _state.update { it.copy(userName = session.displayName, userEmail = session.email) }
                     loadStats(session.uid)
+                    observeAvailabilityOf(session.uid)
                 }
             }
+        }
+    }
+
+    /**
+     * O switch reflete o documento, não o último toque: se a gravação falhar,
+     * ou se a pessoa mudar a disponibilidade em outro aparelho, o snapshot é
+     * quem manda. É o que evita o switch mentir sobre o estado real.
+     */
+    private fun observeAvailabilityOf(userId: String) {
+        screenModelScope.launch {
+            observeAvailability(userId).collect { result ->
+                result.onSuccess { availability ->
+                    _state.update { it.copy(isAvailable = availability.isAvailable) }
+                }
+            }
+        }
+    }
+
+    private fun changeAvailability(isAvailable: Boolean) {
+        val userId = currentUserId ?: return
+        val strings = stringsHolder.resolveStringsOrDefault().playerProfile
+
+        screenModelScope.launch {
+            // Otimista: o switch acompanha o dedo. O observe acima corrige se a
+            // gravação não passar.
+            _state.update {
+                it.copy(
+                    isAvailable = isAvailable,
+                    isUpdatingAvailability = true,
+                    availabilityErrorMessage = null,
+                )
+            }
+
+            setAvailability(userId, isAvailable)
+                .onSuccess {
+                    _state.update { it.copy(isUpdatingAvailability = false) }
+                }
+                .onFailure {
+                    _state.update {
+                        it.copy(
+                            isAvailable = !isAvailable,
+                            isUpdatingAvailability = false,
+                            availabilityErrorMessage = strings.availabilityError,
+                        )
+                    }
+                }
         }
     }
 
@@ -47,6 +106,9 @@ internal class PlayerProfileStepModel(
             }
             PlayerProfileEvent.DismissError -> _state.update { it.copy(errorMessage = null) }
             PlayerProfileEvent.LogoutRequested -> logout()
+            is PlayerProfileEvent.AvailabilityChanged -> changeAvailability(event.isAvailable)
+            PlayerProfileEvent.DismissAvailabilityError ->
+                _state.update { it.copy(availabilityErrorMessage = null) }
         }
     }
 

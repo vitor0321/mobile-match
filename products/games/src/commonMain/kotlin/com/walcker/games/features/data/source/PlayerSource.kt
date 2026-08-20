@@ -1,6 +1,8 @@
 package com.walcker.games.features.data.source
 
+import com.walcker.games.features.domain.model.DimensionAverage
 import com.walcker.games.features.domain.model.PlayerSearchFilters
+import com.walcker.games.features.domain.model.RatingDimension
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 
@@ -99,4 +101,10 @@ internal data class PlayerDetailsDto(
     val city: String?,
     val neighborhood: String?,
     val createdAtMs: Long,
+    /**
+     * Médias por dimensão lidas de `profiles/{uid}`. Vem vazio para perfil sem
+     * avaliação e para perfil avaliado antes das dimensões existirem — nesse
+     * caso os campos simplesmente não estão no documento.
+     */
+    val dimensionAverages: Map<RatingDimension, DimensionAverage> = emptyMap(),
 )

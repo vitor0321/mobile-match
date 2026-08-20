@@ -31,6 +31,7 @@ internal fun PlayerDetailsDto.toDomain(): PlayerDetails = PlayerDetails(
     city = city,
     neighborhood = neighborhood,
     memberSinceMs = createdAtMs,
+    dimensionAverages = dimensionAverages,
 )
 
 /**

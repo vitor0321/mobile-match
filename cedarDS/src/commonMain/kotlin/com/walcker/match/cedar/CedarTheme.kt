@@ -99,11 +99,22 @@ private val DarkColorScheme = darkColorScheme(
 
 // ─── Typography ───────────────────────────────────────────────────────────────
 
+/**
+ * Estilos próprios do Cedar, além do que o Material já dá.
+ *
+ * Antes daqui só saía `bodyVerse` — serifada, entrelinha de leitura longa —
+ * herdado do Lexis e sem uma única chamada no app. Ficou [venueName], que é o
+ * texto que de fato se repete no produto: nome de quadra em card de partida,
+ * onde truncar cedo é pior do que apertar a fonte.
+ *
+ * Se a identidade visual for para outro lugar (item "Tema Cedar" da Phase 7),
+ * é aqui que ela nasce.
+ */
 public data class CedarTypography(
-    val bodyVerse: TextStyle = TextStyle(
-        fontFamily    = FontFamily.Serif,
-        fontSize      = 17.sp,
-        lineHeight    = 29.75.sp, // 17 * 1.75
+    val venueName: TextStyle = TextStyle(
+        fontFamily    = FontFamily.SansSerif,
+        fontSize      = 15.sp,
+        lineHeight    = 20.sp,
         letterSpacing = 0.sp,
     ),
 )

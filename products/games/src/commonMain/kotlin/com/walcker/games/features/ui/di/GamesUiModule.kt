@@ -19,6 +19,7 @@ internal val gamesUiModule = module {
             preferences = get(),
             joinGame = get(),
             stringsHolder = get(),
+            analytics = get(),
         )
     }
     factory {
@@ -26,6 +27,7 @@ internal val gamesUiModule = module {
             repository = get(),
             preferences = get(),
             locationProvider = get(),
+            analytics = get(),
         )
     }
     factory {
@@ -33,6 +35,7 @@ internal val gamesUiModule = module {
             repository = get(),
             joinGame = get(),
             stringsHolder = get(),
+            analytics = get(),
         )
     }
     factory {
@@ -41,6 +44,7 @@ internal val gamesUiModule = module {
             stringsHolder = get(),
             sessionHolder = get(),
             tabCoordinator = get(),
+            analytics = get(),
         )
     }
     factory {
@@ -59,6 +63,8 @@ internal val gamesUiModule = module {
             getUserRatings = get(),
             stringsHolder = get(),
             logoutService = get(),
+            observeAvailability = get(),
+            setAvailability = get(),
         )
     }
     factory {

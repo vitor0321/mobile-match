@@ -1,7 +1,6 @@
 package com.walcker.games.features.domain.usecase
 
 import com.walcker.games.features.domain.model.Game
-import com.walcker.games.features.domain.model.MatchRole
 import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.repository.MyMatch
@@ -29,9 +28,12 @@ internal class GetMyMatchesUseCaseImpl(
         }
     }
 
+    /**
+     * O corte de "passada" é o mesmo [Game.isOver] que libera a avaliação: uma
+     * partida não pode cair na aba Passadas e continuar sem botão de avaliar.
+     */
     private fun isActive(game: Game, nowSeconds: Long): Boolean {
         if (game.status == MatchStatus.CANCELLED || game.status == MatchStatus.FINISHED) return false
-        val endSeconds = game.startsAtSeconds + game.durationMin.toLong() * 60
-        return endSeconds >= nowSeconds
+        return !game.isOver(nowSeconds)
     }
 }

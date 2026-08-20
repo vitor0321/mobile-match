@@ -6,6 +6,9 @@ import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.usecase.JoinGameUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.MatchListSource
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +25,12 @@ internal class SearchStepModel(
     private val repository: GameRepository,
     private val joinGame: JoinGameUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val analytics: AnalyticsTracker,
 ) : ScreenModel {
+
+    init {
+        analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.SEARCH))
+    }
 
     private val strings get() = stringsHolder.resolveStringsOrDefault().search
 

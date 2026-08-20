@@ -46,6 +46,7 @@ import coil3.compose.AsyncImage
 import com.walcker.games.features.domain.model.PlayerDetails
 import com.walcker.games.features.ui.player_ratings.PlayerRatingsListStep
 import com.walcker.games.strings.PlayerDetailsStrings
+import com.walcker.games.strings.RatingStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.components.RatingSummary
@@ -73,7 +74,11 @@ internal data class PlayerDetailsStep(val userId: String) : Screen {
         )
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
-        val strings = rememberGamesStrings().strings.playerDetails
+        val allStrings = rememberGamesStrings().strings
+        val strings = allStrings.playerDetails
+        // Os rótulos das quatro dimensões vivem em RatingStrings, junto com o
+        // formulário que as coleta.
+        val ratingStrings = allStrings.ratings
 
         LaunchedEffect(stepModel) {
             stepModel.effects.collect { effect ->
@@ -127,6 +132,7 @@ internal data class PlayerDetailsStep(val userId: String) : Screen {
                     state = state,
                     player = player,
                     strings = strings,
+                    ratingStrings = ratingStrings,
                     onEvent = stepModel::onEvent,
                     modifier = contentModifier,
                 )
@@ -166,6 +172,7 @@ private fun PlayerDetailsContent(
     state: PlayerDetailsState,
     player: PlayerDetails,
     strings: PlayerDetailsStrings,
+    ratingStrings: RatingStrings,
     onEvent: (PlayerDetailsEvents) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -187,6 +194,18 @@ private fun PlayerDetailsContent(
                     averageLabel = strings.ratingValue(distribution.average),
                     totalLabel = strings.ratingsCount(distribution.total),
                     distribution = counts,
+                )
+            }
+        }
+
+        // Some inteira quando ninguém respondeu dimensão nenhuma, que é o
+        // estado de todo perfil avaliado antes das dimensões existirem.
+        if (player.dimensionAverages.isNotEmpty()) {
+            item(key = "dimensions") {
+                DimensionAveragesCard(
+                    averages = player.dimensionAverages,
+                    strings = strings,
+                    ratingStrings = ratingStrings,
                 )
             }
         }

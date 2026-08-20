@@ -13,7 +13,12 @@ val releaseStorePassword = localProps.getProperty("release.storePassword")
 val admobAppId = localProps.getProperty("ADMOB_APP_ID", "ca-app-pub-8514371864627144~1123615258")
 val admobBannerUnitId = localProps.getProperty("ADMOB_BANNER_UNIT_ID", "ca-app-pub-8514371864627144/6345620957")
 val revenueCatAndroidKey = localProps.getProperty("REVENUECAT_ANDROID_KEY", "")
-val googleMapsApiKey = localProps.getProperty("GOOGLE_MAPS_API_KEY", "AIzaSyDYWYUaABISc5Z2gLeLGCN7bpF5sXrI4nc")
+
+// Nunca use a chave real como fallback: este arquivo é versionado.
+// Defina em local.properties (fora do git) ou na variável de ambiente de mesmo nome.
+val googleMapsApiKey: String = localProps.getProperty("GOOGLE_MAPS_API_KEY")
+    ?: providers.environmentVariable("GOOGLE_MAPS_API_KEY").orNull
+    ?: ""
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -165,4 +170,21 @@ android {
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+}
+
+if (googleMapsApiKey.isBlank()) {
+    logger.warn(
+        "GOOGLE_MAPS_API_KEY ausente — o mapa não vai carregar neste build. " +
+            "Defina em local.properties ou exporte a variável de ambiente.",
+    )
+}
+
+// Debug pode subir sem a chave (mapa em branco); release, não.
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    doFirst {
+        check(googleMapsApiKey.isNotBlank()) {
+            "GOOGLE_MAPS_API_KEY ausente. Defina em local.properties ou na variável de ambiente " +
+                "antes de gerar um build de release."
+        }
+    }
 }
