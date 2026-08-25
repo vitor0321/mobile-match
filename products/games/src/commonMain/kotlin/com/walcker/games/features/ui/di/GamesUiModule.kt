@@ -17,7 +17,6 @@ internal val gamesUiModule = module {
         GameListStepModel(
             repository = get(),
             preferences = get(),
-            joinGame = get(),
             stringsHolder = get(),
             analytics = get(),
         )
@@ -33,7 +32,6 @@ internal val gamesUiModule = module {
     factory {
         SearchStepModel(
             repository = get(),
-            joinGame = get(),
             stringsHolder = get(),
             analytics = get(),
         )

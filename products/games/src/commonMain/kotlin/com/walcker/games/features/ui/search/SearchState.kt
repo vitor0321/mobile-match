@@ -2,6 +2,9 @@ package com.walcker.games.features.ui.search
 
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.strings.GameListStrings
+import com.walcker.games.strings.PtBrGamesStrings
+import com.walcker.games.strings.SearchStrings
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -23,6 +26,10 @@ internal data class SearchFilters(
 )
 
 internal data class SearchState(
+    /** Textos da tela, resolvidos no model a partir do holder injetado por DI. */
+    val strings: SearchStrings = PtBrGamesStrings.search,
+    /** Textos do card de partida, compartilhados com a home. */
+    val cardStrings: GameListStrings = PtBrGamesStrings.gameList,
     val query: String = "",
     val filters: SearchFilters = SearchFilters(),
     val results: ImmutableList<Game> = persistentListOf(),

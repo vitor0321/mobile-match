@@ -5,8 +5,6 @@ internal data class SearchStrings(
     val subtitle: String,
     val placeholder: String,
     val emptyForQuery: (String) -> String,
-    val joinSuccess: String,
-    val joinError: String,
     /** Result count above the list: "8 partidas encontradas". */
     val resultsCount: (Int) -> String,
     /** Shown before the user types anything — the list is not empty, it has not started. */
@@ -33,8 +31,6 @@ internal val searchStringsEn = SearchStrings(
     subtitle = "Search by venue or sport",
     placeholder = "Search by court, neighborhood or sport",
     emptyForQuery = { q -> "No matches found for \"$q\"." },
-    joinSuccess = "You joined the match.",
-    joinError = "Could not join the match.",
     resultsCount = { n -> if (n == 1) "1 match found" else "$n matches found" },
     idlePrompt = "Search for a court, a neighborhood or a sport.",
     filtersTitle = "Filters",
@@ -55,8 +51,6 @@ internal val searchStringsPt = SearchStrings(
     subtitle = "Pesquise por local ou esporte",
     placeholder = "Buscar por quadra, bairro ou esporte",
     emptyForQuery = { q -> "Nenhuma partida encontrada para \"$q\"." },
-    joinSuccess = "Você entrou no jogo.",
-    joinError = "Não foi possível entrar no jogo.",
     resultsCount = { n -> if (n == 1) "1 partida encontrada" else "$n partidas encontradas" },
     idlePrompt = "Busque por uma quadra, um bairro ou um esporte.",
     filtersTitle = "Filtros",

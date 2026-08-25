@@ -26,10 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.features.ui.matchdetail.MatchDetailStep
 import com.walcker.games.strings.GameListStrings
-import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.MatchCard
@@ -40,80 +42,105 @@ import kotlinx.collections.immutable.ImmutableList
 /**
  * Home screen of the games product.
  *
- * Shows open matches with a sport filter and a radius slider.
- *
- * The title scrolls with the content instead of sitting in an app bar: the redesign
- * has no opaque bar on list screens, so the tinted canvas runs to the top edge and
- * the cards are what the eye lands on.
+ * O `Step` só liga o model à UI: assina o estado, coleta efeitos e navega. Quem
+ * decide que é hora de navegar é o model — o toque no card vira um evento, não
+ * um `navigator.push` solto no meio da árvore de composição.
  */
 internal class GameListStep : Screen {
 
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
         val stepModel = koinScreenModel<GameListStepModel>()
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
-        val strings = rememberGamesStrings().strings.gameList
 
         LaunchedEffect(Unit) {
             stepModel.effects.collect { effect ->
                 when (effect) {
                     is GameListEffect.ShowMessage ->
                         snackbarHostState.showSnackbar(effect.message)
+
+                    is GameListEffect.NavigateToMatchDetail ->
+                        navigator.push(MatchDetailStep(effect.matchId))
                 }
             }
         }
 
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            ) {
-                CedarScreenTitle(
-                    title = strings.title,
-                    subtitle = strings.subtitle,
-                    modifier = Modifier.padding(
-                        horizontal = CedarTokens.spacing.lg,
-                        vertical = CedarTokens.spacing.md,
-                    ),
+        GameListContent(
+            state = state,
+            onEvent = stepModel::onEvent,
+            snackbarHostState = snackbarHostState,
+        )
+    }
+}
+
+/**
+ * Conteúdo da tela, stateless: recebe estado e devolve eventos.
+ *
+ * O título rola junto com o conteúdo em vez de ficar numa app bar: a repaginação
+ * não tem barra opaca em tela de lista, então a canvas tingida vai até o topo e
+ * os cards são o que o olho encontra primeiro.
+ */
+@Composable
+internal fun GameListContent(
+    state: GameListState,
+    onEvent: (GameListEvents) -> Unit,
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val strings = state.strings
+
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            CedarScreenTitle(
+                title = strings.title,
+                subtitle = strings.subtitle,
+                modifier = Modifier.padding(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.md,
+                ),
+            )
+
+            if (state.preferencesLoaded) {
+                FilterBar(
+                    strings = strings,
+                    selectedSport = state.selectedSport,
+                    radiusKm = state.radiusKm,
+                    onSelectSport = { onEvent(GameListEvents.SelectSport(it)) },
+                    onRadiusChange = { onEvent(GameListEvents.SetRadius(it)) },
                 )
+            }
 
-                if (state.preferencesLoaded) {
-                    FilterBar(
-                        strings = strings,
-                        selectedSport = state.selectedSport,
-                        radiusKm = state.radiusKm,
-                        onSelectSport = { stepModel.onEvent(GameListEvents.SelectSport(it)) },
-                        onRadiusChange = { stepModel.onEvent(GameListEvents.SetRadius(it)) },
+            when {
+                state.isLoading && state.games.isEmpty() ->
+                    LoadingContent(Modifier.fillMaxSize())
+
+                state.errorMessage != null && state.games.isEmpty() ->
+                    EmptyState(
+                        message = state.errorMessage,
+                        modifier = Modifier.fillMaxSize(),
                     )
-                }
 
-                when {
-                    state.isLoading && state.games.isEmpty() ->
-                        LoadingContent(Modifier.fillMaxSize())
-
-                    state.errorMessage != null && state.games.isEmpty() ->
-                        EmptyState(
-                            message = state.errorMessage.orEmpty(),
-                            modifier = Modifier.fillMaxSize(),
-                        )
-
-                    state.games.isEmpty() ->
-                        EmptyState(
-                            message = strings.emptyMessage,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-
-                    else -> GameList(
-                        strings = strings,
-                        games = state.games,
-                        onJoin = { stepModel.onEvent(GameListEvents.JoinGame(it)) },
+                state.games.isEmpty() ->
+                    EmptyState(
+                        message = strings.emptyMessage,
+                        modifier = Modifier.fillMaxSize(),
                     )
-                }
+
+                else -> GameList(
+                    strings = strings,
+                    games = state.games,
+                    onClick = { onEvent(GameListEvents.SelectGame(it)) },
+                )
             }
         }
     }
@@ -176,7 +203,7 @@ private fun FilterBar(
 private fun GameList(
     strings: GameListStrings,
     games: ImmutableList<Game>,
-    onJoin: (String) -> Unit,
+    onClick: (String) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -194,9 +221,7 @@ private fun GameList(
                 priceLabel = game.pricePerPlayer?.let { strings.perPlayer(it) },
                 slotsLabel = strings.slotsBadge(game.openSlots),
                 openSlots = game.openSlots,
-                // TODO(fase 2): trocar por onClick abrindo o detalhe da partida.
-                joinButtonLabel = strings.joinButton,
-                onJoinClick = { onJoin(game.id) },
+                onClick = { onClick(game.id) },
             )
         }
     }

@@ -4,7 +4,6 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.data.preferences.GamesPreferences
 import com.walcker.games.features.domain.repository.GameRepository
-import com.walcker.games.features.domain.usecase.JoinGameUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.match.core.analytics.AnalyticsEvent
@@ -26,7 +25,6 @@ import kotlinx.coroutines.launch
 internal class GameListStepModel(
     private val repository: GameRepository,
     private val preferences: GamesPreferences,
-    private val joinGame: JoinGameUseCase,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
 ) : ScreenModel {
@@ -40,7 +38,7 @@ internal class GameListStepModel(
 
     private val strings get() = stringsHolder.resolveStringsOrDefault().gameList
 
-    private val _state = MutableStateFlow(GameListState())
+    private val _state = MutableStateFlow(GameListState(strings = strings))
     val state: StateFlow<GameListState> = _state.asStateFlow()
 
     private val _effects = Channel<GameListEffect>(Channel.BUFFERED)
@@ -54,12 +52,16 @@ internal class GameListStepModel(
     fun onEvent(event: GameListEvents) {
         when (event) {
             is GameListEvents.Refresh -> refresh()
-            is GameListEvents.JoinGame -> onJoinGame(event.gameId)
             is GameListEvents.SelectSport -> {
                 screenModelScope.launch { preferences.setSelectedSport(event.sport) }
             }
             is GameListEvents.SetRadius -> {
                 screenModelScope.launch { preferences.setRadiusKm(event.radiusKm) }
+            }
+            is GameListEvents.SelectGame -> {
+                screenModelScope.launch {
+                    _effects.send(GameListEffect.NavigateToMatchDetail(event.gameId))
+                }
             }
         }
     }
@@ -77,6 +79,10 @@ internal class GameListStepModel(
             }.sortedBy { (it.lat * it.lat + it.lng * it.lng) } // TODO: sort by distance from user
             _state.update {
                 it.copy(
+                    // Re-carimba as strings: o holder só é preenchido depois da
+                    // primeira composição, então o valor inicial pode ter caído
+                    // no padrão pt-BR.
+                    strings = strings,
                     selectedSport = sport,
                     radiusKm = radius,
                     games = filtered.toImmutableList(),
@@ -98,19 +104,6 @@ internal class GameListStepModel(
                             errorMessage = error.message ?: strings.loadErrorMessage,
                         )
                     }
-                }
-        }
-    }
-
-    private fun onJoinGame(gameId: String) {
-        screenModelScope.launch {
-            joinGame(gameId)
-                .onSuccess {
-                    _effects.send(GameListEffect.ShowMessage(strings.joinSuccess))
-                    refresh()
-                }
-                .onFailure {
-                    _effects.send(GameListEffect.ShowMessage(strings.joinError))
                 }
         }
     }

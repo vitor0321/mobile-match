@@ -3,7 +3,6 @@ package com.walcker.games.features.ui.search
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.repository.GameRepository
-import com.walcker.games.features.domain.usecase.JoinGameUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.match.core.analytics.AnalyticsEvent
@@ -23,7 +22,6 @@ import kotlinx.coroutines.launch
 
 internal class SearchStepModel(
     private val repository: GameRepository,
-    private val joinGame: JoinGameUseCase,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
 ) : ScreenModel {
@@ -32,9 +30,14 @@ internal class SearchStepModel(
         analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.SEARCH))
     }
 
-    private val strings get() = stringsHolder.resolveStringsOrDefault().search
+    private val gamesStrings get() = stringsHolder.resolveStringsOrDefault()
 
-    private val _state = MutableStateFlow(SearchState())
+    private val _state = MutableStateFlow(
+        SearchState(
+            strings = gamesStrings.search,
+            cardStrings = gamesStrings.gameList,
+        ),
+    )
     val state: StateFlow<SearchState> = _state.asStateFlow()
 
     private val _effects = Channel<SearchEffect>(Channel.BUFFERED)
@@ -77,7 +80,11 @@ internal class SearchStepModel(
             SearchEvents.ToggleFiltersPanel -> {
                 _state.update { it.copy(showFiltersPanel = !it.showFiltersPanel) }
             }
-            is SearchEvents.JoinGame -> onJoinGame(event.gameId)
+            is SearchEvents.SelectGame -> {
+                screenModelScope.launch {
+                    _effects.send(SearchEffect.NavigateToMatchDetail(event.gameId))
+                }
+            }
         }
     }
 
@@ -128,24 +135,18 @@ internal class SearchStepModel(
         }
 
         _state.update {
-            it.copy(results = filtered.toImmutableList())
+            // Re-carimba as strings: o holder só é preenchido depois da primeira
+            // composição, então o valor inicial pode ter caído no padrão pt-BR.
+            it.copy(
+                strings = gamesStrings.search,
+                cardStrings = gamesStrings.gameList,
+                results = filtered.toImmutableList(),
+            )
         }
     }
 
     private fun applyQuery(query: String) {
         _state.update { it.copy(query = query) }
         applyFilters()
-    }
-
-    private fun onJoinGame(gameId: String) {
-        screenModelScope.launch {
-            joinGame(gameId)
-                .onSuccess {
-                    _effects.send(SearchEffect.ShowMessage(strings.joinSuccess))
-                }
-                .onFailure {
-                    _effects.send(SearchEffect.ShowMessage(strings.joinError))
-                }
-        }
     }
 }

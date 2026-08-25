@@ -2,10 +2,18 @@ package com.walcker.games.features.ui.gamelist
 
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.strings.GameListStrings
+import com.walcker.games.strings.PtBrGamesStrings
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
 internal data class GameListState(
+    /**
+     * Textos da tela. Vêm do model (que recebe o holder por DI), não de um
+     * `CompositionLocal`: assim o composable de conteúdo é stateless de verdade
+     * e um teste pode passar as strings que quiser.
+     */
+    val strings: GameListStrings = PtBrGamesStrings.gameList,
     val isLoading: Boolean = true,
     val games: ImmutableList<Game> = persistentListOf(),
     val errorMessage: String? = null,

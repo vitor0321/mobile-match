@@ -9,9 +9,11 @@ internal sealed interface SearchEvents {
     data class PriceRangeChanged(val minPrice: Float?, val maxPrice: Float?) : SearchEvents
     data object ResetFilters : SearchEvents
     data object ToggleFiltersPanel : SearchEvents
-    data class JoinGame(val gameId: String) : SearchEvents
+    /** Toque no card do resultado. Quem decide para onde ir é o model. */
+    data class SelectGame(val gameId: String) : SearchEvents
 }
 
 internal sealed interface SearchEffect {
     data class ShowMessage(val message: String) : SearchEffect
+    data class NavigateToMatchDetail(val matchId: String) : SearchEffect
 }

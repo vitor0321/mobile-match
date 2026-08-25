@@ -32,9 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.features.ui.matchdetail.MatchDetailStep
 import com.walcker.games.strings.SearchStrings
-import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarFilterRow
 import com.walcker.match.cedar.components.CedarFilterSection
 import com.walcker.match.cedar.components.CedarPrimaryButton
@@ -50,143 +52,163 @@ import com.walcker.match.cedar.tokens.CedarTokens
  * Search screen — filters the local cache by venue, neighborhood, city or sport
  * label. Search runs entirely client-side; the cache is updated whenever the home
  * screen refreshes.
+ *
+ * O `Step` só liga o model à UI: assina o estado, coleta efeitos e navega.
  */
 internal class SearchStep : Screen {
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
         val stepModel = koinScreenModel<SearchStepModel>()
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
-        val gamesStrings = rememberGamesStrings().strings
-        val strings = gamesStrings.search
-        val cardStrings = gamesStrings.gameList
 
         LaunchedEffect(Unit) {
             stepModel.effects.collect { effect ->
                 when (effect) {
                     is SearchEffect.ShowMessage ->
                         snackbarHostState.showSnackbar(effect.message)
+
+                    is SearchEffect.NavigateToMatchDetail ->
+                        navigator.push(MatchDetailStep(effect.matchId))
                 }
             }
         }
 
-        if (state.showFiltersPanel) {
-            ModalBottomSheet(
-                onDismissRequest = { stepModel.onEvent(SearchEvents.ToggleFiltersPanel) },
-                shape = CedarTokens.radius.sheet,
-                containerColor = MaterialTheme.colorScheme.surface,
-            ) {
-                SearchFiltersPanel(
-                    strings = strings,
-                    selectedSports = state.filters.sports,
-                    onSportToggled = { sport ->
-                        val current = state.filters.sports
-                        val next = if (sport == null) {
-                            emptySet()
-                        } else if (sport in current) {
-                            current - sport
-                        } else {
-                            current + sport
-                        }
-                        stepModel.onEvent(SearchEvents.SportFilterChanged(next))
-                    },
-                    onResetFilters = { stepModel.onEvent(SearchEvents.ResetFilters) },
-                    onDismiss = { stepModel.onEvent(SearchEvents.ToggleFiltersPanel) },
-                )
-            }
+        SearchContent(
+            state = state,
+            onEvent = stepModel::onEvent,
+            snackbarHostState = snackbarHostState,
+        )
+    }
+}
+
+/** Conteúdo da busca, stateless: recebe estado e devolve eventos. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SearchContent(
+    state: SearchState,
+    onEvent: (SearchEvents) -> Unit,
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val strings = state.strings
+    val cardStrings = state.cardStrings
+
+    if (state.showFiltersPanel) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(SearchEvents.ToggleFiltersPanel) },
+            shape = CedarTokens.radius.sheet,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            SearchFiltersPanel(
+                strings = strings,
+                selectedSports = state.filters.sports,
+                onSportToggled = { sport ->
+                    val current = state.filters.sports
+                    val next = if (sport == null) {
+                        emptySet()
+                    } else if (sport in current) {
+                        current - sport
+                    } else {
+                        current + sport
+                    }
+                    onEvent(SearchEvents.SportFilterChanged(next))
+                },
+                onResetFilters = { onEvent(SearchEvents.ResetFilters) },
+                onDismiss = { onEvent(SearchEvents.ToggleFiltersPanel) },
+            )
         }
+    }
 
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.padding(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.md,
+                ),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
             ) {
-                Column(
-                    modifier = Modifier.padding(
-                        horizontal = CedarTokens.spacing.lg,
-                        vertical = CedarTokens.spacing.md,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
-                ) {
-                    CedarScreenTitle(title = strings.title, subtitle = strings.subtitle)
+                CedarScreenTitle(title = strings.title, subtitle = strings.subtitle)
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CedarSearchField(
+                        value = state.query,
+                        onValueChange = { onEvent(SearchEvents.QueryChanged(it)) },
+                        placeholder = strings.placeholder,
+                        clearContentDescription = strings.clearQueryContentDescription,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = { onEvent(SearchEvents.ToggleFiltersPanel) },
                     ) {
-                        CedarSearchField(
-                            value = state.query,
-                            onValueChange = { stepModel.onEvent(SearchEvents.QueryChanged(it)) },
-                            placeholder = strings.placeholder,
-                            clearContentDescription = strings.clearQueryContentDescription,
-                            modifier = Modifier.weight(1f),
+                        Icon(
+                            imageVector = Icons.Filled.Tune,
+                            contentDescription = strings.openFiltersContentDescription,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
-                        IconButton(
-                            onClick = { stepModel.onEvent(SearchEvents.ToggleFiltersPanel) },
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Tune,
-                                contentDescription = strings.openFiltersContentDescription,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
                     }
                 }
+            }
 
-                when {
-                    // Nothing typed yet. This is not an empty result — saying "no
-                    // matches found" before the user has searched reads as a failure.
-                    state.query.isBlank() && state.results.isEmpty() ->
-                        EmptyState(
-                            message = strings.idlePrompt,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+            when {
+                // Nothing typed yet. This is not an empty result — saying "no
+                // matches found" before the user has searched reads as a failure.
+                state.query.isBlank() && state.results.isEmpty() ->
+                    EmptyState(
+                        message = strings.idlePrompt,
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
-                    state.results.isEmpty() ->
-                        EmptyState(
-                            message = strings.emptyForQuery(state.query),
-                            actionLabel = strings.clearFilters,
-                            onAction = { stepModel.onEvent(SearchEvents.ResetFilters) },
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                state.results.isEmpty() ->
+                    EmptyState(
+                        message = strings.emptyForQuery(state.query),
+                        actionLabel = strings.clearFilters,
+                        onAction = { onEvent(SearchEvents.ResetFilters) },
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
-                    else -> {
-                        Text(
-                            text = strings.resultsCount(state.results.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(
-                                horizontal = CedarTokens.spacing.lg,
-                                vertical = CedarTokens.spacing.xs,
-                            ),
-                        )
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                horizontal = CedarTokens.spacing.lg,
-                                vertical = CedarTokens.spacing.xs,
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-                        ) {
-                            items(items = state.results, key = { it.id }) { game ->
-                                MatchCard(
-                                    venueName = game.venueName,
-                                    startsAtSeconds = game.startsAtSeconds,
-                                    metaLabel = "${game.sport.label} · ${game.neighborhood}",
-                                    priceLabel = game.pricePerPlayer?.let { cardStrings.perPlayer(it) },
-                                    slotsLabel = cardStrings.slotsBadge(game.openSlots),
-                                    openSlots = game.openSlots,
-                                    // TODO(fase 2): trocar por onClick abrindo o detalhe da partida.
-                                    joinButtonLabel = cardStrings.joinButton,
-                                    onJoinClick = { stepModel.onEvent(SearchEvents.JoinGame(game.id)) },
-                                )
-                            }
+                else -> {
+                    Text(
+                        text = strings.resultsCount(state.results.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(
+                            horizontal = CedarTokens.spacing.lg,
+                            vertical = CedarTokens.spacing.xs,
+                        ),
+                    )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            horizontal = CedarTokens.spacing.lg,
+                            vertical = CedarTokens.spacing.xs,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+                    ) {
+                        items(items = state.results, key = { it.id }) { game ->
+                            MatchCard(
+                                venueName = game.venueName,
+                                startsAtSeconds = game.startsAtSeconds,
+                                metaLabel = "${game.sport.label} · ${game.neighborhood}",
+                                priceLabel = game.pricePerPlayer?.let { cardStrings.perPlayer(it) },
+                                slotsLabel = cardStrings.slotsBadge(game.openSlots),
+                                openSlots = game.openSlots,
+                                onClick = { onEvent(SearchEvents.SelectGame(game.id)) },
+                            )
                         }
                     }
                 }
