@@ -3,14 +3,19 @@ package com.walcker.match.cedar
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import com.walcker.match.cedar.generated.resources.Res
+import com.walcker.match.cedar.generated.resources.inter_bold
+import com.walcker.match.cedar.generated.resources.inter_medium
+import com.walcker.match.cedar.generated.resources.inter_regular
+import com.walcker.match.cedar.generated.resources.inter_semibold
 import com.walcker.match.cedar.tokens.CedarBrand
 import com.walcker.match.cedar.tokens.ProvideCedarTokens
 import com.walcker.match.cedar.tokens.cedarDarkColorScheme
 import com.walcker.match.cedar.tokens.cedarLightColorScheme
 import com.walcker.match.cedar.tokens.cedarTypography
+import org.jetbrains.compose.resources.Font
 
 /**
  * O tema do app: esquema de cores do Material, escala tipográfica e os tokens Cedar.
@@ -42,7 +47,7 @@ import com.walcker.match.cedar.tokens.cedarTypography
 public fun CedarTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     brand: CedarBrand = CedarBrand.Blue,
-    fontFamily: FontFamily = CedarFontFamily,
+    fontFamily: FontFamily = cedarFontFamily(),
     content: @Composable () -> Unit,
 ) {
     ProvideCedarTokens(darkTheme = darkTheme) {
@@ -66,13 +71,13 @@ public fun CedarTheme(
  * Usada como padrão no [CedarTheme] para garantir identidade visual
  * idêntica entre Android e iOS.
  *
- * No commonMain KMP, o caminho do recurso é relativo a `composeResources/`.
- * O prefixo `font/` é omitido pois o sistema de recursos já resolve a partir
- * da pasta de fontes.
+ * É `@Composable` porque o loader de fontes do compose-resources resolve o
+ * recurso na composição; por isso não pode ser um `val` de topo.
  */
-public val CedarFontFamily = FontFamily(
-    Font("font/Inter-Regular.ttf", FontWeight.Normal),
-    Font("font/Inter-Medium.ttf", FontWeight.Medium),
-    Font("font/Inter-SemiBold.ttf", FontWeight.SemiBold),
-    Font("font/Inter-Bold.ttf", FontWeight.Bold),
+@Composable
+public fun cedarFontFamily(): FontFamily = FontFamily(
+    Font(Res.font.inter_regular, FontWeight.Normal),
+    Font(Res.font.inter_medium, FontWeight.Medium),
+    Font(Res.font.inter_semibold, FontWeight.SemiBold),
+    Font(Res.font.inter_bold, FontWeight.Bold),
 )

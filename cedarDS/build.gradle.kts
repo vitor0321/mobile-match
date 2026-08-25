@@ -35,6 +35,11 @@ kotlin {
     }
 }
 
+compose.resources {
+    packageOfResClass = "com.walcker.match.cedar.generated.resources"
+    generateResClass = always
+}
+
 android {
     namespace = "com.walcker.match.cedar"
     compileSdk = libs.versions.android.compileSdk.get().toInt()

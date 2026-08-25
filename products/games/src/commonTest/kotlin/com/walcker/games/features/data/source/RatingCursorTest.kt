@@ -1,7 +1,7 @@
 package com.walcker.games.features.data.source
 
-import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.fake.rating
+import com.walcker.games.features.domain.model.RatingSort
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -24,7 +24,7 @@ class RatingCursorTest {
 
         assertEquals("4|1700000000000", cursor)
         assertEquals(
-            listOf(4, 1_700_000_000_000L),
+            listOf<Any>(4, 1_700_000_000_000L),
             RatingCursor.decode(cursor, RatingSort.HIGHEST),
         )
     }
