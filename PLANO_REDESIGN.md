@@ -576,14 +576,13 @@ o projeto andar — ele é o contexto permanente, este plano é o do momento.
 ### 9.6. O que ficou pendente, em ordem de valor
 
 1. `./gradlew build` e regravar os goldens (9.2 e 9.3).
-2. ~~**Ligar a navegação lista → detalhe**~~ ✅ *feito (ver 9.7)* — falta ainda o call site do
-   `MatchConfirmedStep`: a tela de confirmação existe mas nunca aparece.
-3. **Consertar o CI.** `.github/workflows/pull-request.yml` roda
-   `:products:bible:testDebugUnitTest` e `:products:bible:compileDebugKotlinAndroid` — e
-   **`:products:bible` não existe**, saiu quando o projeto foi derivado do mobile-lexis. Enquanto
-   isso, `:products:games`, que é o produto, não é compilado nem testado em nenhum job, e
-   `ios-release.yml` só dispara em tag `v*`. Trocar aqueles dois alvos por `:products:games` e
-   acrescentar um `compileKotlinIosSimulatorArm64` fecha o buraco do iOS de uma vez.
+2. ~~**Ligar a navegação lista → detalhe e o call site do `MatchConfirmedStep`**~~ ✅ *feito
+   (ver 9.7 e 9.8)* — a tela de confirmação agora aparece ao entrar numa partida.
+3. ~~**Consertar o CI.**~~ ✅ *já feito na árvore de trabalho* — `.github/workflows/pull-request.yml`
+   não referencia mais `:products:bible`: roda `:products:{identity,games}:testDebugUnitTest`,
+   `:products:games:compileDebugKotlinAndroid` e um job `ios-compile` (macos-14) com
+   `compileKotlinIosSimulatorArm64` dos dois produtos. **A seção "CI quebrado, para conserto" do
+   `CLAUDE.md` está desatualizada** (ainda descreve o `:products:bible`) e deveria ser removida.
 4. Inter (Google Fonts, OFL) em `cedarDS/src/commonMain/composeResources/font/`, passada em
    `CedarTheme(fontFamily = ...)`. Enquanto não entrar, Android e iOS parecem dois apps.
 5. Fase 5 — ícone, splash, glifos.
@@ -614,4 +613,28 @@ ficaram órfãos quando o botão saiu do card e foram removidos das `data class`
 `joinGame = get()` do `GamesUiModule`). O `JoinGameUseCase` continua vivo no fluxo do detalhe.
 
 Verde em `:products:games` e `:products:identity` (`compileKotlinIosSimulatorArm64`) e em
-`:products:games:compileDebugKotlinAndroid`. Pendente aqui: o call site do `MatchConfirmedStep`.
+`:products:games:compileDebugKotlinAndroid`.
+
+### 9.8. Call site do `MatchConfirmedStep` (feito nesta sessão)
+
+A tela de confirmação existia (`matchdetail/MatchConfirmedStep.kt`) mas **nenhum código a abria** —
+entrar numa partida só trocava um banner de sucesso. Agora ela aparece, também em MVI:
+
+- `MatchDetailStepModel` ganhou um `MatchDetailEffect` (`Channel` + `effects: Flow`, espelhando os
+  outros models). No `joinMatchAction`, o outcome `Confirmed` deixa de setar `successMessage`
+  (a tela substitui o banner) e emite `NavigateToConfirmation(matchId, venueName, startsAtSeconds,
+  sportLabel)`; `Waitlist` e `AlreadyJoined` mantêm seus banners — não abrem tela.
+- `MatchDetailStep` coleta o efeito e faz **`navigator.replace(MatchConfirmedStep(...))`** — `replace`,
+  não `push`: as ações da própria confirmação são `replace(MatchDetailStep)` ("ver detalhes") e `pop()`
+  ("voltar"), então só com `replace` a pilha fica sã — `[…, lista, confirmação]` → primário dá
+  `[…, lista, detalhe]`, secundário dá `[…, lista]`.
+
+`matchCode` continua `null` (produto ainda não definiu; nunca mostrar id cru do Firestore), então o
+bloco de código fica escondido. Verde em `:products:games:compileKotlinIosSimulatorArm64`.
+
+> **Desvios pré-existentes no `MatchDetailStepModel`/`MatchDetailStep`, não corrigidos aqui** (fora do
+> escopo; anotados para uma próxima passada): (a) strings de sucesso/erro em pt-BR no código em vez do
+> Lyricist; (b) `error.message` de exceção exposto ao usuário (`errorMessage = error.message ?: …`);
+> (c) nome de enum vazado (`"Status da partida foi atualizado: ${currentStatus.name}"`); (d) o `Step`
+> constrói o model com `remember {}` e ~11 `koinInject()` em vez de `koinScreenModel`, o que arrisca o
+> `screenModelScope` não ser cancelado junto com a tela.

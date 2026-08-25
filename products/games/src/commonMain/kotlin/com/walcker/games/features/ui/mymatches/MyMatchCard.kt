@@ -3,29 +3,39 @@ package com.walcker.games.features.ui.mymatches
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import com.walcker.games.features.domain.model.MatchRole
 import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.repository.MyMatch
+import com.walcker.match.cedar.components.CedarSecondaryButton
+import com.walcker.match.cedar.components.CedarTag
+import com.walcker.match.cedar.components.CedarTagTone
+import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
 
 /**
- * Compact card used in My Matches: same skeleton as [MatchCard] but with a role
- * badge and an action button appropriate to the user's relationship with the
- * match (cancel if organizer, leave if participant).
+ * A match in "Minhas partidas": the same skeleton as `MatchCard`, plus the user's
+ * role and the action that belongs to it (cancel if organiser, leave if participant).
+ *
+ * Two fixes beyond the visuals:
+ * - It rendered `game.sport.name` — the enum constant, so the card said `FUTEBOL`
+ *   while every other screen said `Futebol`. Same bug the map had.
+ * - The role badge was a **disabled `AssistChip`**, which a screen reader announces
+ *   as a disabled button. It is a label, so it is a label now.
+ *
+ * @param isPast the card came from the Passadas tab. It is the only source of
+ *   "it's over": `status` never becomes [MatchStatus.FINISHED], so without this a
+ *   yesterday's match showed no label at all. `GetMyMatchesUseCase` makes the cut
+ *   by the clock.
  */
 @Composable
 internal fun MyMatchCard(
@@ -36,73 +46,90 @@ internal fun MyMatchCard(
     leaveActionLabel: String,
     statusCancelledLabel: String,
     statusFinishedLabel: String,
-    /**
-     * O card veio da aba Passadas. É a única fonte de "acabou": `status` nunca
-     * vira [MatchStatus.FINISHED], então sem isto uma partida de ontem aparecia
-     * sem rótulo nenhum. Quem faz o corte pelo relógio é `GetMyMatchesUseCase`.
-     */
+    playersLabel: String,
     isPast: Boolean,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val game = myMatch.game
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    val statusLabel = when {
+        game.status == MatchStatus.CANCELLED -> statusCancelledLabel
+        game.status == MatchStatus.FINISHED || isPast -> statusFinishedLabel
+        else -> null
+    }
+
+    Card(
+        shape = CedarTokens.radius.mdShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(CedarTokens.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
             ) {
-                Text(
-                    text = game.sport.name,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                val roleLabel = if (myMatch.role == MatchRole.ORGANIZER) organizerBadge else participantBadge
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(roleLabel) },
-                    colors = AssistChipDefaults.assistChipColors(),
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "${game.venueName} · ${game.neighborhood}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = formatWhen(startsAtSeconds = game.startsAtSeconds),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = "${game.confirmedPlayers}/${game.totalPlayers}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            val statusLabel = when {
-                game.status == MatchStatus.CANCELLED -> statusCancelledLabel
-                game.status == MatchStatus.FINISHED || isPast -> statusFinishedLabel
-                else -> null
-            }
-            statusLabel?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                OutlinedButton(onClick = onActionClick) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                ) {
                     Text(
-                        text = when (myMatch.role) {
-                            MatchRole.ORGANIZER -> cancelActionLabel
-                            MatchRole.PARTICIPANT -> leaveActionLabel
-                        }
+                        text = game.venueName,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = formatWhen(startsAtSeconds = game.startsAtSeconds),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "${game.sport.label} · ${game.neighborhood} · $playersLabel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                ) {
+                    CedarTag(
+                        label = if (myMatch.role == MatchRole.ORGANIZER) {
+                            organizerBadge
+                        } else {
+                            participantBadge
+                        },
+                    )
+                    if (statusLabel != null) {
+                        CedarTag(
+                            label = statusLabel,
+                            tone = if (game.status == MatchStatus.CANCELLED) {
+                                CedarTagTone.Danger
+                            } else {
+                                CedarTagTone.Neutral
+                            },
+                        )
+                    }
+                }
+            }
+
+            // A finished or cancelled match has nothing left to cancel or leave.
+            if (statusLabel == null) {
+                CedarSecondaryButton(
+                    text = when (myMatch.role) {
+                        MatchRole.ORGANIZER -> cancelActionLabel
+                        MatchRole.PARTICIPANT -> leaveActionLabel
+                    },
+                    onClick = onActionClick,
+                )
             }
         }
     }

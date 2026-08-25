@@ -1,30 +1,29 @@
 package com.walcker.games.features.ui.creatematch
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -39,206 +38,241 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.window.Dialog
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.strings.CreateMatchStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarFilterRow
+import com.walcker.match.cedar.components.CedarFilterSection
+import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.SportChip
+import com.walcker.match.cedar.tokens.CedarTokens
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
+/** Horário sugerido quando o usuário abre o seletor sem nada escolhido. */
+private const val DEFAULT_HOUR = 19
+
 /**
- * Create Match screen — form to create a new match.
+ * Criação de partida — o outro lado do marketplace.
  *
- * Form sections:
- * - Venue (name, neighborhood, city, address)
- * - Sport selection
- * - DateTime (date + time picker)
- * - Players count (slider)
- * - Price (optional)
+ * O formulário é longo por natureza (local, esporte, quando, quantos, quanto), então
+ * ele é quebrado em três blocos com cabeçalho em vez de uma pilha única de campos:
+ * quem cria uma partida precisa saber quanto falta para acabar.
  *
- * Simplified for ETAPA1. Date/time pickers to be implemented in ETAPA2.
+ * O que mudou nesta repaginação, além dos tokens:
+ * - A tela não usava [CreateMatchStrings]. Ela lia `strings.gameList` e escrevia cada
+ *   rótulo em pt-BR direto no código, com o arquivo de textos traduzido parado ao lado.
+ * - Enviar trocava o formulário inteiro por um spinner centralizado. Agora o formulário
+ *   continua na tela, desabilitado, e o botão é que carrega — o usuário não perde de
+ *   vista o que acabou de preencher.
+ * - Os erros de validação do estado eram desenhados sem cor de erro, e três deles
+ *   (bairro, cidade, endereço) nunca eram desenhados. Agora todos saem como
+ *   `supportingText` do próprio campo.
+ * - Esporte era uma coluna de `FilterChip` de largura cheia. Chip de largura cheia lê
+ *   como botão; e são dez esportes, o que dava dez linhas. Virou um [FlowRow] de pílulas.
+ * - O diálogo de horário não tinha fundo: o [TimePicker] flutuava sobre o conteúdo.
  */
 internal class CreateMatchStep : Screen {
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    override val key: String get() = "create-match"
+
     @Composable
     override fun Content() {
         val stepModel = koinScreenModel<CreateMatchStepModel>()
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
-        val strings = rememberGamesStrings().strings.gameList
+        val strings = rememberGamesStrings().strings.createMatch
 
-        LaunchedEffect(Unit) {
+        LaunchedEffect(stepModel) {
             stepModel.effects.collect { effect ->
                 when (effect) {
                     is CreateMatchEffect.ShowMessage ->
                         snackbarHostState.showSnackbar(effect.message)
-                    is CreateMatchEffect.NavigateToMyMatches -> {
-                        // The TabCoordinator in MatchScaffold is what actually
-                        // switches tabs; here we just acknowledge to the user.
-                        snackbarHostState.showSnackbar("Match criada: ${effect.matchId}")
-                    }
+
+                    // Quem troca de aba é o TabCoordinator, lá no MatchScaffold. Aqui
+                    // só confirmamos — e sem o id do documento, que não diz nada a
+                    // ninguém fora do Firestore.
+                    is CreateMatchEffect.NavigateToMyMatches ->
+                        snackbarHostState.showSnackbar(strings.success)
                 }
             }
         }
 
+        val enabled = !state.isSubmitting
+
         Scaffold(
+            containerColor = CedarTokens.colors.canvas,
             topBar = {
                 CedarTopBar(
-                    title = "Criar Partida",
-                    subtitle = "Preencha os detalhes da partida",
+                    title = strings.title,
+                    subtitle = strings.subtitle,
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
-            if (state.isSubmitting) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    CircularProgressIndicator()
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.md,
+                ),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
+            ) {
+                item(key = "section-venue") {
+                    CedarSectionHeader(title = strings.sectionVenue)
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    item {
-                        Text("Seu espaço", style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
-                    }
 
-                    // Venue name
-                    item {
-                        OutlinedTextField(
-                            value = state.venueName,
-                            onValueChange = { stepModel.onEvent(CreateMatchEvents.VenueNameChanged(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Nome do local") },
-                            placeholder = { Text("Ex: Quadra do Parque") },
-                            singleLine = true,
-                            isError = state.venueNameError != null,
-                        )
-                        if (state.venueNameError != null) {
-                            Text(state.venueNameError!!, style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
-                        }
-                    }
+                item(key = "venue-name") {
+                    FormTextField(
+                        value = state.venueName,
+                        onValueChange = {
+                            stepModel.onEvent(CreateMatchEvents.VenueNameChanged(it))
+                        },
+                        label = strings.venueNameLabel,
+                        placeholder = strings.venueNamePlaceholder,
+                        error = state.venueNameError,
+                        enabled = enabled,
+                    )
+                }
 
-                    // Sport selection
-                    //
-                    // Column, not LazyColumn: a lazy list inside a LazyColumn
-                    // item is measured with infinite height and crashes at
-                    // runtime. Sport is a small fixed enum anyway — there is
-                    // nothing to virtualize.
-                    item {
-                        Text("Esporte", style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Sport.entries.forEach { sport ->
-                                FilterChip(
-                                    selected = state.selectedSport == sport,
-                                    onClick = { stepModel.onEvent(CreateMatchEvents.SportSelected(sport)) },
-                                    label = { Text(sport.label) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                        }
-                    }
-
-                    // Neighborhood
-                    item {
-                        OutlinedTextField(
-                            value = state.neighborhood,
-                            onValueChange = { stepModel.onEvent(CreateMatchEvents.NeighborhoodChanged(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Bairro") },
-                            placeholder = { Text("Ex: Centro") },
-                            singleLine = true,
+                // FlowRow e não LazyRow: uma lista lazy horizontal esconderia metade
+                // dos esportes fora da tela, e são só dez itens fixos — não há o que
+                // virtualizar.
+                item(key = "sport") {
+                    CedarFilterSection(label = strings.sportLabel) {
+                        SportPicker(
+                            selected = state.selectedSport,
+                            enabled = enabled,
+                            onSelect = { stepModel.onEvent(CreateMatchEvents.SportSelected(it)) },
                         )
                     }
+                }
 
-                    // City
-                    item {
-                        OutlinedTextField(
-                            value = state.city,
-                            onValueChange = { stepModel.onEvent(CreateMatchEvents.CityChanged(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Cidade") },
-                            placeholder = { Text("Ex: São Paulo") },
-                            singleLine = true,
-                        )
-                    }
+                item(key = "neighborhood") {
+                    FormTextField(
+                        value = state.neighborhood,
+                        onValueChange = {
+                            stepModel.onEvent(CreateMatchEvents.NeighborhoodChanged(it))
+                        },
+                        label = strings.neighborhoodLabel,
+                        placeholder = strings.neighborhoodPlaceholder,
+                        error = state.neighborhoodError,
+                        enabled = enabled,
+                    )
+                }
 
-                    // Address
-                    item {
-                        OutlinedTextField(
-                            value = state.address,
-                            onValueChange = { stepModel.onEvent(CreateMatchEvents.AddressChanged(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Endereço") },
-                            placeholder = { Text("Ex: Rua A, 123") },
-                            singleLine = true,
-                        )
-                    }
+                item(key = "city") {
+                    FormTextField(
+                        value = state.city,
+                        onValueChange = { stepModel.onEvent(CreateMatchEvents.CityChanged(it)) },
+                        label = strings.cityLabel,
+                        placeholder = strings.cityPlaceholder,
+                        error = state.cityError,
+                        enabled = enabled,
+                    )
+                }
 
-                    // Date + Time picker section
-                    item {
-                        DateTimePickerSection(
-                            selectedDateMillis = state.selectedDate,
-                            selectedTime = state.selectedTime,
-                            onDateSelected = { stepModel.onEvent(CreateMatchEvents.DateSelected(it)) },
-                            onTimeSelected = { hour, minute ->
-                                stepModel.onEvent(CreateMatchEvents.TimeSelected(hour, minute))
-                            },
-                            dateError = state.dateError,
-                            timeError = state.timeError,
-                        )
-                    }
+                item(key = "address") {
+                    FormTextField(
+                        value = state.address,
+                        onValueChange = { stepModel.onEvent(CreateMatchEvents.AddressChanged(it)) },
+                        label = strings.addressLabel,
+                        placeholder = strings.addressPlaceholder,
+                        error = state.addressError,
+                        enabled = enabled,
+                    )
+                }
 
-                    // Duration dropdown (60 / 90 / 120)
-                    item {
-                        DurationDropdown(
-                            selectedDurationMin = state.durationMin,
-                            onDurationSelected = { stepModel.onEvent(CreateMatchEvents.DurationSelected(it)) },
-                        )
-                    }
+                item(key = "section-when") {
+                    CedarSectionHeader(title = strings.sectionWhen)
+                }
 
-                    // Players count (slider)
-                    item {
-                        PlayersSlider(
-                            totalPlayers = state.totalPlayers,
-                            onPlayersChanged = { stepModel.onEvent(CreateMatchEvents.PlayersChanged(it)) },
-                        )
-                    }
+                item(key = "date-time") {
+                    DateTimeSection(
+                        selectedDateMillis = state.selectedDate,
+                        selectedTime = state.selectedTime,
+                        dateError = state.dateError,
+                        timeError = state.timeError,
+                        strings = strings,
+                        enabled = enabled,
+                        onDateSelected = { stepModel.onEvent(CreateMatchEvents.DateSelected(it)) },
+                        onTimeSelected = { hour, minute ->
+                            stepModel.onEvent(CreateMatchEvents.TimeSelected(hour, minute))
+                        },
+                    )
+                }
 
-                    // Price (optional)
-                    item {
-                        OutlinedTextField(
-                            value = state.pricePerPlayer,
-                            onValueChange = { stepModel.onEvent(CreateMatchEvents.PriceChanged(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Preço por jogador (opcional)") },
-                            placeholder = { Text("Ex: R$ 50") },
-                            singleLine = true,
-                        )
-                    }
+                item(key = "duration") {
+                    DurationPicker(
+                        selectedDurationMin = state.durationMin,
+                        strings = strings,
+                        enabled = enabled,
+                        onDurationSelected = {
+                            stepModel.onEvent(CreateMatchEvents.DurationSelected(it))
+                        },
+                    )
+                }
 
-                    // Submit button
-                    item {
-                        Button(
+                item(key = "section-details") {
+                    CedarSectionHeader(title = strings.sectionDetails)
+                }
+
+                item(key = "players") {
+                    PlayersSlider(
+                        totalPlayers = state.totalPlayers,
+                        strings = strings,
+                        enabled = enabled,
+                        onPlayersChanged = {
+                            stepModel.onEvent(CreateMatchEvents.PlayersChanged(it))
+                        },
+                    )
+                }
+
+                item(key = "price") {
+                    FormTextField(
+                        value = state.pricePerPlayer,
+                        onValueChange = { stepModel.onEvent(CreateMatchEvents.PriceChanged(it)) },
+                        label = strings.priceLabel,
+                        placeholder = strings.pricePlaceholder,
+                        error = state.priceError,
+                        helper = strings.priceHelper,
+                        enabled = enabled,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    )
+                }
+
+                item(key = "submit") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = CedarTokens.spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        CedarPrimaryButton(
+                            text = strings.submit,
                             onClick = { stepModel.onEvent(CreateMatchEvents.Submit) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            enabled = state.isFormValid && !state.isSubmitting,
-                        ) {
-                            Text("Criar e Publicar")
+                            enabled = state.isFormValid,
+                            loading = state.isSubmitting,
+                        )
+                        // Botão desabilitado sem explicação é o jeito mais rápido de
+                        // travar alguém num formulário longo.
+                        if (!state.isFormValid) {
+                            Text(
+                                text = strings.validationError,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }
@@ -248,54 +282,129 @@ internal class CreateMatchStep : Screen {
 }
 
 /**
- * Combined date + time picker row. Two outlined buttons open Material3
- * dialogs; the chosen date and time are surfaced as plain text inside each
- * button so the user can always see what is selected.
+ * Campo de texto do formulário.
+ *
+ * O erro entra como `supportingText` do próprio campo em vez de um [Text] solto
+ * embaixo: assim ele herda a cor de erro e o leitor de tela o anuncia junto do campo,
+ * e não como um parágrafo avulso.
+ */
+@Composable
+private fun FormTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    helper: String? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions(
+        capitalization = KeyboardCapitalization.Sentences,
+    ),
+) {
+    val supporting = error ?: helper
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        label = { Text(label) },
+        placeholder = { Text(placeholder) },
+        supportingText = supporting?.let { text -> { Text(text) } },
+        isError = error != null,
+        singleLine = true,
+        shape = CedarTokens.radius.smShape,
+        enabled = enabled,
+        keyboardOptions = keyboardOptions,
+    )
+}
+
+/**
+ * Os dez esportes de uma vez, quebrando linha conforme couberem.
+ *
+ * Eram `FilterChip` de largura cheia, um por linha — dez linhas de pílula gigante
+ * antes de chegar no resto do formulário.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SportPicker(
+    selected: Sport?,
+    enabled: Boolean,
+    onSelect: (Sport) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+    ) {
+        Sport.entries.forEach { sport ->
+            SportChip(
+                label = sport.label,
+                selected = selected == sport,
+                onClick = { onSelect(sport) },
+                enabled = enabled,
+            )
+        }
+    }
+}
+
+/**
+ * Data e horário, lado a lado.
+ *
+ * Os dois campos usam [CedarFilterRow]: a seta à direita é o que diz que aquilo abre
+ * um seletor. Os `OutlinedButton` de antes tinham a mesma altura e a mesma borda dos
+ * campos de texto acima, então pareciam campos de digitação.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateTimePickerSection(
+private fun DateTimeSection(
     selectedDateMillis: Long?,
     selectedTime: Pair<Int, Int>?,
-    onDateSelected: (Long) -> Unit,
-    onTimeSelected: (Int, Int) -> Unit,
     dateError: String?,
     timeError: String?,
+    strings: CreateMatchStrings,
+    enabled: Boolean,
+    onDateSelected: (Long) -> Unit,
+    onTimeSelected: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Data e horário", style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.height(8.dp))
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
         ) {
-            OutlinedButton(
+            CedarFilterRow(
+                label = strings.dateLabel,
+                value = selectedDateMillis?.let(::formatDate),
+                placeholder = strings.datePlaceholder,
                 onClick = { showDatePicker = true },
+                enabled = enabled,
                 modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    text = selectedDateMillis?.let { formatDate(it) } ?: "Selecionar data",
-                )
-            }
-            OutlinedButton(
+            )
+            CedarFilterRow(
+                label = strings.timeLabel,
+                value = selectedTime?.let { formatTime(it.first, it.second) },
+                placeholder = strings.timePlaceholder,
                 onClick = { showTimePicker = true },
+                enabled = enabled,
                 modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    text = selectedTime?.let { formatTime(it.first, it.second) } ?: "Selecionar hora",
-                )
-            }
+            )
         }
-        if (dateError != null) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(dateError, style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
-        }
-        if (timeError != null) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(timeError, style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+
+        val error = dateError ?: timeError
+        if (error != null) {
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 
@@ -306,13 +415,15 @@ private fun DateTimePickerSection(
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let(onDateSelected)
-                    showDatePicker = false
-                }) { Text("OK") }
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let(onDateSelected)
+                        showDatePicker = false
+                    },
+                ) { Text(strings.confirm) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
+                TextButton(onClick = { showDatePicker = false }) { Text(strings.cancel) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -320,61 +431,70 @@ private fun DateTimePickerSection(
     }
 
     if (showTimePicker) {
-        val initialHour = selectedTime?.first ?: 19
-        val initialMinute = selectedTime?.second ?: 0
         val timePickerState = rememberTimePickerState(
-            initialHour = initialHour,
-            initialMinute = initialMinute,
+            initialHour = selectedTime?.first ?: DEFAULT_HOUR,
+            initialMinute = selectedTime?.second ?: 0,
             is24Hour = true,
         )
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showTimePicker = false }) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
+        Dialog(onDismissRequest = { showTimePicker = false }) {
+            // Sem Surface o diálogo é transparente e o relógio fica boiando sobre o
+            // formulário. Era assim antes.
+            Surface(
+                shape = CedarTokens.radius.lgShape,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = CedarTokens.elevation.overlay,
             ) {
-                TimePicker(state = timePickerState)
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                Column(
+                    modifier = Modifier.padding(CedarTokens.spacing.lg),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
                 ) {
-                    TextButton(onClick = { showTimePicker = false }) { Text("Cancelar") }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = {
-                        onTimeSelected(timePickerState.hour, timePickerState.minute)
-                        showTimePicker = false
-                    }) { Text("OK") }
+                    TimePicker(state = timePickerState)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = { showTimePicker = false }) {
+                            Text(strings.cancel)
+                        }
+                        TextButton(
+                            onClick = {
+                                onTimeSelected(timePickerState.hour, timePickerState.minute)
+                                showTimePicker = false
+                            },
+                        ) { Text(strings.confirm) }
+                    }
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DurationDropdown(
+private fun DurationPicker(
     selectedDurationMin: Int,
+    strings: CreateMatchStrings,
+    enabled: Boolean,
     onDurationSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Duração", style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        CedarFilterRow(
+            label = strings.durationLabel,
+            value = strings.durationValue(selectedDurationMin),
+            placeholder = strings.durationLabel,
             onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("$selectedDurationMin minutos")
-        }
+            enabled = enabled,
+        )
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
             CreateMatchState.AVAILABLE_DURATIONS.forEach { duration ->
                 DropdownMenuItem(
-                    text = { Text("$duration minutos") },
+                    text = { Text(strings.durationValue(duration)) },
                     onClick = {
                         onDurationSelected(duration)
                         expanded = false
@@ -388,21 +508,32 @@ private fun DurationDropdown(
 @Composable
 private fun PlayersSlider(
     totalPlayers: Int,
+    strings: CreateMatchStrings,
+    enabled: Boolean,
     onPlayersChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+    ) {
         Text(
-            text = "Total de jogadores: $totalPlayers",
-            style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+            text = strings.playersLabel,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        // Round to steps of 1; the state already constrains the range to
-        // [MIN_PLAYERS, MAX_PLAYERS] via CreateMatchState.isFormValid.
+        Text(
+            text = strings.playersValue(totalPlayers),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
         Slider(
             value = totalPlayers.toFloat(),
             onValueChange = { onPlayersChanged(it.toInt()) },
-            valueRange = CreateMatchState.MIN_PLAYERS.toFloat()..CreateMatchState.MAX_PLAYERS.toFloat(),
-            steps = (CreateMatchState.MAX_PLAYERS - CreateMatchState.MIN_PLAYERS - 1),
+            valueRange = CreateMatchState.MIN_PLAYERS.toFloat()..
+                CreateMatchState.MAX_PLAYERS.toFloat(),
+            steps = CreateMatchState.MAX_PLAYERS - CreateMatchState.MIN_PLAYERS - 1,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -412,8 +543,8 @@ private fun formatDate(millis: Long): String {
     val local = Instant.fromEpochMilliseconds(millis)
         .toLocalDateTime(TimeZone.currentSystemDefault())
     return "${local.dayOfMonth.toString().padStart(2, '0')}/" +
-            "${local.monthNumber.toString().padStart(2, '0')}/" +
-            "${local.year}"
+        "${local.monthNumber.toString().padStart(2, '0')}/" +
+        "${local.year}"
 }
 
 private fun formatTime(hour: Int, minute: Int): String =

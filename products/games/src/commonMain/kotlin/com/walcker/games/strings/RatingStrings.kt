@@ -3,7 +3,7 @@ package com.walcker.games.strings
 /**
  * Mensagens do envio de avaliação pós-partida.
  *
- * Só três: o transporte de callable do Firebase não preserva o código do
+ * Só três de erro: o transporte de callable do Firebase não preserva o código do
  * HttpsError do outro lado, então inventar uma taxonomia de erro aqui daria
  * mensagens erradas. As pré-condições reais (partida não terminou, você não
  * jogou) já são barradas pela própria UI antes da chamada.
@@ -27,6 +27,12 @@ internal data class RatingStrings(
     val dimensionRespect: String,
     val dimensionFairPlay: String,
     val dimensionBehavior: String,
+    /** Rótulo da fileira principal de estrelas — ela não tinha nenhum. */
+    val overallLabel: String,
+    /** Nome acessível de cada estrela do seletor: "3 de 5 estrelas". */
+    val starContentDescription: (Int) -> String,
+    /** Contador do comentário: "120/500". */
+    val commentCounter: (current: Int, max: Int) -> String,
 )
 
 internal val ratingStringsEn = RatingStrings(
@@ -44,6 +50,9 @@ internal val ratingStringsEn = RatingStrings(
     dimensionRespect = "Respect",
     dimensionFairPlay = "Fair play",
     dimensionBehavior = "Behaviour",
+    overallLabel = "Overall",
+    starContentDescription = { n -> "$n out of 5 stars" },
+    commentCounter = { current, max -> "$current/$max" },
 )
 
 internal val ratingStringsPt = RatingStrings(
@@ -61,4 +70,7 @@ internal val ratingStringsPt = RatingStrings(
     dimensionRespect = "Respeito",
     dimensionFairPlay = "Fair play",
     dimensionBehavior = "Comportamento",
+    overallLabel = "Nota geral",
+    starContentDescription = { n -> "$n de 5 estrelas" },
+    commentCounter = { current, max -> "$current/$max" },
 )

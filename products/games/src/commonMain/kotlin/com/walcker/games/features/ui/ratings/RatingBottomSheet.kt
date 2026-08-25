@@ -1,12 +1,14 @@
 package com.walcker.games.features.ui.ratings
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.domain.model.RatingDimensions
 import com.walcker.games.strings.RatingStrings
+import com.walcker.match.cedar.tokens.CedarTokens
 
 /**
  * Bottom sheet modal para avaliar um jogador após partida.
@@ -14,8 +16,8 @@ import com.walcker.games.strings.RatingStrings
  * @param isVisible Se o modal está visível
  * @param playerName Nome do jogador sendo avaliado
  * @param onDismiss Chamado quando modal fecha
- * @param onSubmit Chamado quando usuário submete avaliação. `dimensions` vem
- *   vazio quando ele só deu estrelas — o servidor aceita assim
+ * @param onSubmit Chamado quando usuário submete avaliação. `dimensions` vem vazio
+ *   quando ele só deu estrelas — o servidor aceita assim
  * @param isLoading Se está enviando (mostra loading state)
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +37,8 @@ internal fun RatingBottomSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
+            shape = CedarTokens.radius.sheet,
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             RatingForm(
                 playerName = playerName,

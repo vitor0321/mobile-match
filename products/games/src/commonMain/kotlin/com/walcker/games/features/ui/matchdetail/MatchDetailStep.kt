@@ -5,41 +5,47 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.games.features.domain.model.ParticipantsSummary
+import com.walcker.games.features.domain.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.usecase.GetGameByIdUseCase
+import com.walcker.games.features.domain.usecase.JoinGameUseCase
+import com.walcker.games.features.domain.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
@@ -47,21 +53,46 @@ import com.walcker.games.features.domain.usecase.SubmitReportUseCase
 import com.walcker.games.features.ui.ratings.RatingBottomSheet
 import com.walcker.games.features.ui.reports.ReportBottomSheet
 import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.games.strings.MatchDetailStrings
 import com.walcker.games.strings.ReportStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
+import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarAvailabilityButton
+import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.match.cedar.components.CedarSecondaryButton
+import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.PlayerAvatar
+import com.walcker.match.cedar.components.PlayerAvatarSize
+import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.datetime.formatWhen
 import com.walcker.match.navigator.PromotionCoordinator
 import org.koin.compose.koinInject
 
 /**
- * Screen for displaying match/game details.
- * Receives matchId as a parameter.
+ * Match detail.
+ *
+ * Rebuilt for the redesign. Three things were broken beyond the visuals:
+ *
+ * - **Back did nothing.** The navigation icon's `onClick` was an empty lambda with
+ *   a comment saying the Navigator handled it. It did not. On Android the system
+ *   back gesture covered for it; on iOS there was no way out of this screen.
+ * - **The screen did not scroll.** Everything sat in a plain `Column`, so on a
+ *   390×844 phone the join button was below the fold and unreachable.
+ * - **Half the copy was English** on a pt-BR screen. It now comes from
+ *   [MatchDetailStrings].
+ *
+ * The join CTA moved into the Scaffold's bottom bar: it is the point of the screen
+ * and it should not depend on how far the user scrolled.
  */
 internal class MatchDetailStep(val matchId: String) : Screen {
-    @OptIn(ExperimentalMaterial3Api::class)
+
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+
         val getGameById: GetGameByIdUseCase = koinInject()
         val observeMatch: ObserveMatchUseCase = koinInject()
         val observeParticipants: ObserveParticipantsUseCase = koinInject()
@@ -72,9 +103,9 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val stringsHolder: GamesStringsHolder = koinInject()
         val analytics: AnalyticsTracker = koinInject()
 
-        val joinGame: com.walcker.games.features.domain.usecase.JoinGameUseCase = koinInject()
-        val leaveGame: com.walcker.games.features.domain.usecase.LeaveMatchUseCase = koinInject()
-        val cancelGame: com.walcker.games.features.domain.usecase.CancelMatchUseCase = koinInject()
+        val joinGame: JoinGameUseCase = koinInject()
+        val leaveGame: LeaveMatchUseCase = koinInject()
+        val cancelGame: CancelMatchUseCase = koinInject()
 
         val stepModel = remember {
             MatchDetailStepModel(
@@ -96,126 +127,162 @@ internal class MatchDetailStep(val matchId: String) : Screen {
 
         val state by stepModel.state.collectAsState()
         val strings = rememberGamesStrings().strings
+        val detail = strings.matchDetail
+
+        // Efeito é canal, não estado: a confirmação abre uma vez. `replace` (não
+        // `push`) porque a própria tela de confirmação volta com `replace(detail)`
+        // e `pop()` — só assim a pilha fica [..., lista, confirmação] → sã.
+        LaunchedEffect(Unit) {
+            stepModel.effects.collect { effect ->
+                when (effect) {
+                    is MatchDetailEffect.NavigateToConfirmation ->
+                        navigator.replace(
+                            MatchConfirmedStep(
+                                matchId = effect.matchId,
+                                venueName = effect.venueName,
+                                startsAtSeconds = effect.startsAtSeconds,
+                                sportLabel = effect.sportLabel,
+                            ),
+                        )
+                }
+            }
+        }
+
+        val match = state.match
+        val confirmed = state.participants?.confirmedCount ?: match?.confirmedPlayers ?: 0
+        val total = state.participants?.totalSlots ?: match?.totalPlayers ?: 0
+        val openSlots = (total - confirmed).coerceAtLeast(0)
+        val isFull = match != null && (confirmed >= total || match.status == MatchStatus.FULL)
+        // FINISHED stays in the check for safety, but the clock is what really closes
+        // a match — nothing writes that status (see Game.isOver).
+        val isClosed = match != null && (
+            state.isMatchOver ||
+                match.status == MatchStatus.FINISHED ||
+                match.status == MatchStatus.CANCELLED
+            )
 
         Scaffold(
+            containerColor = CedarTokens.colors.canvas,
             topBar = {
-                TopAppBar(
-                    title = { Text("Match Details") },
-                    navigationIcon = {
-                        TextButton(onClick = { /* Back button handled by Navigator */ }) {
-                            Text("← Back")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
+                CedarTopBar(
+                    title = detail.title,
+                    onBack = { navigator.pop() },
+                    backContentDescription = detail.backContentDescription,
                 )
+            },
+            bottomBar = {
+                if (match != null) {
+                    JoinBar(
+                        label = when {
+                            isClosed -> detail.matchClosed
+                            isFull -> detail.joinWaitlist
+                            else -> detail.joinMatch
+                        },
+                        priceLabel = match.pricePerPlayer,
+                        enabled = !isClosed && !state.isJoining,
+                        isLoading = state.isJoining,
+                        useAvailabilityTone = !isClosed && !isFull,
+                        onClick = { stepModel.onEvent(MatchDetailEvent.JoinMatch) },
+                    )
+                }
             },
         ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background),
+                    .verticalScroll(rememberScrollState()),
             ) {
-                // Promotion banner — shown when the user just moved from waitlist to confirmed.
                 if (state.justPromoted) {
-                    PromotionBanner(
+                    Banner(
+                        message = detail.promotedFromWaitlist,
+                        container = MaterialTheme.colorScheme.primaryContainer,
+                        onContainer = MaterialTheme.colorScheme.onPrimaryContainer,
+                        dismissContentDescription = detail.dismissContentDescription,
                         onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissPromotion) },
                     )
                 }
-
-                // Success message banner — shown after successfully joining a match.
                 state.successMessage?.let { message ->
-                    SuccessBanner(
+                    Banner(
                         message = message,
+                        container = CedarTokens.colors.availableContainer,
+                        onContainer = CedarTokens.colors.availableText,
+                        dismissContentDescription = detail.dismissContentDescription,
                         onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissSuccess) },
                     )
                 }
-
-                // Status change notification — shown when match status changes (FULL, FINISHED, CANCELLED)
                 state.statusChangeMessage?.let { message ->
-                    StatusChangeBanner(
+                    Banner(
                         message = message,
+                        container = MaterialTheme.colorScheme.secondaryContainer,
+                        onContainer = MaterialTheme.colorScheme.onSecondaryContainer,
+                        dismissContentDescription = detail.dismissContentDescription,
                         onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissStatusChange) },
                     )
                 }
-
-                // Rating failure — a banner, not the full-screen error state:
+                // A failed rating or report is a banner, not a full-screen error:
                 // the match itself loaded fine.
                 state.ratingErrorMessage?.let { message ->
-                    RatingErrorBanner(
+                    Banner(
                         message = message,
+                        container = MaterialTheme.colorScheme.errorContainer,
+                        onContainer = MaterialTheme.colorScheme.onErrorContainer,
+                        dismissContentDescription = detail.dismissContentDescription,
                         onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissRatingError) },
                     )
                 }
-
-                // Same treatment for a failed report.
                 state.reportErrorMessage?.let { message ->
-                    RatingErrorBanner(
+                    Banner(
                         message = message,
+                        container = MaterialTheme.colorScheme.errorContainer,
+                        onContainer = MaterialTheme.colorScheme.onErrorContainer,
+                        dismissContentDescription = detail.dismissContentDescription,
                         onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissReportError) },
                     )
                 }
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    when {
-                        state.isLoading -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center),
-                            )
-                        }
+                when {
+                    state.isLoading -> LoadingBlock()
 
-                        state.errorMessage != null -> {
-                            ErrorContent(
-                                error = state.errorMessage ?: "Unknown error",
-                                onRetry = { stepModel.onEvent(MatchDetailEvent.Retry) },
-                            )
-                        }
+                    state.errorMessage != null -> EmptyState(
+                        message = state.errorMessage.orEmpty(),
+                        actionLabel = detail.retry,
+                        onAction = { stepModel.onEvent(MatchDetailEvent.Retry) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                        state.match != null -> {
-                            MatchDetailContent(
-                                match = state.match!!,
-                                participants = state.participants,
-                                canRate = state.canRate,
-                                isMatchOver = state.isMatchOver,
-                                isJoining = state.isJoining,
-                                isLeavingMatch = state.isLeavingMatch,
-                                isCancellingMatch = state.isCancellingMatch,
-                                currentUserId = state.currentUserId,
-                                reportStrings = strings.reports,
-                                onReportPlayer = { userId, displayName ->
-                                    stepModel.onEvent(
-                                        MatchDetailEvent.OpenReportSheet(userId, displayName),
-                                    )
-                                },
-                                onRatePlayer = { userId, displayName ->
-                                    stepModel.onEvent(
-                                        MatchDetailEvent.OpenRatingSheet(userId, displayName),
-                                    )
-                                },
-                                onJoinMatch = {
-                                    stepModel.onEvent(MatchDetailEvent.JoinMatch)
-                                },
-                                onLeaveMatch = {
-                                    stepModel.onEvent(MatchDetailEvent.RequestLeaveMatch)
-                                },
-                                onCancelMatch = {
-                                    stepModel.onEvent(MatchDetailEvent.RequestCancelMatch)
-                                },
-                            )
-                        }
+                    match != null -> MatchDetailContent(
+                        match = match,
+                        participants = state.participants,
+                        detail = detail,
+                        confirmed = confirmed,
+                        total = total,
+                        openSlots = openSlots,
+                        isClosed = isClosed,
+                        canRate = state.canRate,
+                        isMatchOver = state.isMatchOver,
+                        isLeavingMatch = state.isLeavingMatch,
+                        isCancellingMatch = state.isCancellingMatch,
+                        currentUserId = state.currentUserId,
+                        reportStrings = strings.reports,
+                        onReportPlayer = { userId, displayName ->
+                            stepModel.onEvent(MatchDetailEvent.OpenReportSheet(userId, displayName))
+                        },
+                        onRatePlayer = { userId, displayName ->
+                            stepModel.onEvent(MatchDetailEvent.OpenRatingSheet(userId, displayName))
+                        },
+                        onLeaveMatch = { stepModel.onEvent(MatchDetailEvent.RequestLeaveMatch) },
+                        onCancelMatch = { stepModel.onEvent(MatchDetailEvent.RequestCancelMatch) },
+                    )
 
-                        else -> {
-                            EmptyContent()
-                        }
-                    }
+                    else -> EmptyState(
+                        message = detail.notFound,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
 
-        // Report bottom sheet — shown when user taps the flag on a participant.
         ReportBottomSheet(
             isVisible = state.showReportSheet,
             playerName = state.selectedPlayerForReport?.second ?: "",
@@ -227,7 +294,6 @@ internal class MatchDetailStep(val matchId: String) : Screen {
             },
         )
 
-        // Rating bottom sheet — shown when user taps "Rate" on a participant.
         RatingBottomSheet(
             isVisible = state.showRatingSheet,
             playerName = state.selectedPlayerForRating?.second ?: "",
@@ -239,319 +305,193 @@ internal class MatchDetailStep(val matchId: String) : Screen {
             isLoading = state.isSubmittingRating,
         )
 
-        // Leave match confirmation dialog
         if (state.showLeaveConfirmDialog) {
-            AlertDialog(
-                onDismissRequest = { stepModel.onEvent(MatchDetailEvent.CancelLeaveMatch) },
-                title = { Text("Sair da Partida?") },
-                text = {
-                    Text("Tem certeza de que deseja sair desta partida? Sua vaga será liberada para o próximo da fila.")
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { stepModel.onEvent(MatchDetailEvent.ConfirmLeaveMatch) },
-                        enabled = !state.isLeavingMatch,
-                    ) {
-                        if (state.isLeavingMatch) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        } else {
-                            Text("Sair")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { stepModel.onEvent(MatchDetailEvent.CancelLeaveMatch) },
-                    ) {
-                        Text("Cancelar")
-                    }
-                },
+            ConfirmDialog(
+                title = detail.leaveDialogTitle,
+                body = detail.leaveDialogBody,
+                confirmLabel = detail.leaveDialogConfirm,
+                dismissLabel = detail.dialogDismiss,
+                isWorking = state.isLeavingMatch,
+                onConfirm = { stepModel.onEvent(MatchDetailEvent.ConfirmLeaveMatch) },
+                onDismiss = { stepModel.onEvent(MatchDetailEvent.CancelLeaveMatch) },
             )
         }
 
-        // Cancel match confirmation dialog
         if (state.showCancelConfirmDialog) {
-            AlertDialog(
-                onDismissRequest = { stepModel.onEvent(MatchDetailEvent.CancelCancelMatch) },
-                title = { Text("Cancelar Partida?") },
-                text = {
-                    Text("Tem certeza de que deseja cancelar esta partida? Todos os participantes serão notificados.")
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { stepModel.onEvent(MatchDetailEvent.ConfirmCancelMatch) },
-                        enabled = !state.isCancellingMatch,
-                    ) {
-                        if (state.isCancellingMatch) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        } else {
-                            Text("Cancelar Partida")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { stepModel.onEvent(MatchDetailEvent.CancelCancelMatch) },
-                    ) {
-                        Text("Voltar")
-                    }
-                },
+            ConfirmDialog(
+                title = detail.cancelDialogTitle,
+                body = detail.cancelDialogBody,
+                confirmLabel = detail.cancelDialogConfirm,
+                dismissLabel = detail.dialogDismiss,
+                isWorking = state.isCancellingMatch,
+                onConfirm = { stepModel.onEvent(MatchDetailEvent.ConfirmCancelMatch) },
+                onDismiss = { stepModel.onEvent(MatchDetailEvent.CancelCancelMatch) },
             )
         }
     }
 }
 
+/**
+ * The join CTA, pinned to the bottom.
+ *
+ * Green while there is a slot to take — the one green button in the app — and the
+ * neutral primary once it becomes "join the waitlist", which is a different promise.
+ */
 @Composable
-private fun PromotionBanner(
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun JoinBar(
+    label: String,
+    priceLabel: String?,
+    enabled: Boolean,
+    isLoading: Boolean,
+    useAvailabilityTone: Boolean,
+    onClick: () -> Unit,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.small,
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = CedarTokens.elevation.overlay,
     ) {
-        Text(
-            text = "🎉",
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            text = "Você foi promovido da fila!",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onDismiss) {
-            Text("✕", color = MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-    }
-}
-
-@Composable
-private fun SuccessBanner(
-    message: String,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.tertiaryContainer,
-                shape = MaterialTheme.shapes.small,
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "✓",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
-        )
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onDismiss) {
-            Text("✕", color = MaterialTheme.colorScheme.onTertiaryContainer)
-        }
-    }
-}
-
-@Composable
-private fun RatingErrorBanner(
-    message: String,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.errorContainer,
-                shape = MaterialTheme.shapes.small,
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onDismiss) {
-            Text("✕", color = MaterialTheme.colorScheme.onErrorContainer)
-        }
-    }
-}
-
-@Composable
-private fun StatusChangeBanner(
-    message: String,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.secondaryContainer,
-                shape = MaterialTheme.shapes.small,
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "ℹ️",
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onDismiss) {
-            Text("✕", color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Box(
+            modifier = Modifier.padding(
+                horizontal = CedarTokens.spacing.lg,
+                vertical = CedarTokens.spacing.sm,
+            ),
+        ) {
+            val text = if (priceLabel != null && enabled) "$label · $priceLabel" else label
+            if (useAvailabilityTone) {
+                CedarAvailabilityButton(
+                    text = text,
+                    onClick = onClick,
+                    enabled = enabled,
+                    loading = isLoading,
+                )
+            } else {
+                CedarPrimaryButton(
+                    text = text,
+                    onClick = onClick,
+                    enabled = enabled,
+                    loading = isLoading,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun MatchDetailContent(
-    match: com.walcker.games.features.domain.model.Game,
+    match: Game,
     participants: ParticipantsSummary?,
+    detail: MatchDetailStrings,
+    confirmed: Int,
+    total: Int,
+    openSlots: Int,
+    isClosed: Boolean,
     canRate: Boolean,
     isMatchOver: Boolean,
     currentUserId: String?,
     reportStrings: ReportStrings,
     onReportPlayer: (userId: String, displayName: String) -> Unit,
-    isJoining: Boolean,
-    isLeavingMatch: Boolean,
-    isCancellingMatch: Boolean,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
-    onJoinMatch: () -> Unit,
     onLeaveMatch: () -> Unit,
     onCancelMatch: () -> Unit,
+    isLeavingMatch: Boolean,
+    isCancellingMatch: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(
+                horizontal = CedarTokens.spacing.lg,
+                vertical = CedarTokens.spacing.md,
+            ),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
     ) {
-        // Match sport and venue
-        Text(
-            text = match.sport.label,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        Text(
-            text = match.venueName,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        Text(
-            text = "${match.neighborhood}, ${match.city}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Organizer
-        Text(
-            text = "Organizer: ${match.organizerName} (${match.organizerRating}★)",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Live status badge (from realtime match subscription)
-        StatusBadge(status = match.status, isMatchOver = isMatchOver)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Match details
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Column {
-                Text(
-                    text = "Duration",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "${match.durationMin} min",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
-            Column {
-                Text(
-                    text = "Price",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = match.pricePerPlayer ?: "Free",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Participants section header with live count
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        // Venue first, then when, then price. The sport is a chip-sized detail —
+        // it used to be the headline, but the user already filtered by it.
+        Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
             Text(
-                text = "Participants",
-                style = MaterialTheme.typography.titleSmall,
+                text = "${match.sport.label} · ${match.neighborhood}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = match.venueName,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-
-            val confirmed = participants?.confirmedCount ?: match.confirmedPlayers
-            val total = participants?.totalSlots ?: match.totalPlayers
-            val open = (total - confirmed).coerceAtLeast(0)
-
             Text(
-                text = "$confirmed/$total" + if (open > 0) " ($open open)" else " (FULL)",
+                text = formatWhen(startsAtSeconds = match.startsAtSeconds),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = match.pricePerPlayer ?: detail.freePrice,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (open == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        // Live participant list (from realtime subscription)
+        StatusBadge(status = match.status, isMatchOver = isMatchOver, detail = detail)
+
+        // The slot count, which is the decision the user came here to make.
+        Card(
+            shape = CedarTokens.radius.lgShape,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(CedarTokens.spacing.md),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+            ) {
+                Text(
+                    text = detail.confirmedOf(confirmed, total),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = if (openSlots > 0) {
+                        detail.openSlotsRemaining(openSlots)
+                    } else {
+                        detail.noSlotsRemaining
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    // The darker green: #29D178 as text on white is 2:1.
+                    color = if (openSlots > 0) {
+                        CedarTokens.colors.availableText
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xl)) {
+            LabelledValue(
+                label = detail.durationLabel,
+                value = detail.durationValue(match.durationMin),
+            )
+            LabelledValue(
+                label = detail.priceLabel,
+                value = match.pricePerPlayer ?: detail.freePrice,
+            )
+        }
+
+        Text(
+            text = detail.organizer(match.organizerName, match.organizerRating),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        CedarSectionHeader(title = detail.participants)
+
+        // A plain Column, not a LazyColumn. The old version nested a LazyColumn
+        // pinned to 240dp inside this screen — which is how a participant list ends
+        // up with its own scrollbar inside a page that does not scroll.
         if (participants != null) {
             ParticipantsList(
                 participants = participants,
+                detail = detail,
                 canRate = canRate,
                 currentUserId = currentUserId,
                 reportStrings = reportStrings,
@@ -559,72 +499,53 @@ private fun MatchDetailContent(
                 onRatePlayer = onRatePlayer,
             )
         } else {
-            // Fallback to the static list embedded in Game.participants
-            StaticParticipantsList(participantIds = match.participants, organizerName = match.organizerName)
+            StaticParticipantsList(
+                participantIds = match.participants,
+                organizerName = match.organizerName,
+                detail = detail,
+            )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Join button — reacts live to status and slot availability.
-        val confirmed = participants?.confirmedCount ?: match.confirmedPlayers
-        val total = participants?.totalSlots ?: match.totalPlayers
-        val isFull = confirmed >= total || match.status == MatchStatus.FULL
-        // `FINISHED` continua aqui por segurança, mas quem realmente fecha a
-        // partida é o relógio: nada escreve esse status (ver Game.isOver).
-        val isClosed = isMatchOver ||
-            match.status == MatchStatus.FINISHED ||
-            match.status == MatchStatus.CANCELLED
-
-        JoinButton(
-            enabled = !isFull && !isClosed && !isJoining,
-            isLoading = isJoining,
-            label = when {
-                isClosed -> "Partida encerrada"
-                isFull -> "Entrar na fila de espera"
-                else -> "Entrar na partida"
-            },
-            onClick = onJoinMatch,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Action buttons: Leave / Cancel (shown conditionally based on user role)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
         ) {
-            // Leave match button (participant)
-            Button(
+            CedarSecondaryButton(
+                text = detail.leaveMatch,
                 onClick = onLeaveMatch,
                 enabled = !isClosed && !isLeavingMatch && !isCancellingMatch,
+                loading = isLeavingMatch,
+                fillWidth = false,
                 modifier = Modifier.weight(1f),
-            ) {
-                if (isLeavingMatch) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text("Sair")
-                }
-            }
-
-            // Cancel match button (organizer only)
-            Button(
+            )
+            CedarSecondaryButton(
+                text = detail.cancelMatch,
                 onClick = onCancelMatch,
                 enabled = !isClosed && !isCancellingMatch && !isLeavingMatch,
+                loading = isCancellingMatch,
+                fillWidth = false,
                 modifier = Modifier.weight(1f),
-            ) {
-                if (isCancellingMatch) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text("Cancelar")
-                }
-            }
+            )
         }
+    }
+}
+
+@Composable
+private fun LabelledValue(
+    label: String,
+    value: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
@@ -632,62 +553,45 @@ private fun MatchDetailContent(
 private fun StatusBadge(
     status: MatchStatus,
     isMatchOver: Boolean,
+    detail: MatchDetailStrings,
     modifier: Modifier = Modifier,
 ) {
-    // Cancelada vence o relógio: uma partida cancelada não vira "Encerrada"
-    // depois do horário. Fora isso, quem passou do fim está encerrada, mesmo
-    // com `status` ainda em OPEN/FULL — nada escreve FINISHED.
+    // Cancelled beats the clock: a cancelled match does not become "finished" after
+    // its end time. Otherwise anything past its end is finished, even with `status`
+    // still OPEN/FULL — nothing writes FINISHED.
     val (label, color) = when {
         status == MatchStatus.CANCELLED ->
-            "Cancelada" to MaterialTheme.colorScheme.error
+            detail.statusCancelled to MaterialTheme.colorScheme.error
         status == MatchStatus.FINISHED || isMatchOver ->
-            "Encerrada" to MaterialTheme.colorScheme.onSurfaceVariant
+            detail.statusFinished to MaterialTheme.colorScheme.onSurfaceVariant
         status == MatchStatus.FULL ->
-            "Lotada" to MaterialTheme.colorScheme.error
+            detail.statusFull to MaterialTheme.colorScheme.error
         else ->
-            "Aberta" to MaterialTheme.colorScheme.primary
+            detail.statusOpen to MaterialTheme.colorScheme.primary
     }
 
     Box(
         modifier = modifier
-            .background(color.copy(alpha = 0.15f), shape = MaterialTheme.shapes.small)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .background(color.copy(alpha = BADGE_TINT), shape = CedarTokens.radius.pill)
+            .padding(
+                horizontal = CedarTokens.spacing.sm,
+                vertical = CedarTokens.spacing.xxs,
+            ),
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = color,
         )
     }
 }
 
-@Composable
-private fun JoinButton(
-    enabled: Boolean,
-    isLoading: Boolean,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled && !isLoading,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                color = MaterialTheme.colorScheme.onPrimary,
-            )
-        } else {
-            Text(text = label)
-        }
-    }
-}
+private const val BADGE_TINT = 0.15f
 
 @Composable
 private fun ParticipantsList(
     participants: ParticipantsSummary,
+    detail: MatchDetailStrings,
     canRate: Boolean,
     currentUserId: String?,
     reportStrings: ReportStrings,
@@ -695,25 +599,22 @@ private fun ParticipantsList(
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(240.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
     ) {
         if (participants.confirmed.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Confirmed (${participants.confirmed.size})",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-            items(items = participants.confirmed, key = { it.userId }) { participant ->
+            Text(
+                text = detail.confirmedSection(participants.confirmed.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            participants.confirmed.forEach { participant ->
                 ParticipantRow(
                     participant = participant,
-                    statusLabel = "✓ Confirmed",
+                    statusLabel = detail.confirmedTag,
+                    paidLabel = detail.paidTag,
+                    rateLabel = detail.rateAction,
                     canRate = canRate,
                     canReport = participant.userId != currentUserId,
                     reportStrings = reportStrings,
@@ -724,20 +625,20 @@ private fun ParticipantsList(
         }
 
         if (participants.waitlist.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Waitlist (${participants.waitlist.size})",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-            items(items = participants.waitlist, key = { it.userId }) { participant ->
-                val pos = participant.positionInWaitlist ?: 0
+            Text(
+                text = detail.waitlistSection(participants.waitlist.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = CedarTokens.spacing.xs),
+            )
+            participants.waitlist.forEach { participant ->
                 ParticipantRow(
                     participant = participant,
-                    statusLabel = "#$pos in queue",
-                    canRate = false, // Only rate confirmed players
+                    statusLabel = detail.queuePosition(participant.positionInWaitlist ?: 0),
+                    paidLabel = detail.paidTag,
+                    rateLabel = detail.rateAction,
+                    // Only confirmed players can be rated.
+                    canRate = false,
                     canReport = participant.userId != currentUserId,
                     reportStrings = reportStrings,
                     onReportPlayer = onReportPlayer,
@@ -752,15 +653,16 @@ private fun ParticipantsList(
 private fun StaticParticipantsList(
     participantIds: List<String>,
     organizerName: String,
+    detail: MatchDetailStrings,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
     ) {
-        participantIds.forEachIndexed { index, userId ->
+        participantIds.forEachIndexed { index, _ ->
             Text(
-                text = "• ${if (index == 0) organizerName else "Jogador ${index + 1}"}",
+                text = if (index == 0) organizerName else detail.anonymousPlayer(index + 1),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -772,6 +674,8 @@ private fun StaticParticipantsList(
 private fun ParticipantRow(
     participant: Participant,
     statusLabel: String,
+    paidLabel: String,
+    rateLabel: String,
     canRate: Boolean,
     canReport: Boolean,
     reportStrings: ReportStrings,
@@ -783,61 +687,48 @@ private fun ParticipantRow(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surface,
+                shape = CedarTokens.radius.smShape,
             )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(
+                horizontal = CedarTokens.spacing.sm,
+                vertical = CedarTokens.spacing.xs,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Avatar placeholder circle
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                    shape = CircleShape,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = participant.displayName.firstOrNull()?.uppercase() ?: "?",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
-            )
-        }
+        PlayerAvatar(
+            displayName = participant.displayName,
+            photoUrl = participant.photoUrl,
+            size = PlayerAvatarSize.Small,
+        )
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = participant.displayName,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = statusLabel,
+                // The paid state used to be a bare 💰 with no accessible name.
+                text = if (participant.hasPaid) "$statusLabel · $paidLabel" else statusLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        if (participant.hasPaid) {
-            Text(
-                text = "💰",
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
-
-        // Rate button — only shown after match is finished.
         if (canRate) {
             TextButton(
                 onClick = { onRatePlayer(participant.userId, participant.displayName) },
             ) {
-                Text("⭐ Avaliar")
+                Text(text = rateLabel, style = MaterialTheme.typography.labelLarge)
             }
         }
 
-        // Report is available regardless of match status: bad behaviour does
-        // not wait for the final whistle. Hidden only on the user's own row.
+        // Report is available regardless of match status: bad behaviour does not
+        // wait for the final whistle. Hidden only on the user's own row.
         if (canReport) {
             IconButton(
                 onClick = { onReportPlayer(participant.userId, participant.displayName) },
@@ -853,42 +744,90 @@ private fun ParticipantRow(
 }
 
 @Composable
-private fun ErrorContent(
-    error: String,
-    onRetry: () -> Unit,
+private fun Banner(
+    message: String,
+    container: Color,
+    onContainer: Color,
+    dismissContentDescription: String,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    Row(
         modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .fillMaxWidth()
+            .padding(
+                horizontal = CedarTokens.spacing.lg,
+                vertical = CedarTokens.spacing.xs,
+            )
+            .background(color = container, shape = CedarTokens.radius.smShape)
+            .padding(
+                start = CedarTokens.spacing.md,
+                top = CedarTokens.spacing.xs,
+                bottom = CedarTokens.spacing.xs,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = error,
+            text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
+            color = onContainer,
+            modifier = Modifier.weight(1f),
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = onRetry) {
-            Text("Retry")
+        // Was a TextButton with "✕" as its label — a glyph is not an accessible name.
+        IconButton(onClick = onDismiss) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = dismissContentDescription,
+                tint = onContainer,
+            )
         }
     }
 }
 
 @Composable
-private fun EmptyContent(modifier: Modifier = Modifier) {
+private fun ConfirmDialog(
+    title: String,
+    body: String,
+    confirmLabel: String,
+    dismissLabel: String,
+    isWorking: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(body) },
+        shape = CedarTokens.radius.lgShape,
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = !isWorking) {
+                if (isWorking) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(DIALOG_SPINNER),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(confirmLabel)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(dismissLabel) }
+        },
+    )
+}
+
+private val DIALOG_SPINNER = 16.dp
+
+@Composable
+private fun LoadingBlock(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(CedarTokens.spacing.xxl),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "Match not found",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        CircularProgressIndicator()
     }
 }

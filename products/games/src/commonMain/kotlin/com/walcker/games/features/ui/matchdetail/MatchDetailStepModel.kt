@@ -29,11 +29,14 @@ import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.analytics.JoinOutcome
 import com.walcker.match.navigator.PromotionCoordinator
 import com.walcker.match.navigator.PromotionNotice
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -146,6 +149,22 @@ internal sealed interface MatchDetailEvent {
 }
 
 /**
+ * One-shot effects the [MatchDetailStep] consumes on the UI thread.
+ *
+ * Navegação é efeito, não estado: quem confirma a entrada numa partida é levado
+ * à tela de confirmação uma única vez, e reentrar na tela não pode reabri-la.
+ */
+internal sealed interface MatchDetailEffect {
+    /** Entrou e foi confirmado — abre a tela de confirmação. */
+    data class NavigateToConfirmation(
+        val matchId: String,
+        val venueName: String,
+        val startsAtSeconds: Long,
+        val sportLabel: String,
+    ) : MatchDetailEffect
+}
+
+/**
  * ScreenModel for match detail screen.
  *
  * Subscribes to two live streams:
@@ -181,6 +200,9 @@ internal class MatchDetailStepModel(
 
     private val _state = MutableStateFlow(MatchDetailState())
     val state: StateFlow<MatchDetailState> = _state.asStateFlow()
+
+    private val _effects = Channel<MatchDetailEffect>(Channel.BUFFERED)
+    val effects: Flow<MatchDetailEffect> = _effects.receiveAsFlow()
 
     /**
      * Last-known confirmed-set userIds; used to detect promotion transitions.
@@ -394,6 +416,7 @@ internal class MatchDetailStepModel(
 
     private fun joinMatchAction() {
         val sport = _state.value.match?.sport?.name ?: UNKNOWN_SPORT
+        val strings = stringsHolder.resolveStringsOrDefault().matchDetail
 
         screenModelScope.launch {
             _state.update { it.copy(isJoining = true, errorMessage = null) }
@@ -415,9 +438,11 @@ internal class MatchDetailStepModel(
                         ),
                     )
                     val message = when (outcome) {
-                        is JoinMatchOutcome.Confirmed -> "Você entrou na partida! ✓"
-                        is JoinMatchOutcome.Waitlist -> "Você foi adicionado à fila de espera (posição #${outcome.position})"
-                        is JoinMatchOutcome.AlreadyJoined -> "Você já é participante desta partida"
+                        // Confirmado abre a tela de confirmação (efeito abaixo);
+                        // não há banner a mostrar por baixo dela.
+                        is JoinMatchOutcome.Confirmed -> null
+                        is JoinMatchOutcome.Waitlist -> strings.joinWaitlistSuccess(outcome.position)
+                        is JoinMatchOutcome.AlreadyJoined -> strings.joinAlreadyJoined
                     }
                     _state.update {
                         it.copy(
@@ -425,6 +450,18 @@ internal class MatchDetailStepModel(
                             joinOutcome = outcome,
                             successMessage = message,
                         )
+                    }
+                    if (outcome is JoinMatchOutcome.Confirmed) {
+                        _state.value.match?.let { match ->
+                            _effects.send(
+                                MatchDetailEffect.NavigateToConfirmation(
+                                    matchId = matchId,
+                                    venueName = match.venueName,
+                                    startsAtSeconds = match.startsAtSeconds,
+                                    sportLabel = match.sport.label,
+                                ),
+                            )
+                        }
                     }
                 }
                 .onFailure { error ->
@@ -434,7 +471,7 @@ internal class MatchDetailStepModel(
                     _state.update {
                         it.copy(
                             isJoining = false,
-                            errorMessage = error.message ?: "Erro ao entrar na partida",
+                            errorMessage = strings.joinError,
                         )
                     }
                 }
@@ -442,24 +479,24 @@ internal class MatchDetailStepModel(
     }
 
     private fun leaveMatchAction() {
+        val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
             _state.update { it.copy(isLeavingMatch = true, showLeaveConfirmDialog = false, errorMessage = null) }
 
             leaveMatch(matchId)
-                .onSuccess { outcome ->
-                    val message = "Você saiu da partida"
+                .onSuccess {
                     _state.update {
                         it.copy(
                             isLeavingMatch = false,
-                            successMessage = message,
+                            successMessage = strings.leaveSuccess,
                         )
                     }
                 }
-                .onFailure { error ->
+                .onFailure {
                     _state.update {
                         it.copy(
                             isLeavingMatch = false,
-                            errorMessage = error.message ?: "Erro ao sair da partida",
+                            errorMessage = strings.leaveError,
                         )
                     }
                 }
@@ -467,14 +504,15 @@ internal class MatchDetailStepModel(
     }
 
     private fun cancelMatchAction() {
+        val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
             _state.update { it.copy(isCancellingMatch = true, showCancelConfirmDialog = false, errorMessage = null) }
 
             cancelMatch(matchId)
                 .onSuccess { outcome ->
                     val message = when (outcome) {
-                        is CancelMatchOutcome.Cancelled -> "Partida cancelada"
-                        is CancelMatchOutcome.AlreadyCancelled -> "Partida já foi cancelada"
+                        is CancelMatchOutcome.Cancelled -> strings.cancelSuccess
+                        is CancelMatchOutcome.AlreadyCancelled -> strings.cancelAlreadyCancelled
                     }
                     _state.update {
                         it.copy(
@@ -483,11 +521,11 @@ internal class MatchDetailStepModel(
                         )
                     }
                 }
-                .onFailure { error ->
+                .onFailure {
                     _state.update {
                         it.copy(
                             isCancellingMatch = false,
-                            errorMessage = error.message ?: "Erro ao cancelar partida",
+                            errorMessage = strings.cancelError,
                         )
                     }
                 }
@@ -502,11 +540,11 @@ internal class MatchDetailStepModel(
             result.onSuccess { game ->
                 trackViewOnce(game)
                 _state.update { it.copy(isLoading = false, match = game).withCanRate() }
-            }.onFailure { error ->
+            }.onFailure {
                 _state.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Unknown error loading match details",
+                        errorMessage = stringsHolder.resolveStringsOrDefault().matchDetail.loadError,
                     )
                 }
             }
@@ -570,8 +608,9 @@ internal class MatchDetailStepModel(
         if (userId in justAdded) {
             // We just got promoted — flip the in-screen flag and emit global event.
             _state.update { it.copy(justPromoted = true) }
+            val strings = stringsHolder.resolveStringsOrDefault().matchDetail
             val matchTitle = buildString {
-                append(_state.value.match?.sport?.label ?: "Partida")
+                append(_state.value.match?.sport?.label ?: strings.unknownMatchTitle)
                 append(" · ")
                 append(_state.value.match?.venueName ?: "")
             }
@@ -600,25 +639,24 @@ internal class MatchDetailStepModel(
 
         // Detect transitions and show appropriate messages
         if (prevStatus != currentStatus) {
+            val strings = stringsHolder.resolveStringsOrDefault().matchDetail
             val message = when {
                 // Match became full
                 prevStatus == MatchStatus.OPEN &&
-                currentStatus == MatchStatus.FULL -> {
-                    "Partida lotada! 🔴 Novas entradas serão na fila de espera."
-                }
+                currentStatus == MatchStatus.FULL -> strings.statusChangedToFull
                 // Match was finished
-                currentStatus == MatchStatus.FINISHED -> {
-                    "Partida encerrada ✓"
-                }
+                currentStatus == MatchStatus.FINISHED -> strings.statusChangedToFinished
                 // Match was cancelled
-                currentStatus == MatchStatus.CANCELLED -> {
-                    "Partida foi cancelada ✕"
-                }
-                // Any other transition
-                else -> "Status da partida foi atualizado: ${currentStatus.name}"
+                currentStatus == MatchStatus.CANCELLED -> strings.statusChangedToCancelled
+                // Qualquer outra transição (ex.: FULL → OPEN, vaga reaberta) não
+                // tem cópia própria — melhor não avisar do que vazar o nome do
+                // enum num banner sem sentido para quem lê.
+                else -> null
             }
 
-            _state.update { it.copy(statusChangeMessage = message) }
+            if (message != null) {
+                _state.update { it.copy(statusChangeMessage = message) }
+            }
         }
 
         previousStatus = currentStatus

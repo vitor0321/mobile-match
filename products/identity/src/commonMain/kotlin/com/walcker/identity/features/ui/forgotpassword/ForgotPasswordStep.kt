@@ -1,30 +1,30 @@
 package com.walcker.identity.features.ui.forgotpassword
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import com.walcker.identity.features.ui.common.AuthFormMessage
+import com.walcker.identity.features.ui.common.AuthScaffold
 import com.walcker.identity.strings.LocalIdentityStrings
 import com.walcker.identity.strings.WithIdentityStrings
-import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.match.cedar.components.CedarTextButton
+import com.walcker.match.cedar.tokens.CedarTokens
 
 internal class ForgotPasswordStep : Screen {
+
+    override val key: String get() = "forgot-password"
+
     @Composable
     override fun Content() {
         WithIdentityStrings {
@@ -43,6 +43,13 @@ internal class ForgotPasswordStep : Screen {
     }
 }
 
+/**
+ * Recuperação de senha: um campo, um botão.
+ *
+ * Depois do envio bem-sucedido o formulário sai da tela e fica só a confirmação com
+ * o caminho de volta. Antes o campo e o botão continuavam ali, do mesmo jeito, e
+ * nada dizia que a tarefa tinha acabado — dava para reenviar sem perceber.
+ */
 @Composable
 internal fun ForgotPasswordScreen(
     state: ForgotPasswordState,
@@ -51,61 +58,50 @@ internal fun ForgotPasswordScreen(
     onBack: () -> Unit,
 ) {
     val strings = LocalIdentityStrings.current.forgotPassword
+    val enabled = !state.isLoading
 
-    Scaffold(
-        topBar = {
-            CedarTopBar(
-                title = strings.title,
-                subtitle = strings.subtitle,
-                onBack = onBack,
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    AuthScaffold(
+        title = strings.title,
+        subtitle = strings.subtitle,
+        backContentDescription = strings.back,
+        onBack = onBack,
+    ) {
+        if (state.isSuccess) {
+            AuthFormMessage(text = strings.successMessage, isError = false)
+        } else {
             OutlinedTextField(
                 value = state.email,
                 onValueChange = onEmailChanged,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(strings.emailLabel) },
                 singleLine = true,
-                enabled = !state.isLoading,
+                shape = CedarTokens.radius.smShape,
+                isError = state.error != null,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Done,
+                ),
+                enabled = enabled,
             )
-            if (state.isSuccess) {
-                Text(
-                    text = strings.successMessage,
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+
+            state.error?.let { error ->
+                AuthFormMessage(text = error, isError = true)
             }
-            state.error?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            Button(
+
+            CedarPrimaryButton(
+                text = strings.submitButton,
                 onClick = onSubmit,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading,
-            ) {
-                Text(if (state.isLoading) strings.submitLoadingButton else strings.submitButton)
-            }
-            TextButton(
-                onClick = onBack,
-                enabled = !state.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(strings.backToLoginButton)
-            }
+                enabled = enabled,
+                loading = state.isLoading,
+                modifier = Modifier.padding(top = CedarTokens.spacing.xxs),
+            )
         }
+
+        CedarTextButton(
+            text = strings.backToLoginButton,
+            onClick = onBack,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

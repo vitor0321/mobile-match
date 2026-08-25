@@ -17,4 +17,6 @@ internal val EnGamesStrings = GamesStrings(
     ratings = ratingStringsEn,
     reports = reportStringsEn,
     matchConfirmed = matchConfirmedStringsEn,
+    matchDetail = matchDetailStringsEn,
+    map = mapStringsEn,
 )

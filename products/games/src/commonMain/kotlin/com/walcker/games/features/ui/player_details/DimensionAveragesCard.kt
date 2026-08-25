@@ -4,10 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,14 +20,25 @@ import com.walcker.games.features.domain.model.DimensionAverage
 import com.walcker.games.features.domain.model.RatingDimension
 import com.walcker.games.strings.PlayerDetailsStrings
 import com.walcker.games.strings.RatingStrings
+import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.tokens.CedarTokens
+
+private const val MAX_STARS = 5f
+
+/** A barra do Material tem 4dp por padrão; 6dp lê melhor à distância de um braço. */
+private val BarHeight = 6.dp
 
 /**
  * Médias por dimensão do jogador.
  *
  * Só desenha as dimensões que alguém respondeu, e mostra a contagem de cada uma
- * separadamente: como responder é opcional, "4,8 de pontualidade" com uma
- * resposta e com quarenta são coisas muito diferentes, e omitir o número
- * deixaria as duas com a mesma cara.
+ * separadamente: como responder é opcional, "4,8 de pontualidade" com uma resposta e
+ * com quarenta são coisas muito diferentes, e omitir o número deixaria as duas com a
+ * mesma cara.
+ *
+ * Era um `Card` do Material, que traz sombra e uma cor de container própria — num
+ * app cujo relevo vem do canvas azulado atrás de cartões brancos, a sombra briga com
+ * o resto. Virou [Surface] plana, como os outros cartões.
  *
  * Quem chama já garantiu que [averages] não está vazio.
  */
@@ -37,20 +49,21 @@ internal fun DimensionAveragesCard(
     ratingStrings: RatingStrings,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = CedarTokens.radius.mdShape,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(CedarTokens.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
         ) {
-            Text(
-                text = strings.dimensionsTitle,
-                style = MaterialTheme.typography.labelLarge,
-            )
+            CedarSectionHeader(title = strings.dimensionsTitle)
 
-            // Itera pelo enum, não pelo mapa: assim a ordem das linhas é sempre
-            // a mesma entre perfis, em vez de depender da ordem de inserção.
+            // Itera pelo enum, não pelo mapa: assim a ordem das linhas é sempre a
+            // mesma entre perfis, em vez de depender da ordem de inserção.
             RatingDimension.entries.forEach { dimension ->
                 val average = averages[dimension] ?: return@forEach
                 DimensionRow(
@@ -76,25 +89,36 @@ private fun DimensionRow(
             .semantics {
                 contentDescription = "$label: ${strings.ratingAccessibility(average.average)}"
             },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
             Text(
                 text = strings.ratingValue(average.average),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
         LinearProgressIndicator(
-            // coerceIn porque a barra só aceita 0f..1f: um agregado corrompido
-            // no Firestore deve desenhar torto, não derrubar a tela.
+            // coerceIn porque a barra só aceita 0f..1f: um agregado corrompido no
+            // Firestore deve desenhar torto, não derrubar a tela.
             progress = { (average.average / MAX_STARS).coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primary,
+            // outlineVariant é a divisória, quase invisível; o trilho precisa
+            // aparecer para a barra significar alguma coisa.
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(BarHeight),
         )
 
         Text(
@@ -112,5 +136,3 @@ private fun RatingDimension.label(strings: RatingStrings): String = when (this) 
     RatingDimension.FAIR_PLAY -> strings.dimensionFairPlay
     RatingDimension.BEHAVIOR -> strings.dimensionBehavior
 }
-
-private const val MAX_STARS = 5f

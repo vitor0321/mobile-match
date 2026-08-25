@@ -35,7 +35,9 @@ public fun RatingStars(
     maxStars: Int = 5,
     starSize: Dp = 16.dp,
     filledTint: Color = MaterialTheme.colorScheme.primary,
-    emptyTint: Color = MaterialTheme.colorScheme.outlineVariant,
+    // outline e não outlineVariant: a estrela vazia é o que diz "de 5", então
+    // ela precisa ser vista. O outlineVariant é a divisória, quase invisível.
+    emptyTint: Color = MaterialTheme.colorScheme.outline,
     contentDescription: String? = null,
 ) {
     val safeRating = rating.coerceIn(0f, maxStars.toFloat())

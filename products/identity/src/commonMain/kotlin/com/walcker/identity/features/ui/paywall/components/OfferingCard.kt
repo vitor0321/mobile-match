@@ -2,28 +2,43 @@ package com.walcker.identity.features.ui.paywall.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.walcker.identity.features.domain.billing.ProductOffering
+import com.walcker.match.cedar.tokens.CedarTokens
 
+private val IndicatorSize = 20.dp
+private val IndicatorDotSize = 8.dp
+private val IndicatorBorderWidth = 2.dp
+
+/** Quanto do contorno vaza para o fundo da faixa de estado, no fim do cartão. */
+private const val HINT_BACKGROUND_ALPHA = 0.12f
+
+/**
+ * Um plano da assinatura.
+ *
+ * O cartão era `clickable`, sem papel: para um leitor de tela os planos eram botões
+ * genéricos e nada dizia qual estava escolhido — a única pista era a faixa de texto
+ * no fim do cartão. Agora é [Role.RadioButton] com `selectable`, que é o que ele de
+ * fato é: uma opção entre poucas.
+ */
 @Composable
 internal fun OfferingCard(
     offering: ProductOffering,
@@ -34,68 +49,82 @@ internal fun OfferingCard(
     onClick: () -> Unit,
 ) {
     val background = if (isSelected) colors.primaryContainer else colors.surface
-    val border = if (isSelected) colors.primary else colors.outline
+    val accent = if (isSelected) colors.primary else colors.outline
     val titleColor = if (isSelected) colors.onPrimaryContainer else colors.onSurface
     val bodyColor = if (isSelected) colors.onPrimaryContainer else colors.onSurfaceVariant
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = CedarTokens.radius.mdShape,
         color = background,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(background, RoundedCornerShape(16.dp))
-                .clickable(onClick = onClick)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+                .selectable(
+                    selected = isSelected,
+                    role = Role.RadioButton,
+                    onClick = onClick,
+                )
+                .padding(CedarTokens.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = offering.title,
+                    style = MaterialTheme.typography.titleMedium,
                     color = titleColor,
-                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
                 SelectionIndicator(
                     isSelected = isSelected,
-                    borderColor = border,
+                    borderColor = accent,
                     fillColor = colors.surface,
                 )
             }
             Text(
                 text = offering.description,
+                style = MaterialTheme.typography.bodyMedium,
                 color = bodyColor,
             )
             Text(
                 text = offering.priceLabel,
+                style = MaterialTheme.typography.titleLarge,
                 color = titleColor,
-                fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.fillMaxWidth())
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(border.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(top = CedarTokens.spacing.xxs)
+                    .background(
+                        color = accent.copy(alpha = HINT_BACKGROUND_ALPHA),
+                        shape = CedarTokens.radius.smShape,
+                    )
+                    .padding(
+                        horizontal = CedarTokens.spacing.sm,
+                        vertical = CedarTokens.spacing.xs,
+                    ),
             ) {
                 Text(
                     text = if (isSelected) selectedLabel else selectHint,
-                    color = border,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = titleColor,
                 )
             }
         }
     }
 }
 
+/**
+ * O rádio desenhado à mão.
+ *
+ * `contentDescription` fica nulo de propósito: quem anuncia o estado é o
+ * `selectable` do cartão inteiro. Um rótulo aqui repetiria "selecionado" duas vezes.
+ */
 @Composable
 private fun SelectionIndicator(
     isSelected: Boolean,
@@ -104,15 +133,15 @@ private fun SelectionIndicator(
 ) {
     Box(
         modifier = Modifier
-            .size(20.dp)
-            .border(width = 2.dp, color = borderColor, shape = CircleShape)
+            .size(IndicatorSize)
+            .border(width = IndicatorBorderWidth, color = borderColor, shape = CircleShape)
             .background(color = fillColor, shape = CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (isSelected) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(IndicatorDotSize)
                     .background(color = borderColor, shape = CircleShape),
             )
         }

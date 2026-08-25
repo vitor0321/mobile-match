@@ -1,37 +1,54 @@
 package com.walcker.identity.features.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import com.walcker.identity.features.ui.common.AuthFormMessage
 import com.walcker.identity.strings.LocalIdentityStrings
+import com.walcker.identity.strings.ProfileStrings
 import com.walcker.identity.strings.WithIdentityStrings
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarFilterRow
+import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.match.cedar.components.CedarSecondaryButton
+import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.PlayerAvatar
+import com.walcker.match.cedar.components.PlayerAvatarSize
+import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.strings.Locales
 
 internal class ProfileStep : Screen {
+
+    override val key: String get() = "profile-settings"
+
     @Composable
     override fun Content() {
         WithIdentityStrings {
@@ -47,7 +64,8 @@ internal class ProfileStep : Screen {
                 onManageSubscription = { url -> uriHandler.openUri(url) },
                 onRestorePurchases = stepModel::onRestorePurchasesClicked,
                 onDeleteAccount = stepModel::onDeleteAccountClicked,
-                onDeleteAccountConfirmationDismissed = stepModel::onDeleteAccountConfirmationDismissed,
+                onDeleteAccountConfirmationDismissed =
+                    stepModel::onDeleteAccountConfirmationDismissed,
                 onDeleteAccountConfirmed = stepModel::onDeleteAccountConfirmed,
                 onSignOut = stepModel::onSignOutClicked,
                 onLanguageSelected = stepModel::onLanguageSelected,
@@ -56,6 +74,22 @@ internal class ProfileStep : Screen {
     }
 }
 
+/**
+ * Conta, plano e as ações de conta.
+ *
+ * O que mudou nesta repaginação:
+ * - **Excluir conta era um `OutlinedButton` igual a "Restaurar compras" e "Sair".**
+ *   A ação irreversível do app tinha exatamente o mesmo peso visual das outras duas,
+ *   empilhada entre elas. Agora ela é a última, em texto, na cor de erro — e a
+ *   confirmação do diálogo também, que era um botão primário verde convidativo.
+ * - **A tela não rolava.** Um `Spacer(weight(1f))` empurrava as ações para o rodapé
+ *   numa `Column` de altura fixa: com plano PRO, seletor de idioma, mensagem e erro
+ *   ao mesmo tempo, o fim do conteúdo saía da tela sem jeito de alcançar.
+ * - O cabeçalho era só nome e e-mail em texto corrido. Ganhou o avatar com iniciais,
+ *   o mesmo componente que a busca de jogadores e os cards de avaliação usam.
+ * - O idioma era um `OutlinedButton` que parecia enviar algo; virou [CedarFilterRow],
+ *   com a seta dizendo que abre uma escolha.
+ */
 @Composable
 internal fun ProfileScreen(
     state: ProfileState,
@@ -71,23 +105,16 @@ internal fun ProfileScreen(
     onLanguageSelected: (String) -> Unit = {},
 ) {
     val strings = LocalIdentityStrings.current.profile
-    var showLanguageMenu by remember { mutableStateOf(false) }
+
+    // Qualquer uma das três operações trava as outras: são todas sobre a mesma conta.
+    val isBusy = state.isLoading || state.isRestoringPurchases || state.isDeletingAccount
 
     if (state.showDeleteAccountConfirmation) {
-        AlertDialog(
-            onDismissRequest = onDeleteAccountConfirmationDismissed,
-            title = { Text(strings.deleteAccountConfirmationTitle) },
-            text = { Text(strings.deleteAccountConfirmationMessage) },
-            confirmButton = {
-                Button(onClick = onDeleteAccountConfirmed) {
-                    Text(strings.deleteAccountConfirmationButton)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = onDeleteAccountConfirmationDismissed) {
-                    Text(strings.deleteAccountCancelButton)
-                }
-            },
+        DeleteAccountDialog(
+            strings = strings,
+            isDeleting = state.isDeletingAccount,
+            onConfirm = onDeleteAccountConfirmed,
+            onDismiss = onDeleteAccountConfirmationDismissed,
         )
     }
 
@@ -96,174 +123,271 @@ internal fun ProfileScreen(
             CedarTopBar(
                 title = strings.title,
                 onBack = onBack,
+                backContentDescription = strings.back,
             )
         },
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = CedarTokens.colors.canvas,
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.md,
+                ),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.lg),
         ) {
-            Text(
-                text = state.userSession?.displayName ?: state.userSession?.email ?: strings.fallbackAccountName,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+            AccountHeader(
+                displayName = state.userSession?.displayName
+                    ?: state.userSession?.email
+                    ?: strings.fallbackAccountName,
+                email = state.userSession?.email,
             )
-            state.userSession?.email?.let { email ->
-                Text(
-                    text = email,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = if (state.isPro) strings.proStatusLabel else strings.freeStatusLabel,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = if (state.isPro) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-            )
-            Text(
-                text = if (state.isPro) strings.proStatusDescription else strings.freeStatusDescription,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (!state.isPro) {
-                Button(
-                    onClick = onUpgradeToPro,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading && !state.isRestoringPurchases && !state.isDeletingAccount,
-                ) {
-                    Text(strings.subscribeProButton)
-                }
-            } else {
-                Button(
-                    onClick = onChangePlan,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading && !state.isRestoringPurchases && !state.isDeletingAccount,
-                ) {
-                    Text(strings.changePlanButton)
-                }
-                OutlinedButton(
-                    onClick = { state.managementUrl?.let(onManageSubscription) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = state.managementUrl != null &&
-                        !state.isLoading &&
-                        !state.isRestoringPurchases &&
-                        !state.isDeletingAccount,
-                ) {
-                    Text(strings.manageSubscriptionButton)
-                }
-                if (state.managementUrl == null) {
-                    Text(
-                        text = strings.manageSubscriptionUnavailable,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
 
-            // Language Selection Section
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = strings.languageLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                OutlinedButton(
-                    onClick = { showLanguageMenu = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = when (state.selectedLanguage) {
-                            Locales.PT -> strings.languagePortuguese
-                            Locales.EN -> strings.languageEnglish
-                            else -> strings.languagePortuguese
-                        }
-                    )
-                }
-                DropdownMenu(
-                    expanded = showLanguageMenu,
-                    onDismissRequest = { showLanguageMenu = false },
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(strings.languagePortuguese) },
-                        onClick = {
-                            onLanguageSelected(Locales.PT)
-                            showLanguageMenu = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(strings.languageEnglish) },
-                        onClick = {
-                            onLanguageSelected(Locales.EN)
-                            showLanguageMenu = false
-                        }
-                    )
-                }
-            }
+            PlanCard(
+                isPro = state.isPro,
+                managementUrl = state.managementUrl,
+                strings = strings,
+                enabled = !isBusy,
+                onUpgradeToPro = onUpgradeToPro,
+                onChangePlan = onChangePlan,
+                onManageSubscription = onManageSubscription,
+            )
+
+            LanguagePicker(
+                selectedLanguage = state.selectedLanguage,
+                strings = strings,
+                enabled = !isBusy,
+                onLanguageSelected = onLanguageSelected,
+            )
 
             state.message?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                AuthFormMessage(text = message, isError = false)
             }
             state.error?.let { error ->
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
+                AuthFormMessage(text = error, isError = true)
             }
-            Spacer(Modifier.weight(1f))
-            OutlinedButton(
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            CedarSectionHeader(title = strings.accountActionsLabel)
+
+            CedarSecondaryButton(
+                text = strings.restorePurchasesButton,
                 onClick = onRestorePurchases,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading && !state.isRestoringPurchases && !state.isDeletingAccount,
-            ) {
-                Text(
-                    if (state.isRestoringPurchases) {
-                        strings.restorePurchasesLoadingButton
-                    } else {
-                        strings.restorePurchasesButton
-                    },
-                )
-            }
-            OutlinedButton(
+                enabled = !isBusy,
+                loading = state.isRestoringPurchases,
+            )
+
+            CedarSecondaryButton(
+                text = strings.signOutButton,
+                onClick = onSignOut,
+                enabled = !isBusy,
+                loading = state.isLoading,
+            )
+
+            // Última, em texto e na cor de erro: a única ação daqui que não dá para
+            // desfazer não deve parecer com as outras duas.
+            TextButton(
                 onClick = onDeleteAccount,
+                enabled = !isBusy,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading && !state.isRestoringPurchases && !state.isDeletingAccount,
             ) {
                 Text(
-                    if (state.isDeletingAccount) {
+                    text = if (state.isDeletingAccount) {
                         strings.deleteAccountLoadingButton
                     } else {
                         strings.deleteAccountButton
                     },
                 )
             }
-            OutlinedButton(
-                onClick = onSignOut,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                enabled = !state.isLoading && !state.isRestoringPurchases && !state.isDeletingAccount,
-            ) {
-                Text(if (state.isLoading) strings.signOutLoadingButton else strings.signOutButton)
+        }
+    }
+}
+
+@Composable
+private fun AccountHeader(
+    displayName: String,
+    email: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+    ) {
+        PlayerAvatar(
+            displayName = displayName,
+            size = PlayerAvatarSize.Large,
+        )
+        Text(
+            text = displayName,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        if (email != null && email != displayName) {
+            Text(
+                text = email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/**
+ * O plano atual e o que dá para fazer com ele.
+ *
+ * Num cartão branco sobre o canvas em vez de texto solto: o estado da assinatura é a
+ * informação que o usuário vem procurar aqui, e antes ela se misturava com o resto.
+ */
+@Composable
+private fun PlanCard(
+    isPro: Boolean,
+    managementUrl: String?,
+    strings: ProfileStrings,
+    enabled: Boolean,
+    onUpgradeToPro: () -> Unit,
+    onChangePlan: () -> Unit,
+    onManageSubscription: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = CedarTokens.radius.mdShape,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier.padding(CedarTokens.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+        ) {
+            Text(
+                text = if (isPro) strings.proStatusLabel else strings.freeStatusLabel,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (isPro) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+            Text(
+                text = if (isPro) strings.proStatusDescription else strings.freeStatusDescription,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (isPro) {
+                CedarPrimaryButton(
+                    text = strings.changePlanButton,
+                    onClick = onChangePlan,
+                    enabled = enabled,
+                )
+                CedarSecondaryButton(
+                    text = strings.manageSubscriptionButton,
+                    onClick = { managementUrl?.let(onManageSubscription) },
+                    enabled = enabled && managementUrl != null,
+                )
+                if (managementUrl == null) {
+                    Text(
+                        text = strings.manageSubscriptionUnavailable,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                CedarPrimaryButton(
+                    text = strings.subscribeProButton,
+                    onClick = onUpgradeToPro,
+                    enabled = enabled,
+                )
             }
         }
     }
+}
+
+@Composable
+private fun LanguagePicker(
+    selectedLanguage: String,
+    strings: ProfileStrings,
+    enabled: Boolean,
+    onLanguageSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        CedarFilterRow(
+            label = strings.languageLabel,
+            value = strings.labelForLanguage(selectedLanguage),
+            placeholder = strings.languageLabel,
+            onClick = { expanded = true },
+            enabled = enabled,
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(strings.languagePortuguese) },
+                onClick = {
+                    onLanguageSelected(Locales.PT)
+                    expanded = false
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(strings.languageEnglish) },
+                onClick = {
+                    onLanguageSelected(Locales.EN)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountDialog(
+    strings: ProfileStrings,
+    isDeleting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = CedarTokens.radius.lgShape,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text(strings.deleteAccountConfirmationTitle) },
+        text = { Text(strings.deleteAccountConfirmationMessage) },
+        confirmButton = {
+            // Vermelho, não primário: o botão que apaga a conta não deve ser o mais
+            // convidativo do diálogo.
+            Button(
+                onClick = onConfirm,
+                enabled = !isDeleting,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
+            ) {
+                Text(strings.deleteAccountConfirmationButton)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isDeleting) {
+                Text(strings.deleteAccountCancelButton)
+            }
+        },
+    )
+}
+
+private fun ProfileStrings.labelForLanguage(tag: String): String = when (tag) {
+    Locales.EN -> languageEnglish
+    else -> languagePortuguese
 }

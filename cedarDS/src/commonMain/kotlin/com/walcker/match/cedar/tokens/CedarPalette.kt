@@ -85,11 +85,19 @@ internal object CedarPalette {
     /** figma #f7fcff — a card nested inside another card. */
     val SurfaceSubtle: Color = Color(0xFFF7FCFF)
 
-    /** Derived — hairline borders and dividers. */
-    val Outline: Color = Color(0xFFE4EDF6)
+    /** Derived — hairline dividers. Decorative, so the 3:1 rule does not apply. */
+    val Outline: Color = Color(0xFFC9D9E8)
 
-    /** Derived — stronger border (focused field, selected card). */
-    val OutlineStrong: Color = Color(0xFFC9D9E8)
+    /**
+     * Derived — the boundary of a control: borda de campo, cartão selecionado,
+     * estrela vazia.
+     *
+     * Era `#C9D9E8`, **1,44:1** com branco. WCAG 1.4.11 pede 3:1 para o contorno que
+     * identifica um componente, e o contorno de um `OutlinedTextField` é exatamente
+     * isso — sem ele não dá para ver onde o campo começa. Agora 3,58:1, ainda mais
+     * claro que o `outline` padrão do Material (4,3:1).
+     */
+    val OutlineStrong: Color = Color(0xFF6F8AA6)
 
     // ── Map and media ─────────────────────────────────────────────────────────
 
@@ -122,7 +130,9 @@ internal object CedarPalette {
     val SurfaceDark: Color = Color(0xFF131E30)
     val SurfaceSubtleDark: Color = Color(0xFF1A2739)
     val OutlineDark: Color = Color(0xFF2C3A50)
-    val OutlineStrongDark: Color = Color(0xFF44566F)
+
+    /** Era `#44566F`, 2,23:1 sobre `SurfaceDark`. Agora 3,68:1. */
+    val OutlineStrongDark: Color = Color(0xFF627893)
 
     val InkDark900: Color = Color(0xFFE8EEF7)
     val InkDark500: Color = Color(0xFF9FB0C4)

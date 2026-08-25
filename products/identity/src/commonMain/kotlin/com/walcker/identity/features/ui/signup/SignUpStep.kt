@@ -1,35 +1,31 @@
 package com.walcker.identity.features.ui.signup
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.walcker.match.cedar.PasswordOutlinedTextField
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import com.walcker.identity.features.ui.common.AuthFormMessage
+import com.walcker.identity.features.ui.common.AuthScaffold
 import com.walcker.identity.strings.LocalIdentityStrings
 import com.walcker.identity.strings.WithIdentityStrings
-import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.PasswordOutlinedTextField
+import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.match.cedar.components.CedarTextButton
+import com.walcker.match.cedar.tokens.CedarTokens
 
 internal class SignUpStep : Screen {
+
+    override val key: String get() = "sign-up"
+
     @Composable
     override fun Content() {
         WithIdentityStrings {
@@ -41,7 +37,9 @@ internal class SignUpStep : Screen {
                     state = state,
                     onEmailChanged = { onEvent(SignUpInternalRoute.OnEmailChanged(it)) },
                     onPasswordChanged = { onEvent(SignUpInternalRoute.OnPasswordChanged(it)) },
-                    onConfirmPasswordChanged = { onEvent(SignUpInternalRoute.OnConfirmPasswordChanged(it)) },
+                    onConfirmPasswordChanged = {
+                        onEvent(SignUpInternalRoute.OnConfirmPasswordChanged(it))
+                    },
                     onSubmit = { onEvent(SignUpInternalRoute.OnSubmitClicked) },
                     onLogin = { onEvent(SignUpInternalRoute.OnLoginClicked) },
                     onBack = { onEvent(SignUpInternalRoute.OnBackClicked) },
@@ -51,6 +49,14 @@ internal class SignUpStep : Screen {
     }
 }
 
+/**
+ * Criação de conta com e-mail e senha.
+ *
+ * A confirmação de senha agora reage enquanto se digita: se as duas já divergem, o
+ * campo fica em estado de erro na hora. Antes, a divergência só aparecia depois de
+ * tocar em "Criar conta" — e o texto do erro saía no fim do formulário, longe do
+ * campo que o causou.
+ */
 @Composable
 internal fun SignUpScreen(
     state: SignUpState,
@@ -62,70 +68,81 @@ internal fun SignUpScreen(
     onBack: () -> Unit,
 ) {
     val strings = LocalIdentityStrings.current.signUp
+    val enabled = !state.isLoading
 
-    Scaffold(
-        topBar = {
-            CedarTopBar(
-                title = strings.title,
-                subtitle = strings.subtitle,
-                onBack = onBack,
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            OutlinedTextField(
-                value = state.email,
-                onValueChange = onEmailChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(strings.emailLabel) },
-                singleLine = true,
-                enabled = !state.isLoading,
-            )
-            PasswordOutlinedTextField(
-                value = state.password,
-                onValueChange = onPasswordChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(strings.passwordLabel) },
-                singleLine = true,
-                enabled = !state.isLoading,
-            )
-            PasswordOutlinedTextField(
-                value = state.confirmPassword,
-                onValueChange = onConfirmPasswordChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(strings.confirmPasswordLabel) },
-                singleLine = true,
-                enabled = !state.isLoading,
-            )
-            state.error?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            Button(
-                onClick = onSubmit,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading,
-            ) {
-                Text(if (state.isLoading) strings.submitLoadingButton else strings.submitButton)
-            }
-            TextButton(
-                onClick = onLogin,
-                enabled = !state.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(strings.loginButton)
-            }
+    // Só quando já dá para comparar: reclamar da confirmação a cada tecla, desde o
+    // primeiro caractere, é ruído.
+    val passwordsDiverge = state.confirmPassword.isNotEmpty() &&
+        state.password != state.confirmPassword
+
+    AuthScaffold(
+        title = strings.title,
+        subtitle = strings.subtitle,
+        backContentDescription = strings.back,
+        onBack = onBack,
+    ) {
+        OutlinedTextField(
+            value = state.email,
+            onValueChange = onEmailChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(strings.emailLabel) },
+            singleLine = true,
+            shape = CedarTokens.radius.smShape,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next,
+            ),
+            enabled = enabled,
+        )
+
+        PasswordOutlinedTextField(
+            value = state.password,
+            onValueChange = onPasswordChanged,
+            showPasswordLabel = strings.showPassword,
+            hidePasswordLabel = strings.hidePassword,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(strings.passwordLabel) },
+            supportingText = strings.passwordHelper,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Next,
+            ),
+            enabled = enabled,
+        )
+
+        PasswordOutlinedTextField(
+            value = state.confirmPassword,
+            onValueChange = onConfirmPasswordChanged,
+            showPasswordLabel = strings.showPassword,
+            hidePasswordLabel = strings.hidePassword,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(strings.confirmPasswordLabel) },
+            supportingText = strings.passwordMismatchError.takeIf { passwordsDiverge },
+            isError = passwordsDiverge,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done,
+            ),
+            enabled = enabled,
+        )
+
+        state.error?.let { error ->
+            AuthFormMessage(text = error, isError = true)
         }
+
+        CedarPrimaryButton(
+            text = strings.submitButton,
+            onClick = onSubmit,
+            enabled = enabled,
+            loading = state.isLoading,
+            modifier = Modifier.padding(top = CedarTokens.spacing.xxs),
+        )
+
+        CedarTextButton(
+            text = strings.loginButton,
+            onClick = onLogin,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

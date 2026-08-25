@@ -4,8 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.walcker.match.cedar.tokens.CedarTokens
 
+/** Altura mínima, não fixa: com a fonte do sistema a 200% o campo precisa crescer. */
 private val FieldHeight = 56.dp
 private val IconSize = 20.dp
 
@@ -100,7 +101,7 @@ public fun CedarSearchField(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .height(FieldHeight),
+            .defaultMinSize(minHeight = FieldHeight),
     )
 }
 
@@ -123,7 +124,7 @@ public fun CedarSearchEntryPoint(
         horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
         modifier = modifier
             .fillMaxWidth()
-            .height(FieldHeight)
+            .defaultMinSize(minHeight = FieldHeight)
             .background(
                 color = MaterialTheme.colorScheme.surface,
                 shape = CedarTokens.radius.lgShape,

@@ -3,22 +3,19 @@ package com.walcker.games.features.ui.mymatches
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -26,15 +23,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import com.walcker.games.features.domain.model.MatchRole
+import com.walcker.games.features.ui.search.SearchStep
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarScreenTitle
+import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.tokens.CedarTokens
 
+/**
+ * The user's own matches, split into Ativas and Passadas.
+ *
+ * The private `EmptyState` this file carried is gone — it existed only because the
+ * design system version could not take a subtitle. It can now, so there is one
+ * empty state in the app instead of three.
+ */
 internal class MyMatchesStep : Screen {
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
         val strings = rememberGamesStrings().strings.myMatches
         val model = koinScreenModel<MyMatchesStepModel>()
         val state by model.state.collectAsState()
@@ -48,9 +60,7 @@ internal class MyMatchesStep : Screen {
         }
 
         Scaffold(
-            topBar = {
-                TopAppBar(title = { Text(strings.title) })
-            },
+            containerColor = CedarTokens.colors.canvas,
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
             Column(
@@ -58,16 +68,23 @@ internal class MyMatchesStep : Screen {
                     .fillMaxSize()
                     .padding(padding),
             ) {
-                PrimaryTabRow(
-                    selectedTabIndex = if (state.activeTab == MyMatchesTab.ACTIVE) 0 else 1,
-                ) {
+                CedarScreenTitle(
+                    title = strings.title,
+                    modifier = Modifier.padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
+                )
+
+                val isActiveTab = state.activeTab == MyMatchesTab.ACTIVE
+                PrimaryTabRow(selectedTabIndex = if (isActiveTab) 0 else 1) {
                     Tab(
-                        selected = state.activeTab == MyMatchesTab.ACTIVE,
+                        selected = isActiveTab,
                         onClick = { model.onEvent(MyMatchesEvent.TabSelected(MyMatchesTab.ACTIVE)) },
                         text = { Text(strings.activeTab) },
                     )
                     Tab(
-                        selected = state.activeTab == MyMatchesTab.PAST,
+                        selected = !isActiveTab,
                         onClick = { model.onEvent(MyMatchesEvent.TabSelected(MyMatchesTab.PAST)) },
                         text = { Text(strings.pastTab) },
                     )
@@ -83,18 +100,28 @@ internal class MyMatchesStep : Screen {
                     return@Scaffold
                 }
 
-                val matches = if (state.activeTab == MyMatchesTab.ACTIVE) state.active else state.past
+                val matches = if (isActiveTab) state.active else state.past
                 if (matches.isEmpty()) {
                     EmptyState(
-                        title = if (state.activeTab == MyMatchesTab.ACTIVE) strings.emptyActive else strings.emptyPast,
-                        subtitle = if (state.activeTab == MyMatchesTab.ACTIVE) strings.emptyActiveSubtitle else null,
+                        message = if (isActiveTab) strings.emptyActive else strings.emptyPast,
+                        supportingText = if (isActiveTab) strings.emptyActiveSubtitle else null,
+                        // An empty state that only says "nothing here" is a dead end.
+                        actionLabel = if (isActiveTab) strings.emptyActiveAction else null,
+                        onAction = if (isActiveTab) {
+                            { navigator.push(SearchStep()) }
+                        } else {
+                            null
+                        },
+                        modifier = Modifier.fillMaxSize(),
                     )
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            horizontal = CedarTokens.spacing.lg,
+                            vertical = CedarTokens.spacing.md,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {
                         items(matches, key = { it.game.id }) { myMatch ->
                             MyMatchCard(
@@ -105,9 +132,13 @@ internal class MyMatchesStep : Screen {
                                 leaveActionLabel = strings.leaveAction,
                                 statusCancelledLabel = strings.statusCancelled,
                                 statusFinishedLabel = strings.statusFinished,
-                                isPast = state.activeTab == MyMatchesTab.PAST,
+                                playersLabel = strings.playersCount(
+                                    myMatch.game.confirmedPlayers,
+                                    myMatch.game.totalPlayers,
+                                ),
+                                isPast = !isActiveTab,
                                 onActionClick = {
-                                    if (myMatch.role == com.walcker.games.features.domain.model.MatchRole.ORGANIZER) {
+                                    if (myMatch.role == MatchRole.ORGANIZER) {
                                         model.onEvent(MyMatchesEvent.CancelRequested(myMatch.game.id))
                                     } else {
                                         model.onEvent(MyMatchesEvent.LeaveRequested(myMatch.game.id))
@@ -118,23 +149,6 @@ internal class MyMatchesStep : Screen {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyState(title: String, subtitle: String?) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge)
-        subtitle?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(text = it, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

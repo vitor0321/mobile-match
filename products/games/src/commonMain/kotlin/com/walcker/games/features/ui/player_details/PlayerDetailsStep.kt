@@ -8,25 +8,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,38 +24,43 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import coil3.compose.AsyncImage
 import com.walcker.games.features.domain.model.PlayerDetails
 import com.walcker.games.features.ui.player_ratings.PlayerRatingsListStep
 import com.walcker.games.strings.PlayerDetailsStrings
 import com.walcker.games.strings.RatingStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.PlayerAvatar
+import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.components.RatingSummary
+import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatShortDate
 import kotlinx.collections.immutable.toImmutableList
 import org.koin.core.parameter.parametersOf
 
+private val ReviewsLoadingHeight = 100.dp
+private val HeaderStarSize = 20.dp
+
 /**
- * Player profile: identity, rating distribution and received reviews.
+ * Another player's profile: identity, rating distribution and received reviews.
  *
- * Deliberately no experience stats. Matches organized/played and join/cancel
- * rates were removed in Sprint 3 — no writer produces them, so the section only
- * ever rendered zeros. They return in Phase 6 with the trigger that keeps them.
+ * Deliberately no experience stats. Matches organized/played and join/cancel rates
+ * were removed in Sprint 3 — no writer produces them, so the section only ever
+ * rendered zeros. They return in Phase 6 with the trigger that keeps them.
  */
 internal data class PlayerDetailsStep(val userId: String) : Screen {
 
     override val key: String get() = "player-details-$userId"
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -98,17 +93,12 @@ internal data class PlayerDetailsStep(val userId: String) : Screen {
         }
 
         Scaffold(
+            containerColor = CedarTokens.colors.canvas,
             topBar = {
-                TopAppBar(
-                    title = { Text(strings.title) },
-                    navigationIcon = {
-                        IconButton(onClick = navigator::pop) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
+                CedarTopBar(
+                    title = strings.title,
+                    onBack = navigator::pop,
+                    backContentDescription = strings.back,
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -121,10 +111,10 @@ internal data class PlayerDetailsStep(val userId: String) : Screen {
             when {
                 state.isLoadingPlayer -> LoadingContent(modifier = contentModifier)
 
-                player == null -> ErrorContent(
+                player == null -> EmptyState(
                     message = state.errorMessage ?: strings.errorLoading,
-                    retryLabel = strings.retry,
-                    onRetry = { stepModel.onEvent(PlayerDetailsEvents.RetryLoading) },
+                    actionLabel = strings.retry,
+                    onAction = { stepModel.onEvent(PlayerDetailsEvents.RetryLoading) },
                     modifier = contentModifier,
                 )
 
@@ -149,25 +139,6 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ErrorContent(
-    message: String,
-    retryLabel: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = message, style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onRetry, modifier = Modifier.padding(top = 16.dp)) {
-            Text(retryLabel)
-        }
-    }
-}
-
-@Composable
 private fun PlayerDetailsContent(
     state: PlayerDetailsState,
     player: PlayerDetails,
@@ -178,8 +149,11 @@ private fun PlayerDetailsContent(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(
+            horizontal = CedarTokens.spacing.lg,
+            vertical = CedarTokens.spacing.md,
+        ),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
     ) {
         item(key = "header") {
             PlayerHeader(player = player, strings = strings)
@@ -198,8 +172,8 @@ private fun PlayerDetailsContent(
             }
         }
 
-        // Some inteira quando ninguém respondeu dimensão nenhuma, que é o
-        // estado de todo perfil avaliado antes das dimensões existirem.
+        // Some inteira quando ninguém respondeu dimensão nenhuma, que é o estado
+        // de todo perfil avaliado antes das dimensões existirem.
         if (player.dimensionAverages.isNotEmpty()) {
             item(key = "dimensions") {
                 DimensionAveragesCard(
@@ -211,10 +185,7 @@ private fun PlayerDetailsContent(
         }
 
         item(key = "reviews-title") {
-            Text(
-                text = strings.reviews,
-                style = MaterialTheme.typography.labelLarge,
-            )
+            CedarSectionHeader(title = strings.reviews)
         }
 
         when {
@@ -222,7 +193,7 @@ private fun PlayerDetailsContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp),
+                        .height(ReviewsLoadingHeight),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
@@ -232,7 +203,7 @@ private fun PlayerDetailsContent(
             state.previewRatings.isEmpty() -> item(key = "reviews-empty") {
                 Text(
                     text = strings.noReviews,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -254,7 +225,10 @@ private fun PlayerDetailsContent(
                             onClick = { onEvent(PlayerDetailsEvents.SeeAllRatingsClicked) },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(strings.seeAllReviews)
+                            Text(
+                                text = strings.seeAllReviews,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
                         }
                     }
                 }
@@ -272,42 +246,36 @@ private fun PlayerHeader(
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
     ) {
-        Surface(
-            modifier = Modifier
-                .size(AVATAR_SIZE)
-                .clip(CircleShape),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            if (!player.photoUrl.isNullOrEmpty()) {
-                AsyncImage(
-                    model = player.photoUrl,
-                    contentDescription = player.displayName,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(AVATAR_SIZE),
-                )
-            }
-        }
+        // Was a bare grey circle whenever photoUrl was null — which is most
+        // profiles. PlayerAvatar falls back to initials.
+        PlayerAvatar(
+            displayName = player.displayName,
+            photoUrl = player.photoUrl,
+            size = PlayerAvatarSize.Large,
+        )
 
         Text(
             text = player.displayName,
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
         )
 
         RatingStars(
             rating = player.averageRating,
-            starSize = 20.dp,
+            starSize = HeaderStarSize,
             contentDescription = strings.ratingAccessibility(player.averageRating),
         )
         Text(
             text = strings.ratingValue(player.averageRating),
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = strings.ratingsCount(player.totalRatings),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
@@ -317,14 +285,16 @@ private fun PlayerHeader(
             ?.let { sports ->
                 Text(
                     text = sports,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
                 )
             }
 
         player.locationLabel()?.let { location ->
             Text(
                 text = location,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -333,8 +303,8 @@ private fun PlayerHeader(
         if (memberSince.isNotEmpty()) {
             Text(
                 text = strings.memberSince(memberSince),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -345,5 +315,3 @@ private fun PlayerDetails.locationLabel(): String? = listOfNotNull(
     neighborhood?.takeIf { it.isNotBlank() },
     city?.takeIf { it.isNotBlank() },
 ).takeIf { it.isNotEmpty() }?.joinToString(separator = " · ")
-
-private val AVATAR_SIZE = 120.dp

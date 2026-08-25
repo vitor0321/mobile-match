@@ -13,4 +13,6 @@ internal data class GamesStrings(
     val ratings: RatingStrings,
     val reports: ReportStrings,
     val matchConfirmed: MatchConfirmedStrings,
+    val matchDetail: MatchDetailStrings,
+    val map: MapStrings,
 )

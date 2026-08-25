@@ -6,6 +6,7 @@ import com.walcker.games.features.domain.model.CreateMatchRequest
 import com.walcker.games.features.domain.usecase.CreateMatchUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.geo.Coordinates
@@ -22,15 +23,21 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val MILLIS_PER_SECOND = 1000L
+private const val SECONDS_PER_HOUR = 3600L
+private const val SECONDS_PER_MINUTE = 60L
+
 internal class CreateMatchStepModel(
     private val createMatch: CreateMatchUseCase,
     private val stringsHolder: GamesStringsHolder,
-    private val sessionHolder: com.walcker.identity.api.SessionHolder,
+    private val sessionHolder: SessionHolder,
     private val tabCoordinator: TabCoordinator,
     private val analytics: AnalyticsTracker,
 ) : ScreenModel {
 
-    private val strings get() = stringsHolder.resolveStringsOrDefault().gameList
+    // Era `.gameList`: a tela de criação falava com as mensagens da listagem, e o
+    // arquivo de textos próprio dela ficava sem uso.
+    private val strings get() = stringsHolder.resolveStringsOrDefault().createMatch
 
     // TODO Phase 3: replace with real LocationProvider. For now hardcoded to SP center.
     private val defaultLat = -23.5505
@@ -54,7 +61,9 @@ internal class CreateMatchStepModel(
                 _state.update { it.copy(selectedSport = event.sport, sportError = null) }
             }
             is CreateMatchEvents.NeighborhoodChanged -> {
-                _state.update { it.copy(neighborhood = event.neighborhood, neighborhoodError = null) }
+                _state.update {
+                    it.copy(neighborhood = event.neighborhood, neighborhoodError = null)
+                }
             }
             is CreateMatchEvents.CityChanged -> {
                 _state.update { it.copy(city = event.city, cityError = null) }
@@ -85,24 +94,28 @@ internal class CreateMatchStepModel(
         val currentState = _state.value
         if (!currentState.isFormValid) return
 
+        val selectedSport = currentState.selectedSport ?: return
+        val selectedDate = currentState.selectedDate ?: return
+        val (hour, minute) = currentState.selectedTime ?: return
+
         screenModelScope.launch {
             _state.update { it.copy(isSubmitting = true) }
 
             try {
-                val startSeconds = (currentState.selectedDate!! / 1000) +
-                        (currentState.selectedTime!!.first * 3600L) +
-                        (currentState.selectedTime.second * 60L)
+                val startSeconds = (selectedDate / MILLIS_PER_SECOND) +
+                    (hour * SECONDS_PER_HOUR) +
+                    (minute * SECONDS_PER_MINUTE)
 
                 // Ensure the user is logged in. Without a session we cannot scope
                 // the new match to the right user document.
                 val session = sessionHolder.currentUser.first()
                 if (session == null) {
-                    _effects.send(CreateMatchEffect.ShowMessage(strings.joinError))
+                    _effects.send(CreateMatchEffect.ShowMessage(strings.notLoggedIn))
                     return@launch
                 }
 
                 val request = CreateMatchRequest(
-                    sport = currentState.selectedSport!!,
+                    sport = selectedSport,
                     venueName = currentState.venueName,
                     neighborhood = currentState.neighborhood,
                     city = currentState.city,
@@ -121,13 +134,20 @@ internal class CreateMatchStepModel(
                         // A outra ponta do marketplace: sem oferta, o funil de
                         // entrada não tem do que viver.
                         analytics.track(AnalyticsEvent.MatchCreated(request.sport.name))
-                        _effects.send(CreateMatchEffect.ShowMessage(strings.joinSuccess))
+                        // Um efeito só. Antes iam dois — um ShowMessage e um
+                        // NavigateToMyMatches que também mostrava snackbar — e o
+                        // usuário via duas mensagens seguidas, a segunda com o id
+                        // do documento do Firestore.
                         _effects.send(CreateMatchEffect.NavigateToMyMatches(matchId))
                         // Ask the navigation shell to switch to the My Matches tab.
                         tabCoordinator.requestTab(MainTab.MyMatches)
                     }
-                    .onFailure { error ->
-                        _effects.send(CreateMatchEffect.ShowMessage(error.message ?: strings.joinError))
+                    .onFailure {
+                        // `error.message` aqui é a mensagem da exceção — em inglês e
+                        // técnica. O transporte de callable do Firebase não preserva
+                        // o código do HttpsError, então não há taxonomia a montar:
+                        // uma mensagem traduzida é mais honesta que um stack trace.
+                        _effects.send(CreateMatchEffect.ShowMessage(strings.genericError))
                     }
             } finally {
                 _state.update { it.copy(isSubmitting = false) }

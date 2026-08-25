@@ -1,19 +1,17 @@
 package com.walcker.identity.features.ui.paywall
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -25,7 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
@@ -37,6 +37,10 @@ import com.walcker.identity.strings.LocalIdentityStrings
 import com.walcker.identity.strings.WithIdentityStrings
 import com.walcker.match.cedar.CedarLoadingIndicator
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.match.cedar.components.CedarSecondaryButton
+import com.walcker.match.cedar.components.CedarTextButton
+import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.navigation.NavigatorHolder
 import com.walcker.match.navigator.IdentityDestination
 import org.koin.compose.koinInject
@@ -44,7 +48,12 @@ import org.koin.compose.koinInject
 private const val TERMS_OF_USE_URL = "https://vitor0321.github.io/terms-of-use.html"
 private const val PRIVACY_POLICY_URL = "https://vitor0321.github.io/match-privacy-policy.html"
 
+private val LoadingIndicatorSize = 32.dp
+
 internal class PaywallStep : Screen {
+
+    override val key: String get() = "paywall"
+
     @Composable
     override fun Content() {
         WithIdentityStrings {
@@ -58,7 +67,9 @@ internal class PaywallStep : Screen {
             PaywallEvents(
                 stepModel = stepModel,
                 onDismiss = { navigatorHolder.navigator?.pop() },
-                onRequireLogin = { navigatorHolder.navigator?.replace(identityDestination.login()) },
+                onRequireLogin = {
+                    navigatorHolder.navigator?.replace(identityDestination.login())
+                },
                 onShowSnackbar = { message -> snackbarHostState.showSnackbar(message) },
             ) { onEvent ->
                 PaywallScreen(
@@ -78,6 +89,7 @@ internal class PaywallStep : Screen {
     }
 }
 
+/** Atalho para previews e testes de tela, que não têm um snackbar host para dar. */
 @Composable
 internal fun PaywallScreen(
     state: PaywallState,
@@ -105,6 +117,20 @@ internal fun PaywallScreen(
     )
 }
 
+/**
+ * A tela da assinatura.
+ *
+ * O que mudou nesta repaginação:
+ * - **"Assinar" dividia a linha com "Restaurar compras", meio a meio.** A ação que o
+ *   produto quer que aconteça tinha metade da largura e o mesmo desenho da ação de
+ *   manutenção ao lado. Agora o botão de assinar é o único cheio de cor e ocupa a
+ *   linha inteira; restaurar virou texto, abaixo.
+ * - **Havia três botões de largura cheia empilhados** — assinar, restaurar e um
+ *   "Voltar" que só repetia a seta da barra de topo. O voltar também virou texto.
+ * - Os planos ganharam `selectableGroup`, então um leitor de tela agora anuncia
+ *   "opção 2 de 2, selecionada" em vez de dois botões idênticos.
+ * - A mensagem de erro passou a ser uma live region: ela aparecia calada.
+ */
 @Composable
 internal fun PaywallScreen(
     state: PaywallState,
@@ -122,23 +148,34 @@ internal fun PaywallScreen(
     val colors = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
 
+    val isPurchasing = state.purchaseInProgress != null
+    val isBusy = state.isLoading || isPurchasing || state.isRestoring
+
     Scaffold(
-        topBar = { CedarTopBar(title = strings.title, onBack = onBack) },
+        topBar = {
+            CedarTopBar(
+                title = strings.title,
+                onBack = onBack,
+                backContentDescription = strings.back,
+            )
+        },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        containerColor = colors.background,
+        containerColor = CedarTokens.colors.canvas,
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 24.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .verticalScroll(scrollState)
+                .padding(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.md,
+                ),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
         ) {
             Text(
                 text = if (state.isPro) strings.proHeadline else strings.headline,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
                 color = if (state.isPro) colors.primary else colors.onSurface,
             )
             Text(
@@ -150,10 +187,12 @@ internal fun PaywallScreen(
             when {
                 state.isLoading -> {
                     Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = CedarTokens.spacing.xxl),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CedarLoadingIndicator(modifier = Modifier.size(32.dp))
+                        CedarLoadingIndicator(modifier = Modifier.size(LoadingIndicatorSize))
                     }
                     Text(
                         text = strings.loadingLabel,
@@ -172,7 +211,12 @@ internal fun PaywallScreen(
                 }
 
                 else -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectableGroup(),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+                    ) {
                         state.offerings.forEach { offering ->
                             OfferingCard(
                                 offering = offering,
@@ -187,27 +231,31 @@ internal fun PaywallScreen(
                 }
             }
 
-            state.errorMessage?.takeIf { state.offerings.isNotEmpty() }?.let {
-                Text(text = it, color = colors.error, style = MaterialTheme.typography.bodyMedium)
+            state.errorMessage?.takeIf { state.offerings.isNotEmpty() }?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.error,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                )
             }
 
-            HorizontalDivider(color = colors.outline)
+            HorizontalDivider(color = colors.outlineVariant)
 
             if (state.isPro) {
-                Button(
+                CedarPrimaryButton(
+                    text = strings.changePlanButton,
                     onClick = onPurchase,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading && state.purchaseInProgress == null && state.selectedOfferingId != null,
-                ) {
-                    Text(if (state.purchaseInProgress != null) strings.purchaseLoadingButton else strings.changePlanButton)
-                }
-                OutlinedButton(
+                    enabled = !isBusy && state.selectedOfferingId != null,
+                    loading = isPurchasing,
+                )
+                CedarSecondaryButton(
+                    text = strings.manageSubscriptionButton,
                     onClick = { state.managementUrl?.let(onManageSubscription) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = state.managementUrl != null && !state.isLoading && state.purchaseInProgress == null,
-                ) {
-                    Text(strings.manageSubscriptionButton)
-                }
+                    enabled = !isBusy && state.managementUrl != null,
+                )
                 if (state.managementUrl == null && !state.isLoading) {
                     Text(
                         text = strings.manageSubscriptionUnavailable,
@@ -216,34 +264,26 @@ internal fun PaywallScreen(
                     )
                 }
             } else {
-                Row(
+                CedarPrimaryButton(
+                    text = strings.purchaseButton,
+                    onClick = onPurchase,
+                    enabled = !isBusy && state.selectedOfferingId != null,
+                    loading = isPurchasing,
+                )
+                CedarTextButton(
+                    text = strings.restoreButton,
+                    onClick = onRestore,
+                    enabled = !isBusy,
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = onRestore,
-                        modifier = Modifier.weight(1f),
-                        enabled = !state.isLoading && state.purchaseInProgress == null && !state.isRestoring,
-                    ) {
-                        Text(if (state.isRestoring) strings.restoreLoadingButton else strings.restoreButton)
-                    }
-                    Button(
-                        onClick = onPurchase,
-                        modifier = Modifier.weight(1f),
-                        enabled = !state.isLoading && state.purchaseInProgress == null && !state.isRestoring && state.selectedOfferingId != null,
-                    ) {
-                        Text(if (state.purchaseInProgress != null) strings.purchaseLoadingButton else strings.purchaseButton)
-                    }
-                }
+                )
             }
 
-            OutlinedButton(
+            CedarTextButton(
+                text = strings.backButton,
                 onClick = onBack,
+                enabled = !isPurchasing && !state.isRestoring,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.purchaseInProgress == null && !state.isRestoring,
-            ) {
-                Text(strings.backButton)
-            }
+            )
 
             if (state.selectedOffering != null) {
                 SubscriptionInfoSection(

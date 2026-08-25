@@ -9,18 +9,21 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,18 +31,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.data.model.NotificationHistoryItem
 import com.walcker.games.strings.NotificationHistoryStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+private val UnreadDotSize = 8.dp
+
 /**
- * Composable for displaying notification history in a ModalBottomSheet.
- * Shows list of notifications with timestamps, read status, and actions.
+ * Notification history, in a bottom sheet.
+ *
+ * Three things were wrong beyond the styling:
+ *
+ * - **The ✕ in the header called `Refresh`.** Tapping the close button reloaded the
+ *   list and left the sheet open. It closes the sheet now.
+ * - **Relative times were hardcoded English** — "2 hours ago" on a pt-BR screen.
+ * - **`onDelete` was passed down and never used**, so `NotificationHistoryEvent.Delete`
+ *   was unreachable from the UI. There is a delete button now.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,13 +77,18 @@ fun NotificationHistoryStep(
                 onDismiss()
             },
             sheetState = sheetState,
+            shape = CedarTokens.radius.sheet,
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             NotificationHistoryContent(
                 state = state,
                 strings = strings,
                 onEvent = stepModel::onEvent,
+                onClose = {
+                    coroutineScope.launch { sheetState.hide() }
+                    onDismiss()
+                },
                 onNotificationTap = { notificationId ->
-                    // Extract matchId from notification data and navigate
                     val matchId = state.notifications
                         .find { it.id == notificationId }
                         ?.data
@@ -88,140 +109,94 @@ private fun NotificationHistoryContent(
     state: NotificationHistoryState,
     strings: NotificationHistoryStrings,
     onEvent: (NotificationHistoryEvent) -> Unit,
+    onClose: () -> Unit,
     onNotificationTap: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(
+                horizontal = CedarTokens.spacing.lg,
+                vertical = CedarTokens.spacing.sm,
+            ),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
     ) {
-        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = strings.title,
-                style = MaterialTheme.typography.headlineSmall,
+            CedarSectionHeader(
+                title = strings.title,
+                subtitle = if (state.isLoading) strings.refreshing else null,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { onEvent(NotificationHistoryEvent.Refresh) }) {
-                Text("✕", style = MaterialTheme.typography.titleMedium)
+            // Was a TextButton labelled "✕" wired to Refresh.
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = strings.closeContentDescription,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Error message
         state.errorMessage?.let { error ->
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        MaterialTheme.colorScheme.errorContainer,
-                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = CedarTokens.radius.smShape,
                     )
-                    .padding(12.dp),
+                    .padding(start = CedarTokens.spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f),
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { onEvent(NotificationHistoryEvent.DismissError) }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = strings.dismissErrorContentDescription,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
                     )
-                    TextButton(
-                        onClick = { onEvent(NotificationHistoryEvent.DismissError) },
-                    ) {
-                        Text("✕", style = MaterialTheme.typography.labelSmall)
-                    }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Content
         if (state.notifications.isEmpty() && !state.isLoading) {
-            EmptyState(strings = strings)
+            EmptyState(
+                message = strings.emptyState,
+                supportingText = strings.noNotifications,
+                modifier = Modifier.fillMaxWidth(),
+            )
         } else {
-            NotificationsList(
-                notifications = state.notifications,
-                isLoading = state.isLoading,
-                strings = strings,
-                onNotificationTap = onNotificationTap,
-                onMarkAsRead = { id ->
-                    onEvent(NotificationHistoryEvent.MarkAsRead(id))
-                },
-                onDelete = { id ->
-                    onEvent(NotificationHistoryEvent.Delete(id))
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptyState(
-    strings: NotificationHistoryStrings,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = strings.noNotifications,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun NotificationsList(
-    notifications: List<NotificationHistoryItem>,
-    isLoading: Boolean,
-    strings: NotificationHistoryStrings,
-    onNotificationTap: (String) -> Unit,
-    onMarkAsRead: (String) -> Unit,
-    onDelete: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(
-            items = notifications,
-            key = { it.id },
-            contentType = { "notification" },
-        ) { notification: NotificationHistoryItem ->
-            NotificationItemRow(
-                notification = notification,
-                onTap = { onNotificationTap(notification.id) },
-                onMarkAsRead = { onMarkAsRead(notification.id) },
-                onDelete = { onDelete(notification.id) },
-            )
-        }
-
-        if (isLoading) {
-            item {
-                Text(
-                    text = strings.refreshing,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp),
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = CedarTokens.spacing.xxl),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+            ) {
+                items(
+                    items = state.notifications,
+                    key = { it.id },
+                    contentType = { "notification" },
+                ) { notification ->
+                    NotificationItemRow(
+                        notification = notification,
+                        strings = strings,
+                        onTap = { onNotificationTap(notification.id) },
+                        onMarkAsRead = {
+                            onEvent(NotificationHistoryEvent.MarkAsRead(notification.id))
+                        },
+                        onDelete = { onEvent(NotificationHistoryEvent.Delete(notification.id)) },
+                    )
+                }
             }
         }
     }
@@ -230,6 +205,7 @@ private fun NotificationsList(
 @Composable
 private fun NotificationItemRow(
     notification: NotificationHistoryItem,
+    strings: NotificationHistoryStrings,
     onTap: () -> Unit,
     onMarkAsRead: () -> Unit,
     onDelete: () -> Unit,
@@ -239,36 +215,36 @@ private fun NotificationItemRow(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                if (notification.isRead)
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                else
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-                shape = MaterialTheme.shapes.small,
+                color = if (notification.isRead) {
+                    CedarTokens.colors.canvas
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                },
+                shape = CedarTokens.radius.smShape,
             )
-            .clickable(onClick = onTap)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top,
+            .clickable(role = Role.Button, onClick = onTap)
+            .padding(start = CedarTokens.spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Unread indicator
         if (!notification.isRead) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(UnreadDotSize)
                     .background(
-                        MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape,
-                    )
-                    .align(Alignment.CenterVertically),
+                    ),
             )
         } else {
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.size(UnreadDotSize))
         }
 
-        // Content
         Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = CedarTokens.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
         ) {
             Text(
                 text = notification.title,
@@ -282,39 +258,58 @@ private fun NotificationItemRow(
                 maxLines = 2,
             )
             Text(
-                text = formatTimeAgo(notification.receivedAt),
+                text = formatTimeAgo(timestamp = notification.receivedAt, strings = strings),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        // Action: Mark as read
         if (!notification.isRead) {
-            TextButton(onClick = onMarkAsRead) {
-                Text("✓", style = MaterialTheme.typography.labelMedium)
+            IconButton(onClick = onMarkAsRead) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = strings.markAsReadContentDescription,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Outlined.Delete,
+                contentDescription = strings.deleteContentDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
-/**
- * Formats a timestamp as relative time (e.g., "2 hours ago").
- */
-internal fun formatTimeAgo(timestamp: Long): String {
-    val now = getCurrentTimeMillis()
-    val diffMs = now - timestamp
+private const val MINUTE_MS = 60_000L
+private const val HOUR_MS = 3_600_000L
+private const val DAY_MS = 86_400_000L
+private const val WEEK_MS = 604_800_000L
 
+/**
+ * Relative time for a notification. The labels come from [strings]; the maths does
+ * not need translating, the words do.
+ */
+internal fun formatTimeAgo(
+    timestamp: Long,
+    strings: NotificationHistoryStrings,
+): String {
+    val diffMs = (getCurrentTimeMillis() - timestamp).coerceAtLeast(0L)
     return when {
-        diffMs < 60_000 -> "Just now"
-        diffMs < 3_600_000 -> "${diffMs / 60_000} minutes ago"
-        diffMs < 86_400_000 -> "${diffMs / 3_600_000} hours ago"
-        diffMs < 604_800_000 -> "${diffMs / 86_400_000} days ago"
-        else -> "${diffMs / 604_800_000} weeks ago"
+        diffMs < MINUTE_MS -> strings.timeJustNow
+        diffMs < HOUR_MS -> strings.timeMinutesAgo((diffMs / MINUTE_MS).toInt())
+        diffMs < DAY_MS -> strings.timeHoursAgo((diffMs / HOUR_MS).toInt())
+        diffMs < WEEK_MS -> strings.timeDaysAgo((diffMs / DAY_MS).toInt())
+        else -> strings.timeWeeksAgo((diffMs / WEEK_MS).toInt())
     }
 }
 
 /**
- * Returns current time in milliseconds.
- * Platform-specific implementation needed.
+ * Current time in milliseconds.
+ *
+ * Stays here — `MatchDetailStepModel` imports it from this package, and the
+ * `actual`s live in `androidMain`/`iosMain` next to this declaration.
  */
 internal expect fun getCurrentTimeMillis(): Long

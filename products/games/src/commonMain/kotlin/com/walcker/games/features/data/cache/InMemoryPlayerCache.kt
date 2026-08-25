@@ -5,7 +5,6 @@ import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.PlayerSearchResults
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
 
 /**
  * Short-lived cache for player search results and profiles.
@@ -26,7 +25,7 @@ import kotlinx.datetime.Clock
  */
 internal class InMemoryPlayerCache(
     private val ttlMs: Long = DEFAULT_TTL_MS,
-    private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val nowMs: () -> Long = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
 ) {
 
     private data class Entry<T>(val value: T, val storedAtMs: Long)

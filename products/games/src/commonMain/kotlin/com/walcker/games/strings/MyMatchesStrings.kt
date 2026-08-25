@@ -15,6 +15,10 @@ internal data class MyMatchesStrings(
     val leaveError: String,
     val statusCancelled: String,
     val statusFinished: String,
+    /** "8/10 jogadores" — the raw "8/10" said nothing on its own. */
+    val playersCount: (confirmed: Int, total: Int) -> String,
+    /** Way out of the empty active tab: the screen used to be a dead end. */
+    val emptyActiveAction: String,
 )
 
 internal val myMatchesStringsPt = MyMatchesStrings(
@@ -32,6 +36,8 @@ internal val myMatchesStringsPt = MyMatchesStrings(
     leaveError = "Não foi possível sair da partida.",
     statusCancelled = "Cancelada",
     statusFinished = "Finalizada",
+    playersCount = { confirmed, total -> "$confirmed/$total jogadores" },
+    emptyActiveAction = "Buscar partidas",
 )
 
 internal val myMatchesStringsEn = MyMatchesStrings(
@@ -49,4 +55,6 @@ internal val myMatchesStringsEn = MyMatchesStrings(
     leaveError = "Could not leave the match.",
     statusCancelled = "Cancelled",
     statusFinished = "Finished",
+    playersCount = { confirmed, total -> "$confirmed/$total players" },
+    emptyActiveAction = "Find matches",
 )

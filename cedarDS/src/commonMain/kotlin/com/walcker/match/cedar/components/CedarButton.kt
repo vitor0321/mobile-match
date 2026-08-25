@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
@@ -21,10 +20,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.walcker.match.cedar.tokens.CedarTokens
 
+/** Altura mínima, não fixa: o rótulo cresce com a escala de fonte do sistema. */
 private val ButtonHeight = 56.dp
 private val CompactButtonHeight = 44.dp
 private val SpinnerSize = 20.dp
@@ -62,7 +63,7 @@ public fun CedarPrimaryButton(
         contentPadding = ButtonDefaults.ContentPadding,
         modifier = modifier
             .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(ButtonHeight),
+            .defaultMinSize(minHeight = ButtonHeight),
     ) {
         ButtonContent(text = text, loading = loading, leadingIcon = leadingIcon)
     }
@@ -94,7 +95,7 @@ public fun CedarAvailabilityButton(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .height(ButtonHeight),
+            .defaultMinSize(minHeight = ButtonHeight),
     ) {
         ButtonContent(text = text, loading = loading, leadingIcon = leadingIcon)
     }
@@ -123,7 +124,7 @@ public fun CedarSecondaryButton(
         ),
         modifier = modifier
             .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(ButtonHeight),
+            .defaultMinSize(minHeight = ButtonHeight),
     ) {
         ButtonContent(text = text, loading = loading, leadingIcon = leadingIcon)
     }
@@ -152,8 +153,9 @@ public fun CedarTextButton(
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -186,8 +188,11 @@ private fun ButtonContent(
                     Text(
                         text = text,
                         style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
+                        // Duas linhas, não uma: "Enviar e-mail de recuperação" a
+                        // 200% de escala de fonte virava reticências numa linha só.
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
                         modifier = if (leadingIcon != null) {
                             Modifier.padding(start = CedarTokens.spacing.xs)
                         } else {

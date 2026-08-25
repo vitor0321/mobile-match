@@ -2,6 +2,8 @@ package com.walcker.identity.strings
 
 internal data class PaywallStrings(
     val title: String,
+    /** Nome acessível do botão voltar da barra de topo. */
+    val back: String,
     val headline: String,
     val description: String,
     val proHeadline: String,
@@ -46,6 +48,7 @@ internal data class PaywallStrings(
 // numa tela de cobrança é pior do que não detalhar. Trocar quando D27 for decidida.
 internal val paywallStringsEn = PaywallStrings(
     title = "Match Pro",
+    back = "Back",
     headline = "Support Match with Pro",
     description = "Match Pro keeps the app running and gets you first access to what comes next. You can cancel any time from the store.",
     proHeadline = "You are PRO",
@@ -85,6 +88,7 @@ internal val paywallStringsEn = PaywallStrings(
 
 internal val paywallStringsPt = PaywallStrings(
     title = "Match Pro",
+    back = "Voltar",
     headline = "Apoie o Match com o Pro",
     description = "O Match Pro mantém o app de pé e te dá acesso antecipado ao que vem por aí. Dá para cancelar quando quiser, direto na loja.",
     proHeadline = "Você é PRO",

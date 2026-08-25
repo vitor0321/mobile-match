@@ -3,6 +3,7 @@ package com.walcker.games.features.ui.playerprofile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,16 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,17 +26,39 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.model.Rating
 import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarScreenTitle
+import com.walcker.match.cedar.components.CedarSecondaryButton
+import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.CedarStat
+import com.walcker.match.cedar.components.CedarStatRow
+import com.walcker.match.cedar.components.PlayerAvatar
+import com.walcker.match.cedar.components.PlayerAvatarSize
+import com.walcker.match.cedar.components.RatingStars
+import com.walcker.match.cedar.tokens.CedarTokens
+import com.walcker.match.core.datetime.formatShortDate
 import com.walcker.match.core.format.formatDecimal
+import kotlinx.collections.immutable.persistentListOf
 
+/**
+ * The signed-in player's own profile.
+ *
+ * Rebuilt for the redesign: avatar and name at the top, three stat cards, then the
+ * ratings history — the shape of screen 05 in the Figma.
+ *
+ * It also fixes a build break nobody could see: `formatRatingDate` called
+ * `System.currentTimeMillis()`, which is `java.lang.System`. This file is in
+ * `commonMain`, so the iOS target could not compile it — and no CI job builds iOS,
+ * so nothing said so. Dates now go through `formatShortDate` from `core`, which is
+ * the same helper the rating cards elsewhere already use.
+ */
 internal class PlayerProfileStep : Screen {
-    @OptIn(ExperimentalMaterial3Api::class)
+
     @Composable
     override fun Content() {
         val strings = rememberGamesStrings().strings.playerProfile
@@ -60,137 +81,105 @@ internal class PlayerProfileStep : Screen {
         }
 
         Scaffold(
-            topBar = {
-                TopAppBar(title = { Text(strings.title) })
-            },
+            containerColor = CedarTokens.colors.canvas,
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
-            Column(
+            if (state.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+                return@Scaffold
+            }
+
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
+                contentPadding = PaddingValues(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.md,
+                ),
             ) {
-                if (state.isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                    return@Scaffold
+                item {
+                    CedarScreenTitle(title = strings.title)
                 }
 
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 16.dp,
-                        vertical = 16.dp,
-                    ),
-                ) {
-                    // User info card
-                    item {
-                        state.userName?.let { name ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        text = name,
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    state.userEmail?.let { email ->
-                                        Text(
-                                            text = email,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                item {
+                    ProfileHeader(
+                        name = state.userName,
+                        email = state.userEmail,
+                    )
+                }
 
-                    // Disponibilidade (regra B5) — logo abaixo da identificação
-                    // porque é o único controle da tela que muda o que a pessoa
-                    // recebe, e não só o que ela vê.
+                item {
+                    AvailabilityCard(
+                        isAvailable = state.isAvailable,
+                        isUpdating = state.isUpdatingAvailability,
+                        strings = strings,
+                        onCheckedChange = { checked ->
+                            model.onEvent(PlayerProfileEvent.AvailabilityChanged(checked))
+                        },
+                    )
+                }
+
+                item {
+                    CedarStatRow(
+                        stats = persistentListOf(
+                            CedarStat(
+                                value = state.matchesOrganized.toString(),
+                                label = strings.statsOrganized,
+                            ),
+                            CedarStat(
+                                value = state.matchesParticipated.toString(),
+                                label = strings.statsParticipated,
+                            ),
+                            CedarStat(
+                                value = if (state.totalRatings > 0) {
+                                    formatDecimal(value = state.averageRating, decimals = 1)
+                                } else {
+                                    strings.noRatingYet
+                                },
+                                label = strings.statsRating,
+                                highlighted = state.totalRatings > 0,
+                            ),
+                        ),
+                    )
+                }
+
+                if (state.totalRatings > 0) {
                     item {
-                        AvailabilityCard(
-                            isAvailable = state.isAvailable,
-                            isUpdating = state.isUpdatingAvailability,
-                            strings = strings,
-                            onCheckedChange = { checked ->
-                                model.onEvent(PlayerProfileEvent.AvailabilityChanged(checked))
-                            },
+                        CedarSectionHeader(
+                            title = strings.ratingsReceived,
+                            subtitle = strings.ratingsCount(state.totalRatings),
                         )
                     }
-
-                    // Stats grid
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            StatCard(
-                                label = strings.statsOrganized,
-                                value = state.matchesOrganized.toString(),
-                                modifier = Modifier.weight(1f),
-                            )
-                            StatCard(
-                                label = strings.statsParticipated,
-                                value = state.matchesParticipated.toString(),
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-
-                    // Ratings summary and history
-                    if (state.totalRatings > 0) {
-                        item {
-                            RatingsSummaryCard(
-                                averageRating = state.averageRating,
-                                totalRatings = state.totalRatings,
-                            )
-                        }
-
-                        item {
-                            Text(
-                                text = "Avaliações Recebidas",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(top = 8.dp),
-                            )
-                        }
-
-                        items(items = state.ratings, key = { it.id }) { rating ->
-                            RatingItemCard(rating = rating)
-                        }
+                    items(items = state.ratings, key = { it.id }) { rating ->
+                        RatingItemCard(rating = rating, strings = strings)
                     }
                 }
 
-                // Settings section with logout
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = "Configurações",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    OutlinedButton(
-                        onClick = { model.onEvent(PlayerProfileEvent.LogoutRequested) },
-                        modifier = Modifier.fillMaxWidth(),
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = CedarTokens.spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
                     ) {
-                        Text("Fazer logout")
+                        Text(
+                            text = strings.settings,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        CedarSecondaryButton(
+                            text = strings.logout,
+                            onClick = { model.onEvent(PlayerProfileEvent.LogoutRequested) },
+                        )
                     }
                 }
             }
@@ -198,10 +187,44 @@ internal class PlayerProfileStep : Screen {
     }
 }
 
+@Composable
+private fun ProfileHeader(
+    name: String?,
+    email: String?,
+    modifier: Modifier = Modifier,
+) {
+    if (name == null) return
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PlayerAvatar(displayName = name, size = PlayerAvatarSize.Large)
+        Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (email != null) {
+                Text(
+                    text = email,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
 /**
  * O switch é otimista — acompanha o dedo e o StepModel reverte se a gravação
- * falhar — mas fica travado enquanto a escrita está em voo, para um toque
- * repetido não virar uma fila de escritas concorrentes no mesmo documento.
+ * falhar — mas fica travado enquanto a escrita está em voo, para um toque repetido
+ * não virar uma fila de escritas concorrentes no mesmo documento.
  */
 @Composable
 private fun AvailabilityCard(
@@ -211,22 +234,28 @@ private fun AvailabilityCard(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        shape = CedarTokens.radius.lgShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
+        modifier = modifier.fillMaxWidth(),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(CedarTokens.spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = strings.availabilityTitle,
                     style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    // Descreve a consequência, não o estado: "desligado" não
-                    // diz a ninguém que vai parar de receber aviso de partida.
+                    // Descreve a consequência, não o estado: "desligado" não diz a
+                    // ninguém que vai parar de receber aviso de partida.
                     text = if (isAvailable) {
                         strings.availabilityOnDescription
                     } else {
@@ -247,103 +276,36 @@ private fun AvailabilityCard(
 }
 
 @Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Card(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RatingsSummaryCard(
-    averageRating: Float,
-    totalRatings: Int,
-    modifier: Modifier = Modifier,
-) {
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Avaliação Geral",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = formatDecimal(value = averageRating, decimals = 1),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Column {
-                    Text(
-                        text = "⭐ ".repeat(averageRating.toInt()) + "☆".repeat(5 - averageRating.toInt()),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = "$totalRatings avaliações",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun RatingItemCard(
     rating: Rating,
+    strings: PlayerProfileStrings,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        shape = CedarTokens.radius.mdShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
+        modifier = modifier.fillMaxWidth(),
+    ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(CedarTokens.spacing.md)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "⭐ ".repeat(rating.rating) + "☆".repeat(5 - rating.rating),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
+                // Was "⭐ ".repeat(n) + "☆".repeat(5 - n) — a star count a screen
+                // reader announced as a string of emoji names.
+                RatingStars(
+                    rating = rating.rating.toFloat(),
+                    contentDescription = strings.ratingContentDescription(rating.rating.toFloat()),
                 )
                 Text(
-                    text = formatRatingDate(rating.createdAtMs),
+                    text = formatShortDate(epochMillis = rating.createdAtMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -351,24 +313,10 @@ private fun RatingItemCard(
             if (rating.comment.isNotEmpty()) {
                 Text(
                     text = rating.comment,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
-    }
-}
-
-/**
- * Formats a timestamp as a date (e.g., "12 dias atrás").
- */
-private fun formatRatingDate(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diffDays = (now - timestamp) / (1000 * 60 * 60 * 24)
-    return when {
-        diffDays < 1 -> "Hoje"
-        diffDays < 7 -> "$diffDays dias atrás"
-        diffDays < 30 -> "${diffDays / 7} semanas atrás"
-        else -> "${diffDays / 30} meses atrás"
     }
 }

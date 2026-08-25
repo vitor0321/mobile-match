@@ -2,7 +2,11 @@ package com.walcker.identity.strings
 
 internal data class ProfileStrings(
     val title: String,
+    /** Nome acessível do botão voltar da barra de topo. */
+    val back: String,
     val fallbackAccountName: String,
+    /** Cabeçalho do bloco final: restaurar compras, sair, excluir conta. */
+    val accountActionsLabel: String,
     val proStatusLabel: String,
     val proStatusDescription: String,
     val freeStatusLabel: String,
@@ -34,7 +38,9 @@ internal data class ProfileStrings(
 
 internal val profileStringsEn = ProfileStrings(
     title = "Profile",
+    back = "Back",
     fallbackAccountName = "Match account",
+    accountActionsLabel = "Account",
     proStatusLabel = "You are PRO",
     proStatusDescription = "Your PRO benefits are active on this account.",
     freeStatusLabel = "Free plan",
@@ -66,7 +72,9 @@ internal val profileStringsEn = ProfileStrings(
 
 internal val profileStringsPt = ProfileStrings(
     title = "Perfil",
+    back = "Voltar",
     fallbackAccountName = "Conta Match",
+    accountActionsLabel = "Conta",
     proStatusLabel = "Você é PRO",
     proStatusDescription = "Os benefícios do seu plano PRO estão ativos nesta conta.",
     freeStatusLabel = "Plano gratuito",

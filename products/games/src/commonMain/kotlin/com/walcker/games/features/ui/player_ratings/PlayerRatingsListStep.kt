@@ -4,29 +4,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,8 +35,18 @@ import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.ui.player_details.RatingCard
 import com.walcker.games.strings.PlayerRatingsStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.SportChip
+import com.walcker.match.cedar.tokens.CedarTokens
 import org.koin.core.parameter.parametersOf
+
+/** How many items before the end trigger the next page request. */
+private const val PREFETCH_DISTANCE = 3
+
+private val NextPageRowHeight = 56.dp
+private val NextPageSpinnerSize = 24.dp
 
 /**
  * Full list of the reviews a player received: 20 per page, sorted server-side.
@@ -61,7 +61,6 @@ internal data class PlayerRatingsListStep(
 
     override val key: String get() = "player-ratings-$userId"
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -100,21 +99,12 @@ internal data class PlayerRatingsListStep(
         }
 
         Scaffold(
+            containerColor = CedarTokens.colors.canvas,
             topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = state.playerName.ifBlank { strings.title },
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = navigator::pop) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
+                CedarTopBar(
+                    title = state.playerName.ifBlank { strings.title },
+                    onBack = navigator::pop,
+                    backContentDescription = strings.back,
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -138,24 +128,12 @@ internal data class PlayerRatingsListStep(
                         CircularProgressIndicator()
                     }
 
-                    state.ratings.isEmpty() && state.errorMessage != null -> Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = state.errorMessage ?: strings.errorLoading,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Button(
-                            onClick = { stepModel.onEvent(PlayerRatingsEvents.Retry) },
-                            modifier = Modifier.padding(top = 16.dp),
-                        ) {
-                            Text(strings.retry)
-                        }
-                    }
+                    state.ratings.isEmpty() && state.errorMessage != null -> EmptyState(
+                        message = state.errorMessage ?: strings.errorLoading,
+                        actionLabel = strings.retry,
+                        onAction = { stepModel.onEvent(PlayerRatingsEvents.Retry) },
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
                     state.isEmpty -> EmptyState(
                         message = strings.empty,
@@ -165,8 +143,11 @@ internal data class PlayerRatingsListStep(
                     else -> LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = CedarTokens.spacing.lg,
+                            vertical = CedarTokens.spacing.md,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {
                         items(state.ratings, key = { it.id }) { rating ->
                             RatingCard(
@@ -183,11 +164,11 @@ internal data class PlayerRatingsListStep(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(56.dp),
+                                        .height(NextPageRowHeight),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
+                                        modifier = Modifier.size(NextPageSpinnerSize),
                                     )
                                 }
                             }
@@ -195,14 +176,12 @@ internal data class PlayerRatingsListStep(
                             // Manual fallback for when auto-prefetch cannot fire
                             // (short lists, accessibility navigation).
                             item(key = "next-page-button") {
-                                Button(
+                                CedarSecondaryButton(
+                                    text = strings.loadMore,
                                     onClick = {
                                         stepModel.onEvent(PlayerRatingsEvents.LoadNextPage)
                                     },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Text(strings.loadMore)
-                                }
+                                )
                             }
                         }
                     }
@@ -212,6 +191,10 @@ internal data class PlayerRatingsListStep(
     }
 }
 
+/**
+ * Sort options. A [LazyRow] rather than a plain Row: three chips fit today, but the
+ * labels grow with translation and a fixed Row would clip them.
+ */
 @Composable
 private fun SortRow(
     selected: RatingSort,
@@ -219,17 +202,19 @@ private fun SortRow(
     onSortSelected: (RatingSort) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            horizontal = CedarTokens.spacing.lg,
+            vertical = CedarTokens.spacing.xs,
+        ),
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
     ) {
-        RatingSort.entries.forEach { sort ->
-            FilterChip(
+        items(RatingSort.entries) { sort ->
+            SportChip(
+                label = strings.labelFor(sort),
                 selected = sort == selected,
                 onClick = { onSortSelected(sort) },
-                label = { Text(strings.labelFor(sort)) },
             )
         }
     }
@@ -240,6 +225,3 @@ private fun PlayerRatingsStrings.labelFor(sort: RatingSort): String = when (sort
     RatingSort.HIGHEST -> sortHighest
     RatingSort.LOWEST -> sortLowest
 }
-
-/** How many items before the end trigger the next page request. */
-private const val PREFETCH_DISTANCE = 3
