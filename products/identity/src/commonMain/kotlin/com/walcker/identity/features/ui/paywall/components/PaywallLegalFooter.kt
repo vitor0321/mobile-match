@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -49,7 +50,13 @@ internal fun PaywallLegalFooter(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LegalLink(label = termsLabel, color = colors.primary, onClick = onOpenTerms)
-        Text(text = "·", color = colors.onSurfaceVariant)
+        // Separador puramente visual: escondido do leitor de tela, que já lê os
+        // dois links como itens distintos — um "ponto central" no meio seria ruído.
+        Text(
+            text = "·",
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.clearAndSetSemantics {},
+        )
         LegalLink(label = privacyLabel, color = colors.primary, onClick = onOpenPrivacy)
     }
 }

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mobile Match — app icon foreground (adaptive icon layer).
+
+  Design: stylized location pin with a soccer ball inside.
+  Canvas: 108×108dp (Android adaptive icon spec).
+  Safe zone: 66×66dp centered at (54, 54).
+
+  Pin: white teardrop silhouette (circle head r=30 + tapered body).
+  Ball: Blue detail lines inside the white circle — central pentagon + 5 seam
+  segments radiating to the edge, forming the classic hexagonal pattern.
+  The blue details use #146BF2 (CedarPalette.Blue600) to stay on-brand.
+
+  Background color is set in ic_launcher_background.xml (#146BF2).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- White pin silhouette: teardrop (circle + tapered body) -->
+    <path
+        android:pathData="M54,24
+            C37.4,24 24,37.4 24,54
+            C24,64.5 30,73.6 38.5,77.3
+            L54,96
+            L69.5,77.3
+            C78,73.6 84,64.5 84,54
+            C84,37.4 70.6,24 54,24Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Central pentagon (soccer ball classic pattern) -->
+    <path
+        android:pathData="M54,42.5
+            L58.9,46.0 L57.0,51.5
+            L51.0,51.5 L49.1,46.0 Z"
+        android:fillColor="#146BF2" />
+
+    <!-- Seam segment 1: pentagon top → circle top (12 o'clock) -->
+    <path
+        android:pathData="M54,42.5 L54,24.0"
+        android:strokeColor="#146BF2"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+
+    <!-- Seam segment 2: pentagon upper-right → circle upper-right (~2 o'clock) -->
+    <path
+        android:pathData="M58.9,46.0 L74.5,35.5"
+        android:strokeColor="#146BF2"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+
+    <!-- Seam segment 3: pentagon lower-right → circle lower-right (~5 o'clock) -->
+    <path
+        android:pathData="M57.0,51.5 L73.5,61.5"
+        android:strokeColor="#146BF2"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+
+    <!-- Seam segment 4: pentagon lower-left → circle lower-left (~7 o'clock) -->
+    <path
+        android:pathData="M51.0,51.5 L34.5,61.5"
+        android:strokeColor="#146BF2"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+
+    <!-- Seam segment 5: pentagon upper-left → circle upper-left (~10 o'clock) -->
+    <path
+        android:pathData="M49.1,46.0 L33.5,35.5"
+        android:strokeColor="#146BF2"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+
+</vector>

@@ -47,7 +47,7 @@ internal actual fun MatchMapView(
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 Text(
-                    text = "🗺️ Mapa (iOS em breve) — ${pins.size} partidas",
+                    text = "Mapa (iOS em breve) — ${pins.size} partidas",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp),
