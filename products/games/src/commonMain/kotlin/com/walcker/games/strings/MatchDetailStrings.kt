@@ -1,15 +1,8 @@
 package com.walcker.games.strings
 
-/**
- * Copy for the match detail screen.
- *
- * This did not exist: the screen carried its text inline, half of it in English
- * ("Match Details", "Duration", "Price", "Participants", "Free", "Retry") and half
- * in pt-BR ("Sair", "Cancelar Partida", "Entrar na partida"). On a screen that
- * showed both at once.
- */
 internal data class MatchDetailStrings(
     val title: String,
+    val loadingLabel: String,
     val backContentDescription: String,
     val dismissContentDescription: String,
 
@@ -54,9 +47,6 @@ internal data class MatchDetailStrings(
     val cancelDialogConfirm: String,
     val dialogDismiss: String,
 
-    // Mensagens de resultado das ações (banner/live region). Antes eram literais
-    // pt-BR no StepModel — e os erros vazavam `error.message` cru da exceção.
-    // "Confirmado" não tem texto aqui: abre a tela de confirmação, não banner.
     val joinWaitlistSuccess: (position: Int) -> String,
     val joinAlreadyJoined: String,
     val joinError: String,
@@ -67,18 +57,16 @@ internal data class MatchDetailStrings(
     val cancelError: String,
     val loadError: String,
 
-    // Aviso de mudança de status da partida.
     val statusChangedToFull: String,
     val statusChangedToFinished: String,
     val statusChangedToCancelled: String,
 
-    // Fallback do título usado no aviso global de promoção quando o esporte
-    // ainda não carregou — nunca um nome de enum.
     val unknownMatchTitle: String,
 )
 
 internal val matchDetailStringsEn = MatchDetailStrings(
     title = "Match details",
+    loadingLabel = "Loading the match…",
     backContentDescription = "Back",
     dismissContentDescription = "Dismiss",
 
@@ -142,6 +130,7 @@ internal val matchDetailStringsEn = MatchDetailStrings(
 
 internal val matchDetailStringsPt = MatchDetailStrings(
     title = "Detalhes da partida",
+    loadingLabel = "Carregando a partida…",
     backContentDescription = "Voltar",
     dismissContentDescription = "Dispensar",
 

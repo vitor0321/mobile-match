@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
@@ -30,17 +29,11 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.domain.model.MatchRole
 import com.walcker.games.features.ui.search.SearchStep
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * The user's own matches, split into Ativas and Passadas.
- *
- * The private `EmptyState` this file carried is gone — it existed only because the
- * design system version could not take a subtitle. It can now, so there is one
- * empty state in the app instead of three.
- */
 internal class MyMatchesStep : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -95,7 +88,7 @@ internal class MyMatchesStep : Screen {
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator()
+                        CedarLoading(contentDescription = strings.loadingLabel)
                     }
                     return@Scaffold
                 }
@@ -105,7 +98,6 @@ internal class MyMatchesStep : Screen {
                     EmptyState(
                         message = if (isActiveTab) strings.emptyActive else strings.emptyPast,
                         supportingText = if (isActiveTab) strings.emptyActiveSubtitle else null,
-                        // An empty state that only says "nothing here" is a dead end.
                         actionLabel = if (isActiveTab) strings.emptyActiveAction else null,
                         onAction = if (isActiveTab) {
                             { navigator.push(SearchStep()) }

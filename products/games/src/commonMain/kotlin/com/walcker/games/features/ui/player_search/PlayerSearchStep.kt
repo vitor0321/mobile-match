@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,14 +33,12 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.player_details.PlayerDetailsStep
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.CedarSearchField
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * Player search — find other players by name, rating and sport.
- */
 internal class PlayerSearchStep : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -129,7 +126,7 @@ internal class PlayerSearchStep : Screen {
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator()
+                        CedarLoading(contentDescription = strings.loadingLabel)
                     }
 
                     state.errorMessage != null -> EmptyState(
@@ -141,7 +138,6 @@ internal class PlayerSearchStep : Screen {
                         modifier = Modifier.fillMaxSize(),
                     )
 
-                    // Nothing typed yet. Not the same as "we looked and found nobody".
                     state.isIdle -> EmptyState(
                         message = strings.emptySearchPrompt,
                         modifier = Modifier.fillMaxSize(),
@@ -160,8 +156,6 @@ internal class PlayerSearchStep : Screen {
                         ),
                         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {
-                        // The list may be missing people the query never read. Say so
-                        // rather than let it look complete.
                         if (state.reachedLimit) {
                             item(key = "reached-limit") {
                                 Text(

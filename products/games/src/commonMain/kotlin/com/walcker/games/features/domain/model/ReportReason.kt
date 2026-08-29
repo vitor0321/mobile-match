@@ -1,11 +1,5 @@
 package com.walcker.games.features.domain.model
 
-/**
- * Why a player is being reported.
- *
- * [id] is the wire contract with `functions/src/moderation.ts` — a report
- * already stored carries it, so ids may be added but never renamed.
- */
 internal enum class ReportReason(val id: String) {
     NO_SHOW("no_show"),
     LATE("late"),
@@ -17,10 +11,6 @@ internal enum class ReportReason(val id: String) {
     DANGEROUS_PLAY("dangerous_play"),
     FAKE_PROFILE("fake_profile"),
 
-    /**
-     * Without a generic option people pick the closest wrong reason just to be
-     * able to report, and the reason statistics become noise.
-     */
     OTHER("other"),
     ;
 

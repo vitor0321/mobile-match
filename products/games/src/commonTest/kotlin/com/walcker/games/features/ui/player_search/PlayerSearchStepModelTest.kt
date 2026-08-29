@@ -72,7 +72,6 @@ class PlayerSearchStepModelTest {
         val repository = FakePlayerRepository(searchResult = results("Ana Souza"))
         val model = buildModel(repository)
 
-        // Three keystrokes in quick succession.
         model.onEvent(PlayerSearchEvents.QueryChanged("a"))
         advanceTimeBy(100)
         model.onEvent(PlayerSearchEvents.QueryChanged("an"))
@@ -106,7 +105,6 @@ class PlayerSearchStepModelTest {
         model.onEvent(PlayerSearchEvents.QueryChanged("  ana  "))
         advanceUntilIdle()
 
-        // The query is part of the filters so it is part of the cache key.
         assertEquals("ana", repository.searchCalls.single().query)
     }
 

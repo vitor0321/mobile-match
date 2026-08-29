@@ -15,8 +15,6 @@ class ModerationLevelTest {
 
     @Test
     fun `an unknown or missing level reads as unrestricted`() {
-        // The client never enforces a block — it only explains one. Failing open
-        // here is right: the server is the gate.
         assertEquals(ModerationLevel.NONE, ModerationLevel.fromId(null))
         assertEquals(ModerationLevel.NONE, ModerationLevel.fromId("shadowbanned"))
     }

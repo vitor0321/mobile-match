@@ -20,20 +20,6 @@ import androidx.compose.ui.semantics.semantics
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * Moldura comum de entrar, criar conta e recuperar senha.
- *
- * As três telas eram o mesmo `Scaffold` + `Column` copiado, com os mesmos números
- * soltos (24.dp, 16.dp, 12.dp) escritos três vezes. Agora o espaçamento vem dos
- * tokens e mora num lugar só.
- *
- * Duas coisas que faltavam nas três:
- * - **Rolagem.** Num aparelho baixo, com o teclado aberto, o campo de senha e o
- *   botão ficavam fora da tela sem jeito de chegar até eles. [verticalScroll] mais
- *   [imePadding] resolvem.
- * - **Fundo.** As telas usavam `colorScheme.background`, que é branco puro; o resto
- *   do app já roda sobre o canvas levemente azulado.
- */
 @Composable
 internal fun AuthScaffold(
     title: String,
@@ -71,14 +57,6 @@ internal fun AuthScaffold(
     }
 }
 
-/**
- * Mensagem de resultado do formulário — o erro do login, o "e-mail enviado" da
- * recuperação.
- *
- * `liveRegion` é o que faltava: a mensagem aparecia calada para um leitor de tela,
- * então quem não enxerga tocava em "Entrar", nada acontecia na leitura e não havia
- * como saber por quê.
- */
 @Composable
 internal fun AuthFormMessage(
     text: String,

@@ -2,7 +2,6 @@ package com.walcker.identity.strings
 
 internal data class PaywallStrings(
     val title: String,
-    /** Nome acessível do botão voltar da barra de topo. */
     val back: String,
     val headline: String,
     val description: String,
@@ -41,11 +40,6 @@ internal data class PaywallStrings(
     val yearlyPeriodLabel: String,
 )
 
-// ATENÇÃO: os benefícios do Match Pro ainda não estão definidos (decisão D27 —
-// assinatura e limite de plano estão fora do MVP). O texto abaixo é deliberadamente
-// genérico: o anterior era do Lexis e prometia números Strong's e versículos
-// favoritos, coisas que este produto não tem. Prometer benefício que não existe
-// numa tela de cobrança é pior do que não detalhar. Trocar quando D27 for decidida.
 internal val paywallStringsEn = PaywallStrings(
     title = "Match Pro",
     back = "Back",

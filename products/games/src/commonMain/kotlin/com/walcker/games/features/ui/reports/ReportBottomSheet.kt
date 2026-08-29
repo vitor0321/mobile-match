@@ -32,21 +32,6 @@ import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * Modal for reporting a player from a match.
- *
- * A report needs the match it happened in — the server refuses a report between
- * people who never played together — so this is reachable from the match detail
- * screen, not from a profile.
- *
- * Reason and free text are local to the sheet: they are a draft until sent, and
- * hoisting them into the screen state would mean threading two more events through
- * the model for no gain.
- *
- * The reasons were full-width `FilterChip`s. A chip is a filter you can combine;
- * this is one choice out of five, so they are radio rows now — which is also how a
- * screen reader will announce them.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReportBottomSheet(
@@ -65,8 +50,6 @@ internal fun ReportBottomSheet(
         shape = CedarTokens.radius.sheet,
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        // The id, not the enum: rememberSaveable's default saver has no support
-        // for enum values in Compose Multiplatform.
         var selectedReasonId by rememberSaveable { mutableStateOf<String?>(null) }
         var details by rememberSaveable { mutableStateOf("") }
         val selectedReason = selectedReasonId?.let { ReportReason.fromId(it) }
@@ -105,8 +88,6 @@ internal fun ReportBottomSheet(
                     ) {
                         RadioButton(
                             selected = isSelected,
-                            // The row owns the click; a second target here would
-                            // make the same choice tappable twice.
                             onClick = null,
                             enabled = !isSubmitting,
                         )
@@ -135,8 +116,6 @@ internal fun ReportBottomSheet(
             CedarPrimaryButton(
                 text = strings.submit,
                 onClick = { selectedReason?.let { onSubmit(it, details.trim()) } },
-                // No reason, no report: sending would only produce a record
-                // moderation cannot act on.
                 enabled = selectedReason != null,
                 loading = isSubmitting,
             )

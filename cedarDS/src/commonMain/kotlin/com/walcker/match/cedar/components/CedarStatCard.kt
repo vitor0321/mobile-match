@@ -18,14 +18,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.walcker.match.cedar.tokens.CedarTokens
 import kotlinx.collections.immutable.ImmutableList
 
-/**
- * One statistic on the profile screen.
- *
- * @param accessibilityLabel read as a single phrase ("42 partidas jogadas") instead
- *   of the number and the label as two disconnected announcements.
- * @param highlighted paints the value in the availability green — reserved for the
- *   one number that is the point of the row, like the average rating.
- */
 @Immutable
 public data class CedarStat(
     val value: String,
@@ -34,9 +26,6 @@ public data class CedarStat(
     val highlighted: Boolean = false,
 )
 
-/**
- * One number and its label — "42 / Partidas", "68% / Vitórias", "4.8 / Nota média".
- */
 @Composable
 public fun CedarStatCard(
     stat: CedarStat,
@@ -79,12 +68,6 @@ public fun CedarStatCard(
     }
 }
 
-/**
- * The row of stat cards from the profile screen — every card gets the same width.
- *
- * A weighted [Row] rather than a grid: three is the designed count, and a grid here
- * would add a nested-scroll trap for nothing.
- */
 @Composable
 public fun CedarStatRow(
     stats: ImmutableList<CedarStat>,

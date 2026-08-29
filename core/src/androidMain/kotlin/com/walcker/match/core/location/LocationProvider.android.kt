@@ -89,13 +89,7 @@ private class AndroidLocationProvider(
         return result ?: throw LocationError.Timeout
     }
 
-    // The permission flow needs to launch a system dialog through the Activity.
-    // CurrentActivityHolder provides the current Activity reference.
     private suspend fun requestPermissionViaActivity(): Boolean {
-        // For now we rely on the application having requested the permission
-        // through the standard Android permission launcher in MainActivity.
-        // If we need a runtime dialog from background, we can add a
-        // PermissionRequester Activity later.
         return false
     }
 }

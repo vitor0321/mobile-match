@@ -144,7 +144,7 @@ class ProStateHolderImplTest {
     fun `When user is authenticated and has active cached registration date checkTrialStatus should return Active`() = runTest {
         val cache = FakeProStateCache()
         val currentDay = com.walcker.identity.features.data.pro.currentDayKey()
-        cache.saveRegistrationDate("uid-1", currentDay) // 0 days diff
+        cache.saveRegistrationDate("uid-1", currentDay)
 
         val holder = ProStateHolderImpl(
             sessionHolder = FakeSessionHolder(initialUser = userSession),
@@ -160,7 +160,6 @@ class ProStateHolderImplTest {
     @Test
     fun `When user is authenticated and has expired cached registration date checkTrialStatus should return Expired`() = runTest {
         val cache = FakeProStateCache()
-        // Simulate a date 5 days ago (current date is "yyyy-MM-dd", formatted by subtracting days in milliseconds)
         val creationMillis = System.now().toEpochMilliseconds() - 5 * 24 * 60 * 60 * 1000L
         val dateStr = com.walcker.identity.features.data.pro.formatEpochMillisToDayKey(creationMillis)
         cache.saveRegistrationDate("uid-1", dateStr)
@@ -198,7 +197,7 @@ class ProStateHolderImplTest {
     @Test
     fun `When user has no cached date and no Firebase creationTimestamp checkTrialStatus should return OfflineAndNoCachedDate`() = runTest {
         val holder = ProStateHolderImpl(
-            sessionHolder = FakeSessionHolder(initialUser = userSession), // creationTimestamp = null
+            sessionHolder = FakeSessionHolder(initialUser = userSession),
             billingClient = FakeBillingClient(),
             cache = FakeProStateCache(),
             ioDispatcher = StandardTestDispatcher(testScheduler),

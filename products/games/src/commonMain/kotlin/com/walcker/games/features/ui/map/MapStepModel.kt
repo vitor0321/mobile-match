@@ -19,9 +19,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * State for the map screen.
- */
 internal data class MapState(
     val pins: List<MapPin> = emptyList(),
     val nearbyMatches: List<NearbyMatch> = emptyList(),
@@ -29,31 +26,13 @@ internal data class MapState(
     val userLocation: MapCamera? = null,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
-    /**
-     * A permissão de localização foi negada, ou o GPS não respondeu.
-     *
-     * Precisa ser estado, e não silêncio: sem posição a lista de "próximas"
-     * fica vazia para sempre e a câmera fica parada na Paulista. Antes disso
-     * aparecer aqui, a tela não tinha como dizer se não havia partida perto ou
-     * se ela simplesmente não sabia onde o usuário estava.
-     */
     val locationUnavailable: Boolean = false,
 ) {
     internal companion object {
-        // São Paulo center (Av. Paulista area) until the user's GPS resolves.
         val DEFAULT_CAMERA = MapCamera(lat = -23.5505, lng = -46.6333, zoom = 13f)
     }
 }
 
-/**
- * ScreenModel for the map view.
- *
- * Reuses the same cached match stream as the list ([GameRepository.observeMatches])
- * and applies the same sport filter from [GamesPreferences], so map and list stay
- * consistent. Each match becomes a [MapPin].
- *
- * Also requests GPS permission and tracks user location to center the map.
- */
 internal class MapStepModel(
     private val repository: GameRepository,
     private val preferences: GamesPreferences,
@@ -64,16 +43,6 @@ internal class MapStepModel(
     private val _state = MutableStateFlow(MapState())
     val state: StateFlow<MapState> = _state.asStateFlow()
 
-    /**
-     * Posição do usuário como fluxo próprio.
-     *
-     * Antes o `combine` das partidas incluía o `_state` inteiro só para ler a
-     * localização — e o `onEach` dele escrevia de volta no `_state`. Isso é um
-     * laço: toda escrita de estado, inclusive ligar e desligar o `isRefreshing`
-     * do pull-to-refresh, remontava a lista de pinos e recalculava todas as
-     * distâncias. Terminava só porque `MapPin` é data class e o StateFlow
-     * conflaciona valor igual — dependia de sorte, não de desenho.
-     */
     private val userCoordinates = MutableStateFlow<Coordinates?>(null)
 
     init {
@@ -91,8 +60,6 @@ internal class MapStepModel(
         ) { sport, games, userCoords ->
             val filtered = games.filter { game -> sport == null || game.sport == sport }
 
-            // Sem posição não existe "próxima": ordenar por uma distância que
-            // não dá para medir seria inventar ordem.
             val nearby = if (userCoords == null) {
                 emptyList()
             } else {
@@ -129,11 +96,6 @@ internal class MapStepModel(
         }
     }
 
-    /**
-     * Nova tentativa de localizar, para quando a pessoa concede a permissão nos
-     * ajustes e volta para a tela. Sem isto, negar uma vez deixava o mapa cego
-     * até o app ser reiniciado.
-     */
     fun onRetryLocation() {
         requestLocationPermissionAndTrack()
     }
@@ -166,9 +128,6 @@ internal class MapStepModel(
                     }
                 }
                 .onFailure {
-                    // Permissão concedida mas o GPS não resolveu: para a tela é
-                    // a mesma coisa que negar — ela continua sem saber onde
-                    // desenhar o usuário.
                     _state.update { it.copy(locationUnavailable = true) }
                 }
         }

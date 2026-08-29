@@ -17,17 +17,13 @@ class DistanceTest {
 
     @Test
     fun `known distances`() {
-        // These values match the Postgres `distance_km` function and the
-        // `haversine` in `broadcast.functions.ts` (R = 6371).
         val equator = Coordinates(lat = 0.0, lng = 0.0)
         val ninetyEast = Coordinates(lat = 0.0, lng = 90.0)
         val d = distanceKm(equator, ninetyEast)
-        // 1/4 of equatorial circumference = 10007.8 km
         assertTrue(d > 10000.0 && d < 10020.0)
 
         val pole = Coordinates(lat = 90.0, lng = 0.0)
         val d2 = distanceKm(equator, pole)
-        // 1/4 of meridional circumference ≈ 10002 km
         assertTrue(d2 > 9990.0 && d2 < 10010.0)
     }
 }

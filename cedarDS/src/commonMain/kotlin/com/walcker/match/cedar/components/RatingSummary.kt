@@ -19,18 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.collections.immutable.ImmutableList
 
-/**
- * Rating overview: average on the left, per-star distribution bars on the right.
- *
- * Fully stateless and string-free — every label is formatted by the caller's
- * strings layer, so this component stays locale-agnostic.
- *
- * @param averageLabel already-formatted average (e.g. `"4,8"`)
- * @param totalLabel already-formatted count (e.g. `"128 avaliações"`)
- * @param distribution counts per star, ascending: index `0` is 1 star,
- *        index `4` is 5 stars. Must have exactly [STAR_LEVELS] entries.
- * @param starCountLabel renders the row label for a star level (e.g. `5` -> `"5"`)
- */
 @Composable
 public fun RatingSummary(
     average: Float,
@@ -73,7 +61,6 @@ public fun RatingSummary(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            // Highest star level first, the way review sections are usually read.
             for (stars in STAR_LEVELS downTo 1) {
                 DistributionRow(
                     label = starCountLabel(stars),
@@ -137,5 +124,4 @@ private fun DistributionRow(
     }
 }
 
-/** Number of discrete star levels a rating can take (1..5). */
 public const val STAR_LEVELS: Int = 5

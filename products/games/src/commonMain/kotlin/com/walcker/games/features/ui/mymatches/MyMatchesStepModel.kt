@@ -52,9 +52,6 @@ internal class MyMatchesStepModel(
 
             val session = sessionHolder.currentUser.first()
             if (session == null) {
-                // Not logged in: show an empty state instead of querying for a
-                // hardcoded user. The auth gate usually prevents this, but keep
-                // the defensive branch so the screen degrades gracefully.
                 _state.update { it.copy(isLoading = false, active = emptyList(), past = emptyList()) }
                 return@launch
             }
@@ -101,11 +98,6 @@ internal class MyMatchesStepModel(
         }
     }
 
-    /**
-     * Returns the current epoch seconds. Expects an expect/actual override in
-     * commonTest etc.; default implementation delegates to [kotlin.time.Clock]
-     * which is part of stdlib since Kotlin 1.9.
-     */
     private fun getCurrentEpochSeconds(): Long =
         kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000L
 }

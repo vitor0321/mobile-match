@@ -17,27 +17,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
 
-/**
- * A single match in a list.
- *
- * Rebuilt to match the redesign, and the shape changed in two ways that matter:
- *
- * - **The whole card is the target** — once [onClick] is wired. The old version put
- *   an "ENTRAR NO JOGO" button inside every row, which turned each list into a wall
- *   of competing CTAs while the card itself did nothing. The card should open the
- *   match; joining belongs on the detail screen, where the user can see who is
- *   already in.
- * - **The sport is not the headline.** It used to be the first line, in caps. The
- *   venue and the time are what people scan for — the sport is already filtered.
- *
- * Both [onClick] and [joinButtonLabel] are optional on purpose. Neither list screen
- * can navigate to a match detail yet, so this lands with the join button still in
- * the card; wiring `onClick` and dropping the button is the next step, not this one.
- *
- * @param metaLabel one line of context: "Futebol · Vila Mariana".
- * @param slotsLabel already pluralised by the caller: "2 vagas", "Lotado".
- * @param openSlots drives the badge colour, not its text.
- */
 @Composable
 public fun MatchCard(
     venueName: String,
@@ -54,8 +33,6 @@ public fun MatchCard(
     val shape = CedarTokens.radius.mdShape
     val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     val elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat)
-    // One announcement per card instead of five, so a screen reader user hears
-    // "Arena Paulista, hoje 20:30, 2 vagas" and moves on.
     val cardModifier = modifier
         .fillMaxWidth()
         .semantics(mergeDescendants = true) { }

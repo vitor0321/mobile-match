@@ -43,13 +43,6 @@ internal class ForgotPasswordStep : Screen {
     }
 }
 
-/**
- * Recuperação de senha: um campo, um botão.
- *
- * Depois do envio bem-sucedido o formulário sai da tela e fica só a confirmação com
- * o caminho de volta. Antes o campo e o botão continuavam ali, do mesmo jeito, e
- * nada dizia que a tarefa tinha acabado — dava para reenviar sem perceber.
- */
 @Composable
 internal fun ForgotPasswordScreen(
     state: ForgotPasswordState,

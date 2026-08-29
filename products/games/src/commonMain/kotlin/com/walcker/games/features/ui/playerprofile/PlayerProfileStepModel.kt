@@ -11,9 +11,12 @@ import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.SessionHolder
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,10 +33,9 @@ internal class PlayerProfileStepModel(
     private val _state = MutableStateFlow(PlayerProfileState())
     val state: StateFlow<PlayerProfileState> = _state.asStateFlow()
 
-    /**
-     * Guardado porque o toggle precisa do uid a cada toque, e a sessão só é
-     * lida no `collect` do init.
-     */
+    private val _effects = Channel<PlayerProfileEffect>(Channel.BUFFERED)
+    val effects: Flow<PlayerProfileEffect> = _effects.receiveAsFlow()
+
     private var currentUserId: String? = null
 
     init {
@@ -44,16 +46,26 @@ internal class PlayerProfileStepModel(
                     _state.update { it.copy(userName = session.displayName, userEmail = session.email) }
                     loadStats(session.uid)
                     observeAvailabilityOf(session.uid)
+                } else {
+                     currentUserId = null
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            userName = null,
+                            userEmail = null,
+                            matchesOrganized = 0,
+                            matchesParticipated = 0,
+                            ratings = emptyList(),
+                            averageRating = 0f,
+                            totalRatings = 0,
+                            isAvailable = false,
+                        )
+                    }
                 }
             }
         }
     }
 
-    /**
-     * O switch reflete o documento, não o último toque: se a gravação falhar,
-     * ou se a pessoa mudar a disponibilidade em outro aparelho, o snapshot é
-     * quem manda. É o que evita o switch mentir sobre o estado real.
-     */
     private fun observeAvailabilityOf(userId: String) {
         screenModelScope.launch {
             observeAvailability(userId).collect { result ->
@@ -65,12 +77,14 @@ internal class PlayerProfileStepModel(
     }
 
     private fun changeAvailability(isAvailable: Boolean) {
-        val userId = currentUserId ?: return
+        val userId = currentUserId
+        if (userId == null) {
+            screenModelScope.launch { _effects.send(PlayerProfileEffect.RequireLogin) }
+            return
+        }
         val strings = stringsHolder.resolveStringsOrDefault().playerProfile
 
         screenModelScope.launch {
-            // Otimista: o switch acompanha o dedo. O observe acima corrige se a
-            // gravação não passar.
             _state.update {
                 it.copy(
                     isAvailable = isAvailable,
@@ -100,8 +114,6 @@ internal class PlayerProfileStepModel(
             PlayerProfileEvent.Refresh -> {
                 val currentState = _state.value
                 if (currentState.userName != null) {
-                    // Re-derive userId from current state's email/name (not ideal but safe)
-                    // Better: track uid in state
                 }
             }
             PlayerProfileEvent.DismissError -> _state.update { it.copy(errorMessage = null) }
@@ -116,8 +128,6 @@ internal class PlayerProfileStepModel(
         screenModelScope.launch {
             logoutService.logout()
                 .onSuccess {
-                    // Logout succeeded. The MatchScaffold will detect
-                    // isAuthenticated=false and show the login screen.
                 }
                 .onFailure { error ->
                     val message = error.message ?: "Erro ao fazer logout"
@@ -131,11 +141,9 @@ internal class PlayerProfileStepModel(
             _state.update { it.copy(isLoading = true, errorMessage = null) }
             val nowSeconds = getCurrentEpochSeconds()
 
-            // Load matches and ratings in parallel
-            val matchesResult = getMyMatches(userId, nowSeconds)
+             val matchesResult = getMyMatches(userId, nowSeconds)
             val ratingsResult = getUserRatings(userId, limit = 50)
 
-            // Process matches
             matchesResult
                 .onSuccess { result ->
                     val allMatches = result.active + result.past
@@ -146,7 +154,6 @@ internal class PlayerProfileStepModel(
                         match.role == com.walcker.games.features.domain.model.MatchRole.PARTICIPANT
                     }
 
-                    // Process ratings
                     ratingsResult
                         .onSuccess { ratings ->
                             val avgRating = if (ratings.isNotEmpty()) {
@@ -167,7 +174,6 @@ internal class PlayerProfileStepModel(
                             }
                         }
                         .onFailure { error ->
-                            // Ratings failed but matches loaded successfully
                             val message = (error as? GamesError)?.message ?: error.message ?: "Erro ao carregar avaliações"
                             _state.update {
                                 it.copy(
@@ -186,11 +192,6 @@ internal class PlayerProfileStepModel(
         }
     }
 
-    /**
-     * Returns the current epoch seconds. Expects an expect/actual override in
-     * commonTest etc.; default implementation delegates to [kotlin.time.Clock]
-     * which is part of stdlib since Kotlin 1.9.
-     */
     private fun getCurrentEpochSeconds(): Long =
         kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000L
 }

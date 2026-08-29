@@ -9,30 +9,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * What a tag means, which is the only thing a call site should have to decide.
- */
 public enum class CedarTagTone {
-    /** Neutral fact: a role, a category. */
     Neutral,
 
-    /** Something the user should notice but not act on: "Aberta". */
     Info,
 
-    /** There are slots left. Same green as [SlotBadge], same meaning. */
     Available,
 
-    /** Cancelled, full, expired. */
     Danger,
 }
 
-/**
- * A small non-interactive label: role badges, match status, category chips.
- *
- * Not a chip — chips are tappable, and every one of these is read-only. The app
- * used a disabled `AssistChip` for the role badge, which announces itself to a
- * screen reader as a disabled button and invites a tap that does nothing.
- */
 @Composable
 public fun CedarTag(
     label: String,

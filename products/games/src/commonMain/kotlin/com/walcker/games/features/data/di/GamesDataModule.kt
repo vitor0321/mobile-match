@@ -110,7 +110,6 @@ internal val gamesDataModule = module {
     factory { SubmitRatingUseCase(ratingRepository = get()) }
     factory { GetUserRatingsUseCase(ratingRepository = get()) }
 
-    // Player search (Phase 5)
     single<PlayerSource> {
         createPlayerSource(
             firestore = get<FirestoreClient>(),
@@ -125,8 +124,6 @@ internal val gamesDataModule = module {
     factory<GetPlayerDetailsUseCase> { GetPlayerDetailsUseCaseImpl(repository = get()) }
     factory<GetPlayerRatingsUseCase> { GetPlayerRatingsUseCaseImpl(repository = get()) }
 
-    // Disponibilidade — o toggle da regra B5, que decide quem o
-    // `selectRecipients` das Functions avisa de partida nova.
     single<AvailabilitySource> { FirestoreAvailabilitySource(firestore = get<FirestoreClient>()) }
     single<AvailabilityRepository> { AvailabilityRepositoryImpl(source = get()) }
     factory<ObserveAvailabilityUseCase> { ObserveAvailabilityUseCaseImpl(repository = get()) }

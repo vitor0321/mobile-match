@@ -4,6 +4,7 @@ import com.walcker.match.core.format.formatDecimal
 
 internal data class PlayerSearchStrings(
     val title: String,
+    val loadingLabel: String,
     val subtitle: String,
     val placeholder: String,
     val emptySearchPrompt: String,
@@ -25,6 +26,7 @@ internal data class PlayerSearchStrings(
 
 internal val playerSearchStringsEn = PlayerSearchStrings(
     title = "Find Players",
+    loadingLabel = "Loading players…",
     subtitle = "Search by name, rating, or sport",
     placeholder = "Search by player name",
     emptySearchPrompt = "Search for a player to get started",
@@ -48,6 +50,7 @@ internal val playerSearchStringsEn = PlayerSearchStrings(
 
 internal val playerSearchStringsPt = PlayerSearchStrings(
     title = "Encontrar Jogadores",
+    loadingLabel = "Carregando jogadores…",
     subtitle = "Pesquise por nome, avaliação ou esporte",
     placeholder = "Buscar por nome do jogador",
     emptySearchPrompt = "Busque um jogador para começar",

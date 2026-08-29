@@ -8,15 +8,6 @@ import com.walcker.games.strings.SearchStrings
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
-/**
- * Filters for advanced game search.
- *
- * @param startDateMs Search from this date (milliseconds since epoch). Null = no minimum.
- * @param endDateMs Search until this date (milliseconds since epoch). Null = no maximum.
- * @param sports Selected sports to filter by. Empty = all sports.
- * @param minPrice Minimum price filter (null = no minimum).
- * @param maxPrice Maximum price filter (null = no maximum).
- */
 internal data class SearchFilters(
     val startDateMs: Long? = null,
     val endDateMs: Long? = null,
@@ -26,9 +17,7 @@ internal data class SearchFilters(
 )
 
 internal data class SearchState(
-    /** Textos da tela, resolvidos no model a partir do holder injetado por DI. */
     val strings: SearchStrings = PtBrGamesStrings.search,
-    /** Textos do card de partida, compartilhados com a home. */
     val cardStrings: GameListStrings = PtBrGamesStrings.gameList,
     val query: String = "",
     val filters: SearchFilters = SearchFilters(),

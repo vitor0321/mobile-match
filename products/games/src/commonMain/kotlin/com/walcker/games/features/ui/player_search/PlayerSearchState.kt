@@ -12,14 +12,8 @@ internal data class PlayerSearchState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val showFiltersPanel: Boolean = false,
-    /**
-     * The search read as many profiles as it is allowed to, so matching players
-     * may exist beyond them. Shown as a hint to narrow the search — pretending
-     * the list is complete would be the actual bug.
-     */
     val reachedLimit: Boolean = false,
 ) {
-    /** True while nothing has been typed and no filter is active. */
     val isIdle: Boolean
         get() = query.isBlank() && filters.withoutQuery() == PlayerSearchFilters()
 }

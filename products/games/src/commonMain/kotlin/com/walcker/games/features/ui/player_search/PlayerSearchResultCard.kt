@@ -22,13 +22,6 @@ import com.walcker.match.cedar.tokens.CedarTokens
 
 private const val MAX_SPORTS_ON_CARD = 3
 
-/**
- * A player in the search results: avatar, name, rating, favourite sports.
- *
- * The avatar was a grey circle with nothing in it when the player had no photo —
- * which is most of them. [PlayerAvatar] falls back to initials, so the row
- * identifies someone either way.
- */
 @Composable
 internal fun PlayerSearchResultCard(
     player: PlayerSearchResult,
@@ -86,8 +79,6 @@ internal fun PlayerSearchResultCard(
                     )
                 }
 
-                // Favourite sports. The match counter that used to sit here was
-                // removed with the fields that never had a writer.
                 if (player.favoriteSports.isNotEmpty()) {
                     Text(
                         text = player.favoriteSports

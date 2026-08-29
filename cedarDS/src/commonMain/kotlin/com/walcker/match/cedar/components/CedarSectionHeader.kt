@@ -13,15 +13,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * "Partidas perto de você" / "3 vagas recomendadas" — the two-line section header
- * the redesign uses above every list.
- *
- * The title is marked as a heading for accessibility, which is what lets a screen
- * reader user jump between sections instead of swiping through every card.
- *
- * @param action optional trailing link, e.g. "Ver todas".
- */
 @Composable
 public fun CedarSectionHeader(
     title: String,
@@ -56,13 +47,6 @@ public fun CedarSectionHeader(
     }
 }
 
-/**
- * The screen title: "Buscar partidas", "Meu perfil".
- *
- * Bigger than [CedarSectionHeader] and meant to scroll away with the content,
- * which is how the redesign handles titles — there is no opaque app bar on the
- * list screens.
- */
 @Composable
 public fun CedarScreenTitle(
     title: String,

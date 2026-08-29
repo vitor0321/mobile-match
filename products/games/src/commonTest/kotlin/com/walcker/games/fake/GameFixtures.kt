@@ -4,10 +4,6 @@ import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Sport
 
-/**
- * Partida de teste com valores neutros. Só o que o teste declara importa; o
- * resto existe para o construtor fechar.
- */
 internal fun game(
     id: String = "match-1",
     startsAtSeconds: Long = 0L,

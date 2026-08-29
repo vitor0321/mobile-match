@@ -28,17 +28,8 @@ private val IndicatorSize = 20.dp
 private val IndicatorDotSize = 8.dp
 private val IndicatorBorderWidth = 2.dp
 
-/** Quanto do contorno vaza para o fundo da faixa de estado, no fim do cartão. */
 private const val HINT_BACKGROUND_ALPHA = 0.12f
 
-/**
- * Um plano da assinatura.
- *
- * O cartão era `clickable`, sem papel: para um leitor de tela os planos eram botões
- * genéricos e nada dizia qual estava escolhido — a única pista era a faixa de texto
- * no fim do cartão. Agora é [Role.RadioButton] com `selectable`, que é o que ele de
- * fato é: uma opção entre poucas.
- */
 @Composable
 internal fun OfferingCard(
     offering: ProductOffering,
@@ -119,12 +110,6 @@ internal fun OfferingCard(
     }
 }
 
-/**
- * O rádio desenhado à mão.
- *
- * `contentDescription` fica nulo de propósito: quem anuncia o estado é o
- * `selectable` do cartão inteiro. Um rótulo aqui repetiria "selecionado" duas vezes.
- */
 @Composable
 private fun SelectionIndicator(
     isSelected: Boolean,

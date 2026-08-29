@@ -40,141 +40,71 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * State for match detail screen.
- */
 internal data class MatchDetailState(
     val match: Game? = null,
     val participants: ParticipantsSummary? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    /**
-     * Set when the logged-in user was just promoted from waitlist to confirmed.
-     * The UI uses this to show a transient banner ("Você foi promovido!").
-     */
     val justPromoted: Boolean = false,
-    // Join match state
     val isJoining: Boolean = false,
     val joinOutcome: JoinMatchOutcome? = null,
     val successMessage: String? = null,
-    // Leave/Cancel states
     val isLeavingMatch: Boolean = false,
     val isCancellingMatch: Boolean = false,
     val showLeaveConfirmDialog: Boolean = false,
     val showCancelConfirmDialog: Boolean = false,
-    // Real-time status change notifications
     val statusChangeMessage: String? = null,
-    // Rating UI state
     val showRatingSheet: Boolean = false,
-    val selectedPlayerForRating: Pair<String, String>? = null, // userId to displayName
+    val selectedPlayerForRating: Pair<String, String>? = null,
     val isSubmittingRating: Boolean = false,
-    /**
-     * Failure of the rating submission only. Kept apart from [errorMessage]
-     * because that one replaces the whole screen with a retry page — a review
-     * that did not go through must not blank the match the user is looking at.
-     */
     val ratingErrorMessage: String? = null,
-    // Report UI state
     val showReportSheet: Boolean = false,
-    val selectedPlayerForReport: Pair<String, String>? = null, // userId to displayName
+    val selectedPlayerForReport: Pair<String, String>? = null,
     val isSubmittingReport: Boolean = false,
     val reportErrorMessage: String? = null,
-    /**
-     * Who the signed-in user is, so the participant list can hide "report" on
-     * their own row. Null until the session resolves.
-     */
     val currentUserId: String? = null,
-    /**
-     * Libera os botões de avaliar. Calculado pelo relógio (ver [Game.isOver]),
-     * não por `status == FINISHED` — esse status nunca é escrito, e enquanto a
-     * tela olhava para ele o botão não aparecia nunca.
-     *
-     * Reflete as três condições que o servidor checa em `submitPlayerRating`:
-     * a partida acabou, não foi cancelada, e quem está olhando jogou.
-     */
     val canRate: Boolean = false,
-    /**
-     * A partida já passou do fim, pelo relógio. Separado de [canRate] porque
-     * fecha entrar/sair para qualquer um que olhe a tela, não só para quem jogou.
-     */
     val isMatchOver: Boolean = false,
 )
 
-/**
- * Events for match detail screen.
- */
 internal sealed interface MatchDetailEvent {
     data object Retry : MatchDetailEvent
     data object Dismiss : MatchDetailEvent
-    /** Dismisses the "you were promoted" banner. */
     data object DismissPromotion : MatchDetailEvent
-    /** Joins the match. */
     data object JoinMatch : MatchDetailEvent
-    /** Dismisses the success message. */
     data object DismissSuccess : MatchDetailEvent
-    /** Dismisses the status change notification. */
     data object DismissStatusChange : MatchDetailEvent
-    /** Shows leave match confirmation dialog. */
     data object RequestLeaveMatch : MatchDetailEvent
-    /** Confirms leaving the match. */
     data object ConfirmLeaveMatch : MatchDetailEvent
-    /** Closes leave match confirmation dialog. */
     data object CancelLeaveMatch : MatchDetailEvent
-    /** Shows cancel match confirmation dialog. */
     data object RequestCancelMatch : MatchDetailEvent
-    /** Confirms cancelling the match. */
     data object ConfirmCancelMatch : MatchDetailEvent
-    /** Closes cancel match confirmation dialog. */
     data object CancelCancelMatch : MatchDetailEvent
-    /** Opens rating sheet for a specific player. */
     data class OpenRatingSheet(val userId: String, val displayName: String) : MatchDetailEvent
-    /** Closes rating sheet. */
     data object CloseRatingSheet : MatchDetailEvent
-    /** Submits a rating for a player. */
     data class SubmitRating(
         val rating: Int,
         val comment: String,
         val dimensions: RatingDimensions,
     ) : MatchDetailEvent
-    /** Dismisses the rating failure banner. */
     data object DismissRatingError : MatchDetailEvent
-    /** Opens the report sheet for a specific player. */
     data class OpenReportSheet(val userId: String, val displayName: String) : MatchDetailEvent
-    /** Closes the report sheet. */
     data object CloseReportSheet : MatchDetailEvent
-    /** Sends a report for the selected player. */
     data class SubmitReport(val reason: ReportReason, val details: String) : MatchDetailEvent
-    /** Dismisses the report failure banner. */
     data object DismissReportError : MatchDetailEvent
 }
 
-/**
- * One-shot effects the [MatchDetailStep] consumes on the UI thread.
- *
- * Navegação é efeito, não estado: quem confirma a entrada numa partida é levado
- * à tela de confirmação uma única vez, e reentrar na tela não pode reabri-la.
- */
 internal sealed interface MatchDetailEffect {
-    /** Entrou e foi confirmado — abre a tela de confirmação. */
     data class NavigateToConfirmation(
         val matchId: String,
         val venueName: String,
         val startsAtSeconds: Long,
         val sportLabel: String,
     ) : MatchDetailEffect
+
+    data object RequireLogin : MatchDetailEffect
 }
 
-/**
- * ScreenModel for match detail screen.
- *
- * Subscribes to two live streams:
- * 1. The match document (status, counts) — updates the header/badges live.
- * 2. The participants subcollection — updates the confirmed/waitlist list.
- *
- * Detects when the logged-in user transitions from waitlist to confirmed
- * (someone cancelled, first FIFO was promoted) and emits a [PromotionEvent]
- * via [PromotionCoordinator] so the shell can show a global banner.
- */
 internal class MatchDetailStepModel(
     private val getGameById: GetGameByIdUseCase,
     private val observeMatch: ObserveMatchUseCase,
@@ -189,10 +119,6 @@ internal class MatchDetailStepModel(
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
     private val matchId: String,
-    /**
-     * Relógio injetável para o teste conseguir cruzar o fim da partida sem
-     * esperar. O padrão serve produção, então o Koin não precisa saber disso.
-     */
     private val nowSeconds: () -> Long = {
         kotlin.time.Clock.System.now().toEpochMilliseconds() / 1000L
     },
@@ -204,35 +130,12 @@ internal class MatchDetailStepModel(
     private val _effects = Channel<MatchDetailEffect>(Channel.BUFFERED)
     val effects: Flow<MatchDetailEffect> = _effects.receiveAsFlow()
 
-    /**
-     * Last-known confirmed-set userIds; used to detect promotion transitions.
-     * `null` until the first snapshot lands, so we don't fire on initial load.
-     */
     private var previousConfirmedIds: Set<String>? = null
     private var currentUserId: String? = null
-    /**
-     * Previous match status; used to detect status transitions.
-     * `null` until the first snapshot lands, so we don't fire on initial load.
-     */
     private var previousStatus: MatchStatus? = null
 
-    /**
-     * `match_viewed` é uma por abertura de tela, não uma por emissão. O
-     * documento é observado em tempo real e reemite a cada mudança de contador;
-     * sem esta trava o topo do funil contaria movimento de vaga como
-     * visualização.
-     */
     private var viewTracked = false
 
-    /**
-     * Recalcula [MatchDetailState.canRate] a partir da partida, do usuário e do
-     * relógio. Aplicar em todo ponto que muda `match` ou `currentUserId`.
-     *
-     * Só é reavaliado quando o estado muda: uma partida que termina com a tela
-     * aberta e parada não faz o botão aparecer sozinho. Como o documento da
-     * partida é observado em tempo real, na prática a próxima emissão resolve;
-     * se um dia isso incomodar, o lugar de mexer é aqui, com um ticker.
-     */
     private fun MatchDetailState.withCanRate(): MatchDetailState {
         val game = match ?: return copy(canRate = false, isMatchOver = false)
         val now = nowSeconds()
@@ -333,7 +236,6 @@ internal class MatchDetailStepModel(
                 reason = reason,
                 details = details,
             ).onSuccess { outcome ->
-                // Either way the complaint is on file — only the wording differs.
                 val message = when (outcome) {
                     SubmitReportOutcome.Recorded -> strings.success
                     SubmitReportOutcome.AlreadyReported -> strings.alreadyReported
@@ -347,8 +249,6 @@ internal class MatchDetailStepModel(
                     )
                 }
             }.onFailure {
-                // Sheet stays open so the person can retry without picking the
-                // player and the reason again.
                 _state.update {
                     it.copy(isSubmittingReport = false, reportErrorMessage = strings.error)
                 }
@@ -373,9 +273,6 @@ internal class MatchDetailStepModel(
                 comment = comment,
                 dimensions = dimensions,
             ).onSuccess { outcome ->
-                // Resending is idempotent server-side. From the person who
-                // tapped the button, both outcomes mean "it is registered" —
-                // only the wording differs.
                 val message = when (outcome) {
                     is SubmitRatingOutcome.Recorded -> strings.submitSuccess
                     is SubmitRatingOutcome.AlreadyRated -> strings.alreadyRated
@@ -389,10 +286,6 @@ internal class MatchDetailStepModel(
                     )
                 }
             }.onFailure {
-                // The callable transport drops the HttpsError code, so mapping
-                // the server text to a specific message would be guesswork.
-                // The sheet stays open so the person can retry without
-                // re-selecting the player.
                 _state.update {
                     it.copy(
                         isSubmittingRating = false,
@@ -419,6 +312,11 @@ internal class MatchDetailStepModel(
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
 
         screenModelScope.launch {
+            if (sessionHolder.currentUser.first() == null) {
+                _effects.send(MatchDetailEffect.RequireLogin)
+                return@launch
+            }
+
             _state.update { it.copy(isJoining = true, errorMessage = null) }
             analytics.track(AnalyticsEvent.MatchJoinAttempted(sport))
 
@@ -430,16 +328,11 @@ internal class MatchDetailStepModel(
                             outcome = when (outcome) {
                                 is JoinMatchOutcome.Confirmed -> JoinOutcome.CONFIRMED
                                 is JoinMatchOutcome.Waitlist -> JoinOutcome.WAITLIST
-                                // Reenvio idempotente: quem já estava dentro
-                                // continua confirmado, e contar como falha
-                                // inventaria um buraco no funil que não existe.
                                 is JoinMatchOutcome.AlreadyJoined -> JoinOutcome.CONFIRMED
                             },
                         ),
                     )
                     val message = when (outcome) {
-                        // Confirmado abre a tela de confirmação (efeito abaixo);
-                        // não há banner a mostrar por baixo dela.
                         is JoinMatchOutcome.Confirmed -> null
                         is JoinMatchOutcome.Waitlist -> strings.joinWaitlistSuccess(outcome.position)
                         is JoinMatchOutcome.AlreadyJoined -> strings.joinAlreadyJoined
@@ -554,7 +447,7 @@ internal class MatchDetailStepModel(
     private fun subscribeToMatch() {
         screenModelScope.launch {
             observeMatch(matchId)
-                .catch { /* ignore flow errors - keep last known state */ }
+                .catch { }
                 .collect { result ->
                     result.onSuccess { game ->
                         trackViewOnce(game)
@@ -570,16 +463,13 @@ internal class MatchDetailStepModel(
 
     private fun subscribeToParticipants() {
         screenModelScope.launch {
-            // Resolve the current user once; subsequent emissions use the same id.
             if (currentUserId == null) {
                 currentUserId = sessionHolder.currentUser.first()?.uid
-                // Mirrored into the state so the participant list can hide
-                // "report" on the signed-in user's own row.
                 _state.update { it.copy(currentUserId = currentUserId).withCanRate() }
             }
 
             observeParticipants(matchId)
-                .catch { /* ignore flow errors - keep last known state */ }
+                .catch { }
                 .collect { result ->
                     result.onSuccess { summary ->
                         detectPromotion(summary)
@@ -589,15 +479,9 @@ internal class MatchDetailStepModel(
         }
     }
 
-    /**
-     * Compares the new confirmed-set with the previous one. If the current
-     * user was previously in the waitlist (not in previousConfirmedIds) and
-     * is now in the confirmed set, we have a promotion.
-     */
     private fun detectPromotion(summary: ParticipantsSummary) {
         val userId = currentUserId ?: return
         val previousIds = previousConfirmedIds ?: run {
-            // First snapshot — record the baseline but don't fire.
             previousConfirmedIds = summary.confirmed.map { it.userId }.toSet()
             return
         }
@@ -606,7 +490,6 @@ internal class MatchDetailStepModel(
         val justAdded = newConfirmedIds - previousIds
 
         if (userId in justAdded) {
-            // We just got promoted — flip the in-screen flag and emit global event.
             _state.update { it.copy(justPromoted = true) }
             val strings = stringsHolder.resolveStringsOrDefault().matchDetail
             val matchTitle = buildString {
@@ -626,31 +509,19 @@ internal class MatchDetailStepModel(
         previousConfirmedIds = newConfirmedIds
     }
 
-    /**
-     * Detects match status transitions and shows appropriate notifications.
-     * Fires only when status actually changes, not on first load.
-     */
     private fun detectStatusChange(currentStatus: MatchStatus) {
         val prevStatus = previousStatus ?: run {
-            // First snapshot — record the baseline but don't fire.
             previousStatus = currentStatus
             return
         }
 
-        // Detect transitions and show appropriate messages
         if (prevStatus != currentStatus) {
             val strings = stringsHolder.resolveStringsOrDefault().matchDetail
             val message = when {
-                // Match became full
                 prevStatus == MatchStatus.OPEN &&
                 currentStatus == MatchStatus.FULL -> strings.statusChangedToFull
-                // Match was finished
                 currentStatus == MatchStatus.FINISHED -> strings.statusChangedToFinished
-                // Match was cancelled
                 currentStatus == MatchStatus.CANCELLED -> strings.statusChangedToCancelled
-                // Qualquer outra transição (ex.: FULL → OPEN, vaga reaberta) não
-                // tem cópia própria — melhor não avisar do que vazar o nome do
-                // enum num banner sem sentido para quem lê.
                 else -> null
             }
 
@@ -663,11 +534,6 @@ internal class MatchDetailStepModel(
     }
 
     private companion object {
-        /**
-         * A tela pode disparar entrar/sair antes do documento da partida
-         * chegar. Marcar assim mantém o evento comparável, em vez de
-         * sumir com ele do funil.
-         */
         const val UNKNOWN_SPORT = "unknown"
     }
 }

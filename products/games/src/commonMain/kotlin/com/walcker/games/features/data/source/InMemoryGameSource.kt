@@ -15,12 +15,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlin.random.Random
 
-/**
- * Fonte temporária, em memória, para o app rodar antes do backend existir.
- * Substituir por Firestore/API quando o match sair do papel.
- *
- * Sample data with São Paulo locations (near Av. Paulista area).
- */
 internal class InMemoryGameSource : GameSource {
 
     private val games = MutableStateFlow(SAMPLE_GAMES)
@@ -66,7 +60,7 @@ internal class InMemoryGameSource : GameSource {
             geohash = request.geohash,
             startsAtSeconds = request.startsAtSeconds,
             durationMin = request.durationMin,
-            confirmedPlayers = 1, // Organizer
+            confirmedPlayers = 1,
             totalPlayers = request.totalPlayers,
             pricePerPlayer = request.pricePerPlayer,
             organizerName = "Anonymous",
@@ -94,7 +88,6 @@ internal class InMemoryGameSource : GameSource {
         games.update { current ->
             current.map { game ->
                 if (game.id != gameId) return@map game
-                // B3: if the leaving user was confirmed, promote the first non-organizer participant.
                 val newParticipants = game.participants - "user_anon"
                 if (newParticipants.size < game.confirmedPlayers && game.confirmedPlayers > 1) {
                     promoted = newParticipants.firstOrNull()
@@ -129,7 +122,6 @@ internal class InMemoryGameSource : GameSource {
     }
 
     override fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>> {
-        // Derive a fake participant list from the Game data we already have
         val game = games.value.firstOrNull { it.id == matchId }
         return if (game == null) {
             MutableStateFlow(Result.success(ParticipantsSummary(emptyList(), emptyList(), 0, 0)))
@@ -159,7 +151,6 @@ internal class InMemoryGameSource : GameSource {
     }
 
     override fun observeMatch(matchId: String): Flow<Result<Game>> {
-        // Reactive: map the games StateFlow so joins/leaves re-emit automatically.
         return games.map { list ->
             list.firstOrNull { it.id == matchId }
                 ?.let { Result.success(it) }
@@ -168,9 +159,7 @@ internal class InMemoryGameSource : GameSource {
     }
 
     private companion object {
-        // Current time: ~Aug 14 2026 15:00 UTC, so +3 hours = ~18:00 São Paulo time
-        // Use Unix timestamp for "today at 20:00" (1723663200 = ~Aug 15 2026 01:00 UTC = Aug 15 04:00 SP)
-        val TODAY_AT_20H = 1723713600L // Approximate
+        val TODAY_AT_20H = 1723713600L
         val TOMORROW_AT_19H30 = 1723797000L
         val THURSDAY_AT_21H = 1723881600L
 

@@ -30,9 +30,6 @@ internal class GameListStepModel(
 ) : ScreenModel {
 
     init {
-        // Topo do funil. No init, e não a cada emissão da lista: filtro e raio
-        // reemitem o tempo todo, e contar isso como visualização nova encheria
-        // o topo de movimento que ninguém fez.
         analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.HOME))
     }
 
@@ -79,9 +76,6 @@ internal class GameListStepModel(
             }.sortedBy { (it.lat * it.lat + it.lng * it.lng) } // TODO: sort by distance from user
             _state.update {
                 it.copy(
-                    // Re-carimba as strings: o holder só é preenchido depois da
-                    // primeira composição, então o valor inicial pode ter caído
-                    // no padrão pt-BR.
                     strings = strings,
                     selectedSport = sport,
                     radiusKm = radius,

@@ -18,7 +18,6 @@ internal data class PaywallState(
     val errorMessage: String? = null,
 )
 
-
 internal enum class PaywallOfferingPeriod {
     MONTHLY,
     YEARLY,

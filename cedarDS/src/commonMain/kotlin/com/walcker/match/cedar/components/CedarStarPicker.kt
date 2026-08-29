@@ -23,20 +23,6 @@ import androidx.compose.ui.unit.dp
 private val StarTouchTarget = 48.dp
 private val DefaultStarSize = 32.dp
 
-/**
- * The interactive twin of [RatingStars]: stars the user taps to set a score.
- *
- * The app drew this with `TextButton { Text("⭐") }`, which gives a screen reader
- * five buttons all named "star" and no way to tell which one is chosen. Here each
- * star is a `selectable` inside a radio group, so it announces its own label and
- * whether it is the current selection.
- *
- * The icon is [starSize]; the touch area is always 48dp, because thumbs are not
- * 32dp wide.
- *
- * @param starContentDescription label for the nth star, e.g. `"3 de 5 estrelas"`.
- *   Comes from the caller — the design system has no strings layer.
- */
 @Composable
 public fun CedarStarPicker(
     rating: Int,

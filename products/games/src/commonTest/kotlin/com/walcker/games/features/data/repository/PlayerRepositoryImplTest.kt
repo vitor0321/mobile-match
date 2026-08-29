@@ -39,8 +39,6 @@ class PlayerRepositoryImplTest {
 
         val results = repository(source).searchPlayers(filters).getOrThrow()
 
-        // fullName -> displayName is the whole point: reading `displayName` off
-        // the document returned null for every profile and emptied the search.
         assertEquals("Ana Souza", results.players.single().displayName)
     }
 
@@ -99,7 +97,6 @@ class PlayerRepositoryImplTest {
         assertTrue(repository.searchPlayers(filters).isFailure)
         assertTrue(repository.searchPlayers(filters).isFailure)
 
-        // Caching an error would keep the screen broken for five minutes.
         assertEquals(2, source.searchCallCount)
     }
 

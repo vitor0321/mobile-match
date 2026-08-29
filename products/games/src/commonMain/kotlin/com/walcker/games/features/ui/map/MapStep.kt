@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -36,6 +35,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.search.SearchStep
 import com.walcker.games.strings.MapStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSearchEntryPoint
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.CedarTextButton
@@ -46,17 +46,6 @@ import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
 import org.koin.compose.koinInject
 
-/**
- * Map view showing open matches as live pins.
- *
- * Tapping a pin emits a [DeepLink.OpenMatch] through the [DeepLinkCoordinator],
- * which the navigation shell catches to open the match detail overlay — same path
- * used by notification taps.
- *
- * The redesign adds the search bar floating over the map. It is the first thing on
- * the Figma's home screen and it was missing entirely: the only way into search was
- * the bottom tab, which meant the map had no way to answer "not here — over there".
- */
 internal class MapStep : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -71,9 +60,6 @@ internal class MapStep : Screen {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
         Box(modifier = Modifier.fillMaxSize()) {
-            // PullToRefreshBox do Material3, e não o SwipeRefresh do Accompanist:
-            // Accompanist é biblioteca Android, e este arquivo está em commonMain —
-            // o alvo iOS não compilava por causa desses dois imports.
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = { stepModel.onRefresh() },
@@ -101,12 +87,12 @@ internal class MapStep : Screen {
             )
 
             if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CedarLoading(
+                    contentDescription = strings.loadingLabel,
+                    modifier = Modifier.align(Alignment.Center),
+                )
             }
 
-            // Sem posição, "partidas próximas" fica vazio para sempre e a câmera não
-            // sai da Paulista. Dizer isso é melhor do que deixar a pessoa achar que
-            // não há partida perto dela.
             if (state.locationUnavailable) {
                 LocationUnavailableCard(
                     strings = strings,
@@ -170,14 +156,6 @@ private fun LocationUnavailableCard(
     }
 }
 
-/**
- * "Partidas perto de você" — the sheet the map opens onto.
- *
- * Uses the same [MatchCard] as every other list. It used to render its own row
- * layout, which is why a match looked like one thing on the map and another thing
- * in search — and why the sport showed as `FUTEBOL` here and `Futebol` everywhere
- * else: this was the one call site reading `sport.name` instead of `sport.label`.
- */
 @Composable
 private fun NearbyMatchesSheet(
     strings: MapStrings,

@@ -4,11 +4,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Nome e parâmetro de evento são contrato com o painel do Firebase, não detalhe
- * interno: renomear qualquer um deles quebra relatório em silêncio, com o
- * evento antigo simplesmente parando de chegar. Este teste é o alarme.
- */
 class AnalyticsEventTest {
 
     @Test
@@ -38,8 +33,6 @@ class AnalyticsEventTest {
         )
 
         events.forEach { event ->
-            // 40 para o nome, 40 para a chave do parâmetro: passar disso faz o
-            // SDK descartar o evento, sem erro nenhum.
             assertTrue(event.name.length <= 40, "nome longo demais: ${event.name}")
             assertTrue(
                 event.name.all { it.isLowerCase() || it == '_' },
@@ -53,8 +46,6 @@ class AnalyticsEventTest {
 
     @Test
     fun `nenhum evento carrega id`() {
-        // Id é alta cardinalidade: não agrega, estoura o limite do Firebase e
-        // vira log. Quem precisa cruzar por partida usa o Firestore.
         val events = listOf(
             AnalyticsEvent.MatchViewed("FUTSAL", true),
             AnalyticsEvent.MatchJoinResult("FUTSAL", JoinOutcome.CONFIRMED),

@@ -12,7 +12,6 @@ internal fun initKoin(
     isDebug: Boolean = false,
     config: KoinAppDeclaration? = null,
 ): KoinApplication = startKoin {
-//    if (isDebug) logger(PrintLogger(Level.DEBUG))
     config?.invoke(this)
     modules(
         coreModules +
@@ -20,7 +19,5 @@ internal fun initKoin(
             firestoreModule +
             gamesModule +
             notificationsModule,
-        // Phase 3+: Add playerModule as it becomes available
-        // playerModule,
     )
 }

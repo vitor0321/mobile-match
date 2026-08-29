@@ -1,11 +1,8 @@
 package com.walcker.games.features.ui.creatematch
 
 import com.walcker.games.features.domain.model.Sport
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 
 internal data class CreateMatchState(
-    // Form fields
     val venueName: String = "",
     val venueNameError: String? = null,
     val selectedSport: Sport? = null,
@@ -16,16 +13,15 @@ internal data class CreateMatchState(
     val cityError: String? = null,
     val address: String = "",
     val addressError: String? = null,
-    val selectedDate: Long? = null, // Unix millis
+    val selectedDate: Long? = null,
     val dateError: String? = null,
-    val selectedTime: Pair<Int, Int>? = null, // (hour, minute)
+    val selectedTime: Pair<Int, Int>? = null,
     val timeError: String? = null,
     val durationMin: Int = 90,
     val totalPlayers: Int = 10,
     val playersError: String? = null,
     val pricePerPlayer: String = "",
     val priceError: String? = null,
-    // UI state
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
 ) {
@@ -66,4 +62,5 @@ internal sealed class CreateMatchEvents {
 internal sealed class CreateMatchEffect {
     data class ShowMessage(val message: String) : CreateMatchEffect()
     data class NavigateToMyMatches(val matchId: String) : CreateMatchEffect()
+    object RequireLogin : CreateMatchEffect()
 }

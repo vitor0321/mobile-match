@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -32,6 +31,7 @@ import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.Sport
 import com.walcker.games.features.ui.matchdetail.MatchDetailStep
 import com.walcker.games.strings.GameListStrings
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.MatchCard
@@ -39,13 +39,6 @@ import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
 import kotlinx.collections.immutable.ImmutableList
 
-/**
- * Home screen of the games product.
- *
- * O `Step` só liga o model à UI: assina o estado, coleta efeitos e navega. Quem
- * decide que é hora de navegar é o model — o toque no card vira um evento, não
- * um `navigator.push` solto no meio da árvore de composição.
- */
 internal class GameListStep : Screen {
 
     @Composable
@@ -75,13 +68,6 @@ internal class GameListStep : Screen {
     }
 }
 
-/**
- * Conteúdo da tela, stateless: recebe estado e devolve eventos.
- *
- * O título rola junto com o conteúdo em vez de ficar numa app bar: a repaginação
- * não tem barra opaca em tela de lista, então a canvas tingida vai até o topo e
- * os cards são o que o olho encontra primeiro.
- */
 @Composable
 internal fun GameListContent(
     state: GameListState,
@@ -122,7 +108,10 @@ internal fun GameListContent(
 
             when {
                 state.isLoading && state.games.isEmpty() ->
-                    LoadingContent(Modifier.fillMaxSize())
+                    LoadingContent(
+                        contentDescription = strings.loadingLabel,
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
                 state.errorMessage != null && state.games.isEmpty() ->
                     EmptyState(
@@ -228,12 +217,15 @@ private fun GameList(
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
+private fun LoadingContent(
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CircularProgressIndicator()
+        CedarLoading(contentDescription = contentDescription)
     }
 }

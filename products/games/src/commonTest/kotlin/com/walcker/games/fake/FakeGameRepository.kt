@@ -10,10 +10,6 @@ import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.repository.MyMatch
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Fake escrito à mão em vez de mock: só `getMyMatches` é usado hoje, e deixar o
- * resto explodindo deixa claro para o próximo teste o que ainda não foi coberto.
- */
 internal class FakeGameRepository(
     var myMatches: Result<List<MyMatch>> = Result.success(emptyList()),
 ) : GameRepository {

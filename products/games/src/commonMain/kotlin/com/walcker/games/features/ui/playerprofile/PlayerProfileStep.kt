@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -23,40 +22,35 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.model.Rating
+import com.walcker.games.features.ui.common.LoginRequiredBottomSheet
 import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.CedarStat
 import com.walcker.match.cedar.components.CedarStatRow
+import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatShortDate
 import com.walcker.match.core.format.formatDecimal
+import com.walcker.match.navigator.LoginCoordinator
 import kotlinx.collections.immutable.persistentListOf
+import org.koin.compose.koinInject
 
-/**
- * The signed-in player's own profile.
- *
- * Rebuilt for the redesign: avatar and name at the top, three stat cards, then the
- * ratings history — the shape of screen 05 in the Figma.
- *
- * It also fixes a build break nobody could see: `formatRatingDate` called
- * `System.currentTimeMillis()`, which is `java.lang.System`. This file is in
- * `commonMain`, so the iOS target could not compile it — and no CI job builds iOS,
- * so nothing said so. Dates now go through `formatShortDate` from `core`, which is
- * the same helper the rating cards elsewhere already use.
- */
 internal class PlayerProfileStep : Screen {
 
     @Composable
@@ -65,6 +59,9 @@ internal class PlayerProfileStep : Screen {
         val model = koinScreenModel<PlayerProfileStepModel>()
         val state by model.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
+        val loginCoordinator: LoginCoordinator = koinInject()
+        val loginRequired = rememberGamesStrings().strings.loginRequired
+        var showLoginSheet by remember { mutableStateOf(false) }
 
         LaunchedEffect(state.errorMessage) {
             state.errorMessage?.let {
@@ -80,6 +77,14 @@ internal class PlayerProfileStep : Screen {
             }
         }
 
+        LaunchedEffect(model) {
+            model.effects.collect { effect ->
+                when (effect) {
+                    PlayerProfileEffect.RequireLogin -> showLoginSheet = true
+                }
+            }
+        }
+
         Scaffold(
             containerColor = CedarTokens.colors.canvas,
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -91,7 +96,31 @@ internal class PlayerProfileStep : Screen {
                         .padding(padding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    CedarLoading(contentDescription = strings.loadingLabel)
+                }
+                return@Scaffold
+            }
+
+            if (state.userName == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                ) {
+                    CedarScreenTitle(title = strings.title)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        EmptyState(
+                            message = strings.visitorMessage,
+                            supportingText = strings.visitorSupportingText,
+                            actionLabel = strings.visitorCta,
+                            onAction = { loginCoordinator.requestLogin() },
+                        )
+                    }
                 }
                 return@Scaffold
             }
@@ -184,6 +213,16 @@ internal class PlayerProfileStep : Screen {
                 }
             }
         }
+
+        LoginRequiredBottomSheet(
+            isVisible = showLoginSheet,
+            strings = loginRequired,
+            onConfirm = {
+                loginCoordinator.requestLogin()
+                showLoginSheet = false
+            },
+            onDismiss = { showLoginSheet = false },
+        )
     }
 }
 
@@ -221,11 +260,6 @@ private fun ProfileHeader(
     }
 }
 
-/**
- * O switch é otimista — acompanha o dedo e o StepModel reverte se a gravação
- * falhar — mas fica travado enquanto a escrita está em voo, para um toque repetido
- * não virar uma fila de escritas concorrentes no mesmo documento.
- */
 @Composable
 private fun AvailabilityCard(
     isAvailable: Boolean,
@@ -254,8 +288,6 @@ private fun AvailabilityCard(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    // Descreve a consequência, não o estado: "desligado" não diz a
-                    // ninguém que vai parar de receber aviso de partida.
                     text = if (isAvailable) {
                         strings.availabilityOnDescription
                     } else {
@@ -298,8 +330,6 @@ private fun RatingItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Was "⭐ ".repeat(n) + "☆".repeat(5 - n) — a star count a screen
-                // reader announced as a string of emoji names.
                 RatingStars(
                     rating = rating.rating.toFloat(),
                     contentDescription = strings.ratingContentDescription(rating.rating.toFloat()),

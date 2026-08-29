@@ -36,6 +36,7 @@ import com.walcker.games.strings.PlayerDetailsStrings
 import com.walcker.games.strings.RatingStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.PlayerAvatar
@@ -50,13 +51,6 @@ import org.koin.core.parameter.parametersOf
 private val ReviewsLoadingHeight = 100.dp
 private val HeaderStarSize = 20.dp
 
-/**
- * Another player's profile: identity, rating distribution and received reviews.
- *
- * Deliberately no experience stats. Matches organized/played and join/cancel rates
- * were removed in Sprint 3 — no writer produces them, so the section only ever
- * rendered zeros. They return in Phase 6 with the trigger that keeps them.
- */
 internal data class PlayerDetailsStep(val userId: String) : Screen {
 
     override val key: String get() = "player-details-$userId"
@@ -71,8 +65,6 @@ internal data class PlayerDetailsStep(val userId: String) : Screen {
         val snackbarHostState = remember { SnackbarHostState() }
         val allStrings = rememberGamesStrings().strings
         val strings = allStrings.playerDetails
-        // Os rótulos das quatro dimensões vivem em RatingStrings, junto com o
-        // formulário que as coleta.
         val ratingStrings = allStrings.ratings
 
         LaunchedEffect(stepModel) {
@@ -109,7 +101,10 @@ internal data class PlayerDetailsStep(val userId: String) : Screen {
 
             val player = state.player
             when {
-                state.isLoadingPlayer -> LoadingContent(modifier = contentModifier)
+                state.isLoadingPlayer -> LoadingContent(
+                    contentDescription = strings.loadingLabel,
+                    modifier = contentModifier,
+                )
 
                 player == null -> EmptyState(
                     message = state.errorMessage ?: strings.errorLoading,
@@ -132,9 +127,12 @@ internal data class PlayerDetailsStep(val userId: String) : Screen {
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
+private fun LoadingContent(
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        CedarLoading(contentDescription = contentDescription)
     }
 }
 
@@ -172,8 +170,6 @@ private fun PlayerDetailsContent(
             }
         }
 
-        // Some inteira quando ninguém respondeu dimensão nenhuma, que é o estado
-        // de todo perfil avaliado antes das dimensões existirem.
         if (player.dimensionAverages.isNotEmpty()) {
             item(key = "dimensions") {
                 DimensionAveragesCard(
@@ -248,8 +244,6 @@ private fun PlayerHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
     ) {
-        // Was a bare grey circle whenever photoUrl was null — which is most
-        // profiles. PlayerAvatar falls back to initials.
         PlayerAvatar(
             displayName = player.displayName,
             photoUrl = player.photoUrl,
@@ -310,7 +304,6 @@ private fun PlayerHeader(
     }
 }
 
-/** "Bairro · Cidade", skipping whichever half the profile left blank. */
 private fun PlayerDetails.locationLabel(): String? = listOfNotNull(
     neighborhood?.takeIf { it.isNotBlank() },
     city?.takeIf { it.isNotBlank() },

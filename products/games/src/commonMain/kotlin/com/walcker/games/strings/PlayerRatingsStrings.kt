@@ -4,6 +4,7 @@ import com.walcker.match.core.format.formatDecimal
 
 internal data class PlayerRatingsStrings(
     val title: String,
+    val loadingLabel: String,
     val sortRecent: String,
     val sortHighest: String,
     val sortLowest: String,
@@ -18,6 +19,7 @@ internal data class PlayerRatingsStrings(
 
 internal val playerRatingsStringsEn = PlayerRatingsStrings(
     title = "Reviews",
+    loadingLabel = "Loading reviews…",
     sortRecent = "Recent",
     sortHighest = "Highest",
     sortLowest = "Lowest",
@@ -34,6 +36,7 @@ internal val playerRatingsStringsEn = PlayerRatingsStrings(
 
 internal val playerRatingsStringsPt = PlayerRatingsStrings(
     title = "Avaliações",
+    loadingLabel = "Carregando avaliações…",
     sortRecent = "Recentes",
     sortHighest = "Melhores",
     sortLowest = "Piores",

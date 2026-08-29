@@ -22,7 +22,6 @@ class RatingDimensionsTest {
 
         assertEquals(4, dimensions[RatingDimension.RESPECT])
         assertFalse(dimensions.isEmpty)
-        // Responder uma não inventa resposta para as outras.
         assertNull(dimensions[RatingDimension.PUNCTUALITY])
     }
 
@@ -73,11 +72,6 @@ class RatingDimensionsTest {
         assertEquals(5, RatingDimensions.None.with(RatingDimension.RESPECT, 5)[RatingDimension.RESPECT])
     }
 
-    /**
-     * Estes nomes são contrato de rede: têm de bater com `RATING_DIMENSIONS` em
-     * `functions/src/index.ts`. Se alguém renomear o enum achando que é só
-     * cosmético, este teste é quem avisa.
-     */
     @Test
     fun `nomes de campo batem com o contrato do servidor`() {
         assertEquals("punctuality", RatingDimension.PUNCTUALITY.wireName)
@@ -91,11 +85,6 @@ class RatingDimensionsTest {
         assertEquals("fairPlayAverage", RatingDimension.FAIR_PLAY.averageField)
     }
 
-    /**
-     * O servidor recusa payload sem as quatro (`parseRatingDimensions` em
-     * `functions/src/moderation.ts` trata ausente e inválido como o mesmo erro),
-     * então a tela precisa saber dizer quando ainda não dá para enviar.
-     */
     @Test
     fun `so fica completo com as quatro respondidas`() {
         var dimensions = RatingDimensions.None

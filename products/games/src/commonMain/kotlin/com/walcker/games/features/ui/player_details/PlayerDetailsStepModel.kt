@@ -20,13 +20,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * ScreenModel for the player details screen.
- *
- * Loads the profile first, then a sample of received ratings. A ratings failure
- * is deliberately non-fatal: the profile is still worth showing, so the error is
- * swallowed into an empty reviews section instead of blanking the screen.
- */
 internal class PlayerDetailsStepModel(
     private val userId: String,
     private val getPlayerDetails: GetPlayerDetailsUseCase,
@@ -98,7 +91,6 @@ internal class PlayerDetailsStepModel(
                 }
             }
             .onFailure {
-                // Reviews are supplementary: keep the profile usable.
                 _state.update { it.copy(isLoadingRatings = false) }
             }
     }

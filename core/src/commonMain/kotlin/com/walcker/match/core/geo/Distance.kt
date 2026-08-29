@@ -9,12 +9,6 @@ import kotlin.math.sqrt
 
 private const val EARTH_RADIUS_KM = 6371.0
 
-/**
- * Great-circle distance between two coordinates using the haversine formula.
- *
- * Mirrors the Postgres `distance_km` and the `haversine` in `broadcast.functions.ts`
- * from the Lovable MVP — same radius so client, server and legacy DB agree.
- */
 public fun distanceKm(a: Coordinates, b: Coordinates): Double {
     val dLat = (b.lat - a.lat).toRadians()
     val dLng = (b.lng - a.lng).toRadians()
@@ -26,14 +20,9 @@ public fun distanceKm(a: Coordinates, b: Coordinates): Double {
     return EARTH_RADIUS_KM * c
 }
 
-/**
- * Human-friendly distance for the pt-BR UI. Under 1 km rounds to the nearest
- * 10 m; above that shows one decimal ("3,2 km"). Matches `lib/geo.ts` from the MVP.
- */
 public fun formatDistance(km: Double): String {
     if (km < 1.0) {
         val meters = (km * 1000).roundToInt()
-        // Round meters to the nearest 10 to match the MVP's coarser display.
         val rounded = (meters.toDouble() / 10).roundToInt() * 10
         return "$rounded m"
     }

@@ -2,33 +2,30 @@ package com.walcker.games.strings
 
 internal data class PlayerProfileStrings(
     val title: String,
+    val loadingLabel: String,
     val statsOrganized: String,
     val statsParticipated: String,
-    /** Third stat card in the redesign: the player's average rating. */
     val statsRating: String,
     val accountSettings: String,
     val loadingError: String,
-    /** Cabeçalho do bloco do toggle "estou disponível" (regra B5). */
     val availabilityTitle: String,
-    /**
-     * O texto tem de dizer o que o toggle FAZ, não só o que ele é: desligado
-     * significa não receber aviso de partida nenhuma, e isso precisa estar
-     * claro antes do toque, não depois do silêncio.
-     */
     val availabilityOnDescription: String,
     val availabilityOffDescription: String,
     val availabilityError: String,
-    // Below: copy that used to be hardcoded pt-BR inside the screen.
     val ratingsReceived: String,
     val ratingsCount: (Int) -> String,
     val ratingContentDescription: (Float) -> String,
     val settings: String,
     val logout: String,
     val noRatingYet: String,
+    val visitorMessage: String,
+    val visitorSupportingText: String,
+    val visitorCta: String,
 )
 
 internal val playerProfileStringsPt = PlayerProfileStrings(
     title = "Meu perfil",
+    loadingLabel = "Carregando seu perfil…",
     statsOrganized = "Organizadas",
     statsParticipated = "Participadas",
     statsRating = "Nota média",
@@ -44,10 +41,14 @@ internal val playerProfileStringsPt = PlayerProfileStrings(
     settings = "Configurações",
     logout = "Sair da conta",
     noRatingYet = "—",
+    visitorMessage = "Entre para ver seu perfil",
+    visitorSupportingText = "Suas partidas, avaliações e disponibilidade aparecem aqui depois que você entra.",
+    visitorCta = "Entrar",
 )
 
 internal val playerProfileStringsEn = PlayerProfileStrings(
     title = "My profile",
+    loadingLabel = "Loading your profile…",
     statsOrganized = "Organised",
     statsParticipated = "Played",
     statsRating = "Rating",
@@ -63,4 +64,7 @@ internal val playerProfileStringsEn = PlayerProfileStrings(
     settings = "Settings",
     logout = "Log out",
     noRatingYet = "—",
+    visitorMessage = "Sign in to see your profile",
+    visitorSupportingText = "Your matches, ratings and availability show up here once you sign in.",
+    visitorCta = "Sign in",
 )

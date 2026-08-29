@@ -1,15 +1,5 @@
 package com.walcker.games.features.domain.model
 
-/**
- * How a player's ratings spread across the 1..5 star levels.
- *
- * Computed on the client from the ratings sample already in memory (decision D10
- * in the roadmap: ratings are not aggregated server-side). It therefore describes
- * the loaded sample, not necessarily every rating the player ever received — the
- * authoritative totals stay on the profile document.
- *
- * @param counts one entry per star level, ascending: index `0` is 1 star.
- */
 internal data class RatingDistribution(
     val counts: List<Int>,
 ) {
@@ -19,10 +9,8 @@ internal data class RatingDistribution(
         }
     }
 
-    /** How many ratings this distribution was built from. */
     val total: Int get() = counts.sum()
 
-    /** Mean of the sample, or `0f` when there is nothing to average. */
     val average: Float
         get() {
             val total = total
@@ -37,10 +25,6 @@ internal data class RatingDistribution(
     }
 }
 
-/**
- * Buckets a rating sample by star level. Values outside `1..5` are ignored
- * rather than crashing — a malformed document should not take the screen down.
- */
 internal fun List<Rating>.toDistribution(): RatingDistribution {
     val counts = MutableList(RatingDistribution.STAR_LEVELS) { 0 }
     for (rating in this) {

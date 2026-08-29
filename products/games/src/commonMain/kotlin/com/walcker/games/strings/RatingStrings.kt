@@ -1,13 +1,5 @@
 package com.walcker.games.strings
 
-/**
- * Mensagens do envio de avaliação pós-partida.
- *
- * Só três de erro: o transporte de callable do Firebase não preserva o código do
- * HttpsError do outro lado, então inventar uma taxonomia de erro aqui daria
- * mensagens erradas. As pré-condições reais (partida não terminou, você não
- * jogou) já são barradas pela própria UI antes da chamada.
- */
 internal data class RatingStrings(
     val submitSuccess: String,
     val alreadyRated: String,
@@ -18,20 +10,13 @@ internal data class RatingStrings(
     val submitAction: String,
     val submitting: String,
     val dimensionsTitle: String,
-    /**
-     * Diz que as quatro são necessárias. O servidor recusa payload incompleto,
-     * então esconder isso só produziria um erro genérico depois do toque.
-     */
     val dimensionsHint: String,
     val dimensionPunctuality: String,
     val dimensionRespect: String,
     val dimensionFairPlay: String,
     val dimensionBehavior: String,
-    /** Rótulo da fileira principal de estrelas — ela não tinha nenhum. */
     val overallLabel: String,
-    /** Nome acessível de cada estrela do seletor: "3 de 5 estrelas". */
     val starContentDescription: (Int) -> String,
-    /** Contador do comentário: "120/500". */
     val commentCounter: (current: Int, max: Int) -> String,
 )
 

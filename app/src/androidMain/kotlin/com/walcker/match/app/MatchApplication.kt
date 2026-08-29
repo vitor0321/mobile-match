@@ -16,7 +16,7 @@ internal class MatchApplication : Application() {
         }
         MobileAds.initialize(this)
         if (BuildConfig.IS_DEBUG) {
-            Log.d("Match", "Running in debug mode — build: ${BuildConfig.VERSION_NAME}")
+            Log.d("Join Play", "Running in debug mode — build: ${BuildConfig.VERSION_NAME}")
         }
     }
 }

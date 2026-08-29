@@ -3,17 +3,13 @@ package com.walcker.identity.strings
 internal data class LoginStrings(
     val title: String,
     val subtitle: String,
-    /** Nome acessível do botão voltar da barra de topo. */
     val back: String,
     val emailLabel: String,
     val passwordLabel: String,
-    /** Nome acessível do olho quando a senha está escondida. */
     val showPassword: String,
-    /** Nome acessível do olho quando a senha está à mostra. */
     val hidePassword: String,
     val submitButton: String,
     val submitLoadingButton: String,
-    /** Separa o formulário de e-mail dos provedores sociais. */
     val socialDivider: String,
     val googleButton: String,
     val appleButton: String,

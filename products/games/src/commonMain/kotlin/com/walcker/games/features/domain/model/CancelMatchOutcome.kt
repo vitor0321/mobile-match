@@ -1,11 +1,5 @@
 package com.walcker.games.features.domain.model
 
-/**
- * Resultado de chamar o Cloud Function `cancelMatch`.
- *
- * Idempotente: cancelar uma partida já cancelada retorna [AlreadyCancelled]
- * em vez de lançar erro.
- */
 internal sealed interface CancelMatchOutcome {
     val matchId: String
 

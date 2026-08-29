@@ -1,12 +1,5 @@
 package com.walcker.match.core.payments
 
-/**
- * 100% local BR Code Pix generator (EMV-QRCPS-MPM). No gateway, no third-party
- * API calls — the QR will be rendered on-device in Phase 5.
- *
- * Ported 1:1 from `lib/pix.ts` in the Lovable MVP. The generated payload is
- * identical and can be copy-pasted into any banking app.
- */
 public fun buildPixPayload(
     key: String,
     amountCents: Int,
@@ -35,28 +28,17 @@ public fun buildPixPayload(
     return "${withCrcId}${crc16(withCrcId)}"
 }
 
-/**
- * Formats amount in cents as "XX.XX" string for the Pix payload.
- * e.g. 1500 → "15.00", 500 → "5.00"
- */
 private fun formatAmount(cents: Int): String {
     val reais = cents / 100
     val centavos = cents % 100
     return "$reais.${centavos.toString().padStart(2, '0')}"
 }
 
-/**
- * EMV TLV encoding: ID (2 chars) + length (2 chars, zero-padded) + value.
- */
 private fun tlv(id: String, value: String): String {
     val len = value.length.toString().padStart(2, '0')
     return "$id$len$value"
 }
 
-/**
- * CRC-16/CCITT (polynomial 0x1021, initial value 0xFFFF).
- * Used by the BR Code to compute the checksum at the end of the payload.
- */
 internal fun crc16(payload: String): String {
     var crc = 0xFFFF
     for (ch in payload) {
@@ -69,10 +51,6 @@ internal fun crc16(payload: String): String {
     return crc.toString(16).uppercase().padStart(4, '0')
 }
 
-/**
- * Normalizes text for the Pix payload: strips diacritics, removes special
- * characters, uppercases, and truncates to [max] characters.
- */
 internal fun sanitize(text: String, max: Int): String {
     return text
         .normalizeToNFD()

@@ -9,16 +9,8 @@ private const val BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
 private const val EARTH_MERIDIONAL_CIRCUMFERENCE = 40007.86
 private const val METERS_PER_DEGREE_LATITUDE = 110574.0
 
-/** A closed range of geohash prefixes that participate in a radius query. */
 public data class GeoHashRange(val start: String, val endInclusive: String)
 
-/**
- * Encodes [coords] as a base-32 geohash of [precision] characters.
- *
- * Follows the standard algorithm used by GeoFire and every Firestore geo
- * example in circulation. Precision 9 corresponds to ~4.8 m on the equator,
- * which is plenty for a match venue.
- */
 public fun encodeGeoHash(coords: Coordinates, precision: Int = DEFAULT_GEOHASH_PRECISION): String {
     require(precision in 1..22) { "geohash precision must be in 1..22" }
 
@@ -62,15 +54,6 @@ public fun encodeGeoHash(coords: Coordinates, precision: Int = DEFAULT_GEOHASH_P
     return hash.toString()
 }
 
-/**
- * Query intervals that cover the bounding box of a circle of [radiusKm]
- * around [center]. Callers issue one Firestore `orderBy(geohash).startAt(a).endAt(b)`
- * query per range and then filter out the excess (bounding box > circle) with
- * [distanceKm] on the client.
- *
- * Returns 1–9 intervals in practice, depending on how the box straddles
- * geohash cell boundaries. The intervals are merged when adjacent.
- */
 public fun boundsForRadius(
     center: Coordinates,
     radiusKm: Double,
@@ -103,12 +86,8 @@ public fun boundsForRadius(
         .map { encodeGeoHash(it, precision) }
         .toMutableSet()
 
-    // Include the center too so tiny radii still get a hit.
     hashes.add(encodeGeoHash(center, precision))
 
-    // For each unique hash we form a [hash, hash+"~"] interval — "~" sorts after
-    // any base-32 character, so `startAt(hash).endAt(hash + "~")` includes every
-    // longer geohash that starts with `hash`.
     val ranges = hashes
         .sorted()
         .map { GeoHashRange(start = it, endInclusive = it + "~") }
@@ -117,9 +96,6 @@ public fun boundsForRadius(
 }
 
 private fun precisionForRadius(radiusKm: Double): Int {
-    // Each geohash character adds ~5 bits of precision (alternating lat/lng).
-    // We pick the precision whose cell is at least twice the radius, so a
-    // circle of that radius is covered by a small, bounded number of cells.
     var precision = DEFAULT_GEOHASH_PRECISION
     while (precision > 1) {
         val cellKm = latitudeSpanKm(precision)
@@ -130,15 +106,12 @@ private fun precisionForRadius(radiusKm: Double): Int {
 }
 
 private fun latitudeSpanKm(precision: Int): Double {
-    // Each geohash character carries ceil(bitsForLatAtLevel/2) latitude bits.
     val latBits = (precision * BITS_PER_CHAR + 1) / 2
     val spanDegrees = 180.0 / (1 shl latBits)
     return (spanDegrees / 360.0) * EARTH_MERIDIONAL_CIRCUMFERENCE
 }
 
 private fun kmToLongitudeDegrees(radiusKm: Double, latitude: Double): Double {
-    // Longitude compresses toward the poles; use the standard great-circle
-    // approximation that GeoFire uses.
     val radians = radiusKm / (METERS_PER_DEGREE_LATITUDE / 1000.0) * PI / 180.0
     val latRad = latitude * PI / 180.0
     val numerator = sin(radians)

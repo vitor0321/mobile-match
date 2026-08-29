@@ -2,6 +2,7 @@ package com.walcker.games.strings
 
 internal data class MyMatchesStrings(
     val title: String,
+    val loadingLabel: String,
     val activeTab: String,
     val pastTab: String,
     val emptyActive: String,
@@ -15,14 +16,13 @@ internal data class MyMatchesStrings(
     val leaveError: String,
     val statusCancelled: String,
     val statusFinished: String,
-    /** "8/10 jogadores" — the raw "8/10" said nothing on its own. */
     val playersCount: (confirmed: Int, total: Int) -> String,
-    /** Way out of the empty active tab: the screen used to be a dead end. */
     val emptyActiveAction: String,
 )
 
 internal val myMatchesStringsPt = MyMatchesStrings(
     title = "Minhas partidas",
+    loadingLabel = "Carregando suas partidas…",
     activeTab = "Ativas",
     pastTab = "Passadas",
     emptyActive = "Você ainda não organizou ou entrou em nenhuma partida.",
@@ -42,6 +42,7 @@ internal val myMatchesStringsPt = MyMatchesStrings(
 
 internal val myMatchesStringsEn = MyMatchesStrings(
     title = "My matches",
+    loadingLabel = "Loading your matches…",
     activeTab = "Active",
     pastTab = "Past",
     emptyActive = "You haven't organized or joined any matches yet.",

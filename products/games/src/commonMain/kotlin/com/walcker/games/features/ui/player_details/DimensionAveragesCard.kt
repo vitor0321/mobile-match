@@ -25,23 +25,8 @@ import com.walcker.match.cedar.tokens.CedarTokens
 
 private const val MAX_STARS = 5f
 
-/** A barra do Material tem 4dp por padrão; 6dp lê melhor à distância de um braço. */
 private val BarHeight = 6.dp
 
-/**
- * Médias por dimensão do jogador.
- *
- * Só desenha as dimensões que alguém respondeu, e mostra a contagem de cada uma
- * separadamente: como responder é opcional, "4,8 de pontualidade" com uma resposta e
- * com quarenta são coisas muito diferentes, e omitir o número deixaria as duas com a
- * mesma cara.
- *
- * Era um `Card` do Material, que traz sombra e uma cor de container própria — num
- * app cujo relevo vem do canvas azulado atrás de cartões brancos, a sombra briga com
- * o resto. Virou [Surface] plana, como os outros cartões.
- *
- * Quem chama já garantiu que [averages] não está vazio.
- */
 @Composable
 internal fun DimensionAveragesCard(
     averages: Map<RatingDimension, DimensionAverage>,
@@ -62,8 +47,6 @@ internal fun DimensionAveragesCard(
         ) {
             CedarSectionHeader(title = strings.dimensionsTitle)
 
-            // Itera pelo enum, não pelo mapa: assim a ordem das linhas é sempre a
-            // mesma entre perfis, em vez de depender da ordem de inserção.
             RatingDimension.entries.forEach { dimension ->
                 val average = averages[dimension] ?: return@forEach
                 DimensionRow(
@@ -109,12 +92,8 @@ private fun DimensionRow(
         }
 
         LinearProgressIndicator(
-            // coerceIn porque a barra só aceita 0f..1f: um agregado corrompido no
-            // Firestore deve desenhar torto, não derrubar a tela.
             progress = { (average.average / MAX_STARS).coerceIn(0f, 1f) },
             color = MaterialTheme.colorScheme.primary,
-            // outlineVariant é a divisória, quase invisível; o trilho precisa
-            // aparecer para a barra significar alguma coisa.
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier
                 .fillMaxWidth()
@@ -129,7 +108,6 @@ private fun DimensionRow(
     }
 }
 
-/** Mesmo `when` exaustivo do formulário: dimensão nova não compila sem texto. */
 private fun RatingDimension.label(strings: RatingStrings): String = when (this) {
     RatingDimension.PUNCTUALITY -> strings.dimensionPunctuality
     RatingDimension.RESPECT -> strings.dimensionRespect

@@ -18,16 +18,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Read-only star rating, with half-star precision.
- *
- * Stateless by design: the caller owns the value. Rounding is visual only —
- * `4.3` draws four filled stars plus a half, `4.9` draws five.
- *
- * @param rating value in `0f..maxStars`; out-of-range values are clamped
- * @param contentDescription accessibility label; the individual icons are
- *        merged away so a screen reader announces the rating once
- */
 @Composable
 public fun RatingStars(
     rating: Float,
@@ -35,8 +25,6 @@ public fun RatingStars(
     maxStars: Int = 5,
     starSize: Dp = 16.dp,
     filledTint: Color = MaterialTheme.colorScheme.primary,
-    // outline e não outlineVariant: a estrela vazia é o que diz "de 5", então
-    // ela precisa ser vista. O outlineVariant é a divisória, quase invisível.
     emptyTint: Color = MaterialTheme.colorScheme.outline,
     contentDescription: String? = null,
 ) {

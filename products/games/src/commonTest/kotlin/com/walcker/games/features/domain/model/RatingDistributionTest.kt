@@ -24,7 +24,6 @@ class RatingDistributionTest {
 
         val distribution = ratings.toDistribution()
 
-        // index 0 == 1 star ... index 4 == 5 stars
         assertEquals(listOf(1, 0, 1, 0, 2), distribution.counts)
         assertEquals(4, distribution.total)
     }

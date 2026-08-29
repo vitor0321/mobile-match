@@ -35,8 +35,6 @@ internal class CreateMatchStepModel(
     private val analytics: AnalyticsTracker,
 ) : ScreenModel {
 
-    // Era `.gameList`: a tela de criação falava com as mensagens da listagem, e o
-    // arquivo de textos próprio dela ficava sem uso.
     private val strings get() = stringsHolder.resolveStringsOrDefault().createMatch
 
     // TODO Phase 3: replace with real LocationProvider. For now hardcoded to SP center.
@@ -99,20 +97,18 @@ internal class CreateMatchStepModel(
         val (hour, minute) = currentState.selectedTime ?: return
 
         screenModelScope.launch {
+            val session = sessionHolder.currentUser.first()
+            if (session == null) {
+                _effects.send(CreateMatchEffect.RequireLogin)
+                return@launch
+            }
+
             _state.update { it.copy(isSubmitting = true) }
 
             try {
                 val startSeconds = (selectedDate / MILLIS_PER_SECOND) +
                     (hour * SECONDS_PER_HOUR) +
                     (minute * SECONDS_PER_MINUTE)
-
-                // Ensure the user is logged in. Without a session we cannot scope
-                // the new match to the right user document.
-                val session = sessionHolder.currentUser.first()
-                if (session == null) {
-                    _effects.send(CreateMatchEffect.ShowMessage(strings.notLoggedIn))
-                    return@launch
-                }
 
                 val request = CreateMatchRequest(
                     sport = selectedSport,
@@ -131,22 +127,11 @@ internal class CreateMatchStepModel(
 
                 createMatch(request)
                     .onSuccess { matchId ->
-                        // A outra ponta do marketplace: sem oferta, o funil de
-                        // entrada não tem do que viver.
                         analytics.track(AnalyticsEvent.MatchCreated(request.sport.name))
-                        // Um efeito só. Antes iam dois — um ShowMessage e um
-                        // NavigateToMyMatches que também mostrava snackbar — e o
-                        // usuário via duas mensagens seguidas, a segunda com o id
-                        // do documento do Firestore.
                         _effects.send(CreateMatchEffect.NavigateToMyMatches(matchId))
-                        // Ask the navigation shell to switch to the My Matches tab.
                         tabCoordinator.requestTab(MainTab.MyMatches)
                     }
                     .onFailure {
-                        // `error.message` aqui é a mensagem da exceção — em inglês e
-                        // técnica. O transporte de callable do Firebase não preserva
-                        // o código do HttpsError, então não há taxonomia a montar:
-                        // uma mensagem traduzida é mais honesta que um stack trace.
                         _effects.send(CreateMatchEffect.ShowMessage(strings.genericError))
                     }
             } finally {

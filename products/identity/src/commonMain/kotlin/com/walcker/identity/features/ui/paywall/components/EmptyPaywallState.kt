@@ -14,15 +14,6 @@ import androidx.compose.ui.semantics.semantics
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * Nenhum plano veio da loja — ou a chamada falhou.
- *
- * A mensagem é uma live region: ela substitui a lista de planos depois de um
- * carregamento, e quem não enxerga precisa saber que o conteúdo trocou.
- *
- * O espaçamento era `Spacer(Modifier.padding(top = 12.dp))` — um `Spacer` sem
- * tamanho, cujo padding é a única coisa que o faz ocupar espaço.
- */
 @Composable
 internal fun EmptyPaywallState(
     message: String,

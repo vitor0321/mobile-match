@@ -8,10 +8,6 @@ import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 
-/**
- * Fake at the source boundary — used to prove the repository's caching, where a
- * fake repository would hide the very thing under test.
- */
 internal class FakePlayerSource(
     var searchResult: Result<PlayerSearchPageDto> = Result.success(
         PlayerSearchPageDto(players = listOf(playerSearchResultDto()), reachedLimit = false),

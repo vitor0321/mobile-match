@@ -4,13 +4,6 @@ import com.walcker.games.features.domain.model.ReportReason
 import com.walcker.games.features.domain.model.SubmitReportOutcome
 import com.walcker.match.firestore.FirestoreClient
 
-/**
- * Calls the `submitReport` callable.
- *
- * There is no direct write path: `reports/{reportId}` denies client writes in
- * firestore.rules, because the same transaction that stores the report also
- * recomputes the reported player's moderation level.
- */
 internal class FirestoreReportSource(
     private val firestore: FirestoreClient,
 ) : ReportSource {

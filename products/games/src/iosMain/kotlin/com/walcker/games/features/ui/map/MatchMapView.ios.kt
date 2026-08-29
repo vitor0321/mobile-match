@@ -18,14 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-/**
- * iOS implementation of [MatchMapView].
- *
- * MapKit interop via Kotlin/Native (MKMapView + UIKitView) is a separate effort
- * scheduled for Phase 6-ETAPA2. Until then, this renders a functional fallback:
- * a scrollable list of the same pins with tap-to-open, so the feature is usable
- * on iOS while the native map view is wired up.
- */
 @Composable
 internal actual fun MatchMapView(
     pins: List<MapPin>,

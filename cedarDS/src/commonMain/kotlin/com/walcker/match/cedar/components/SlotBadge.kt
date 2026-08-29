@@ -9,23 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * How many slots a match still has — the single most important fact in a list of
- * matches, and the reason green exists in this design system.
- *
- * Deliberately not shaped like a button. No elevation, no border, no ripple: in
- * the Figma the pill sits where a CTA would sit, and the first thing to check in
- * usability testing is whether people try to tap it.
- *
- * Two changes from the mockup:
- * - **Text comes from the caller.** The old version built "2 vagas" / "LOTADO"
- *   inside the design system, which put pt-BR copy in a module that has no strings
- *   layer and cannot be translated.
- * - **12sp floor.** The Figma sets this at 10sp and 11sp.
- *
- * @param label already pluralised by the caller: "2 vagas", "1 vaga", "Lotado".
- * @param openSlots drives the colour only. Zero means the match is full.
- */
 @Composable
 public fun SlotBadge(
     label: String,

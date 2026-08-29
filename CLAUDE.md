@@ -1,4 +1,4 @@
-# Mobile Match
+# Mobile Join Play
 
 App KMP + Compose Multiplatform. Marketplace de vagas em partidas esportivas: quem tem uma partida
 com vaga anuncia, quem quer jogar entra.
@@ -13,6 +13,10 @@ simples, escalável, testável, performático e fácil de manter. **Responda sem
 
 Prefira a mudança pequena que resolve o problema à refatoração ampla que o contorna. Quando encontrar
 um bug fora do escopo do pedido, diga — não corrija junto sem avisar.
+
+**Não escreva comentários no código.** Nem `//` explicativo, nem KDoc (`/** */`). O único formato
+permitido é `// TODO`. Identificadores bem nomeados substituem o comentário; se uma linha precisa de
+comentário para ficar clara, o problema é o nome ou a estrutura, não a falta de explicação ao lado.
 
 ---
 

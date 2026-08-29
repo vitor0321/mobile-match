@@ -19,13 +19,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * MVI ScreenModel for player search.
- *
- * Typing is debounced and each new search cancels the one in flight. Without
- * that, every keystroke fired a Firestore query and the answers could land out
- * of order — the results for "an" arriving after "ana" and overwriting them.
- */
 internal class PlayerSearchStepModel(
     private val searchPlayersUseCase: SearchPlayersUseCase,
     private val stringsHolder: GamesStringsHolder,
@@ -77,7 +70,6 @@ internal class PlayerSearchStepModel(
                         showFiltersPanel = false,
                     )
                 }
-                // Nothing to wait for: clearing is not typing.
                 scheduleSearch(debounce = false)
             }
 
@@ -114,8 +106,6 @@ internal class PlayerSearchStepModel(
 
             _state.update { it.copy(isLoading = true, errorMessage = null) }
 
-            // The query travels inside the filters so it is part of the cache
-            // key — two searches differing only by name are different searches.
             val filters = current.filters.copy(query = current.query.trim())
 
             searchPlayersUseCase(filters)
@@ -137,7 +127,6 @@ internal class PlayerSearchStepModel(
     }
 
     internal companion object {
-        /** Long enough to skip intermediate keystrokes, short enough to feel live. */
         internal const val SEARCH_DEBOUNCE_MS: Long = 300L
     }
 }

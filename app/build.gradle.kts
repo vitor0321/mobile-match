@@ -14,8 +14,6 @@ val admobAppId = localProps.getProperty("ADMOB_APP_ID", "ca-app-pub-851437186462
 val admobBannerUnitId = localProps.getProperty("ADMOB_BANNER_UNIT_ID", "ca-app-pub-8514371864627144/6345620957")
 val revenueCatAndroidKey = localProps.getProperty("REVENUECAT_ANDROID_KEY", "")
 
-// Nunca use a chave real como fallback: este arquivo é versionado.
-// Defina em local.properties (fora do git) ou na variável de ambiente de mesmo nome.
 val googleMapsApiKey: String = localProps.getProperty("GOOGLE_MAPS_API_KEY")
     ?: providers.environmentVariable("GOOGLE_MAPS_API_KEY").orNull
     ?: ""
@@ -64,6 +62,8 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
+            implementation(libs.compottie)
+            implementation(libs.compottie.dot)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.voyager.navigator)
@@ -141,7 +141,7 @@ android {
             versionNameSuffix = "-debug"
             isDebuggable = true
             isMinifyEnabled = false
-            resValue("string", "app_name", "Match Dev")
+            resValue("string", "app_name", "Join Play Dev")
             buildConfigField("Boolean", "IS_DEBUG", "true")
             manifestPlaceholders["admobAppId"] = testAdmobAppId
             manifestPlaceholders["admobBannerUnitId"] = testAdmobBannerUnitId
@@ -160,7 +160,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "Match")
+            resValue("string", "app_name", "Join Play")
             buildConfigField("Boolean", "IS_DEBUG", "false")
         }
     }
@@ -181,7 +181,6 @@ if (googleMapsApiKey.isBlank()) {
     )
 }
 
-// Debug pode subir sem a chave (mapa em branco); release, não.
 tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
     doFirst {
         check(googleMapsApiKey.isNotBlank()) {

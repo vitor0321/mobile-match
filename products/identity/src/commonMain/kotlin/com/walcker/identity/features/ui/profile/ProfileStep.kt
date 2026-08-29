@@ -74,22 +74,6 @@ internal class ProfileStep : Screen {
     }
 }
 
-/**
- * Conta, plano e as ações de conta.
- *
- * O que mudou nesta repaginação:
- * - **Excluir conta era um `OutlinedButton` igual a "Restaurar compras" e "Sair".**
- *   A ação irreversível do app tinha exatamente o mesmo peso visual das outras duas,
- *   empilhada entre elas. Agora ela é a última, em texto, na cor de erro — e a
- *   confirmação do diálogo também, que era um botão primário verde convidativo.
- * - **A tela não rolava.** Um `Spacer(weight(1f))` empurrava as ações para o rodapé
- *   numa `Column` de altura fixa: com plano PRO, seletor de idioma, mensagem e erro
- *   ao mesmo tempo, o fim do conteúdo saía da tela sem jeito de alcançar.
- * - O cabeçalho era só nome e e-mail em texto corrido. Ganhou o avatar com iniciais,
- *   o mesmo componente que a busca de jogadores e os cards de avaliação usam.
- * - O idioma era um `OutlinedButton` que parecia enviar algo; virou [CedarFilterRow],
- *   com a seta dizendo que abre uma escolha.
- */
 @Composable
 internal fun ProfileScreen(
     state: ProfileState,
@@ -106,7 +90,6 @@ internal fun ProfileScreen(
 ) {
     val strings = LocalIdentityStrings.current.profile
 
-    // Qualquer uma das três operações trava as outras: são todas sobre a mesma conta.
     val isBusy = state.isLoading || state.isRestoringPurchases || state.isDeletingAccount
 
     if (state.showDeleteAccountConfirmation) {
@@ -188,8 +171,6 @@ internal fun ProfileScreen(
                 loading = state.isLoading,
             )
 
-            // Última, em texto e na cor de erro: a única ação daqui que não dá para
-            // desfazer não deve parecer com as outras duas.
             TextButton(
                 onClick = onDeleteAccount,
                 enabled = !isBusy,
@@ -242,12 +223,6 @@ private fun AccountHeader(
     }
 }
 
-/**
- * O plano atual e o que dá para fazer com ele.
- *
- * Num cartão branco sobre o canvas em vez de texto solto: o estado da assinatura é a
- * informação que o usuário vem procurar aqui, e antes ela se misturava com o resto.
- */
 @Composable
 private fun PlanCard(
     isPro: Boolean,
@@ -366,8 +341,6 @@ private fun DeleteAccountDialog(
         title = { Text(strings.deleteAccountConfirmationTitle) },
         text = { Text(strings.deleteAccountConfirmationMessage) },
         confirmButton = {
-            // Vermelho, não primário: o botão que apaga a conta não deve ser o mais
-            // convidativo do diálogo.
             Button(
                 onClick = onConfirm,
                 enabled = !isDeleting,

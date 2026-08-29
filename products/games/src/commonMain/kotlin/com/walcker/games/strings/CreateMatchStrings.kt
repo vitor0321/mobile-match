@@ -1,21 +1,10 @@
 package com.walcker.games.strings
 
-/**
- * Textos da criação de partida.
- *
- * Este arquivo já existia, completo e traduzido, e a tela nunca o usou: ela
- * carregava `strings.gameList` e escrevia cada rótulo em pt-BR direto no código.
- * O que faltava aqui eram só os textos que o código inventava inline — os
- * placeholders dos seletores, os botões dos diálogos e as mensagens de resultado.
- */
 internal data class CreateMatchStrings(
     val title: String,
     val subtitle: String,
-    /** Cabeçalho do primeiro bloco do formulário: onde a partida acontece. */
     val sectionVenue: String,
-    /** Cabeçalho do segundo bloco: data, horário e duração. */
     val sectionWhen: String,
-    /** Cabeçalho do terceiro bloco: jogadores e preço. */
     val sectionDetails: String,
     val venueNameLabel: String,
     val venueNamePlaceholder: String,
@@ -27,30 +16,22 @@ internal data class CreateMatchStrings(
     val addressLabel: String,
     val addressPlaceholder: String,
     val dateLabel: String,
-    /** Texto do campo de data enquanto nada foi escolhido. */
     val datePlaceholder: String,
     val timeLabel: String,
-    /** Texto do campo de horário enquanto nada foi escolhido. */
     val timePlaceholder: String,
     val durationLabel: String,
-    /** Valor da duração já escolhido: "90 minutos". */
     val durationValue: (minutes: Int) -> String,
     val playersLabel: String,
-    /** Valor do slider de jogadores: "10 jogadores". */
     val playersValue: (count: Int) -> String,
     val priceLabel: String,
     val pricePlaceholder: String,
-    /** Diz que dá para deixar em branco — o campo é opcional e não parecia. */
     val priceHelper: String,
     val submit: String,
     val validationError: String,
     val genericError: String,
-    /** Sem sessão não dá para saber de quem é a partida. */
     val notLoggedIn: String,
     val success: String,
-    /** Confirmação dos diálogos de data e horário. */
     val confirm: String,
-    /** Cancelamento dos diálogos de data e horário. */
     val cancel: String,
 )
 

@@ -27,19 +27,6 @@ import com.walcker.match.cedar.tokens.CedarTokens
 
 private const val MAX_COMMENT_LENGTH = 500
 
-/**
- * Formulário para submeter avaliação de um jogador.
- *
- * Estrelas (1-5) e as quatro dimensões são obrigatórias — `parseRatingDimensions`
- * nas Functions recusa payload sem qualquer uma delas. O comentário é opcional.
- *
- * O botão fica travado até as quatro estarem respondidas, com o aviso à vista
- * desde o começo: deixar enviar e devolver `INVALID_ARGUMENT` genérico jogaria no
- * usuário um erro que a tela já sabia prever.
- *
- * As estrelas eram `TextButton { Text("⭐") }` — cinco botões idênticos para um
- * leitor de tela, sem indicar qual estava escolhido. Agora é [CedarStarPicker].
- */
 @Composable
 internal fun RatingForm(
     playerName: String,
@@ -63,8 +50,6 @@ internal fun RatingForm(
     ) {
         CedarSectionHeader(title = strings.formTitle(playerName))
 
-        // The main star row had no label at all — it was five glyphs and nothing
-        // saying what they scored.
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
@@ -110,9 +95,6 @@ internal fun RatingForm(
             subtitle = strings.dimensionsHint,
         )
 
-        // Column e não LazyColumn: são quatro linhas fixas, e este formulário já
-        // vive dentro de um bottom sheet rolável — lazy dentro de rolável de altura
-        // não limitada quebra em runtime.
         RatingDimension.entries.forEach { dimension ->
             DimensionRow(
                 label = dimension.label(strings),
@@ -132,10 +114,6 @@ internal fun RatingForm(
     }
 }
 
-/**
- * `when` exaustivo em vez de um mapa nas strings: assim, adicionar uma quinta
- * dimensão não compila até alguém escrever o texto dela nos dois idiomas.
- */
 private fun RatingDimension.label(strings: RatingStrings): String = when (this) {
     RatingDimension.PUNCTUALITY -> strings.dimensionPunctuality
     RatingDimension.RESPECT -> strings.dimensionRespect
@@ -163,9 +141,6 @@ private fun DimensionRow(
         )
 
         CedarStarPicker(
-            // Zero desenha cinco estrelas vazias — é como uma dimensão ainda não
-            // respondida se apresenta. Não dá para voltar a esse estado depois de
-            // responder, e não precisa: o envio exige as quatro.
             rating = stars ?: 0,
             onRatingChange = onStarsChange,
             starContentDescription = strings.starContentDescription,

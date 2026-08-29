@@ -89,7 +89,6 @@ internal class PaywallStep : Screen {
     }
 }
 
-/** Atalho para previews e testes de tela, que não têm um snackbar host para dar. */
 @Composable
 internal fun PaywallScreen(
     state: PaywallState,
@@ -117,20 +116,6 @@ internal fun PaywallScreen(
     )
 }
 
-/**
- * A tela da assinatura.
- *
- * O que mudou nesta repaginação:
- * - **"Assinar" dividia a linha com "Restaurar compras", meio a meio.** A ação que o
- *   produto quer que aconteça tinha metade da largura e o mesmo desenho da ação de
- *   manutenção ao lado. Agora o botão de assinar é o único cheio de cor e ocupa a
- *   linha inteira; restaurar virou texto, abaixo.
- * - **Havia três botões de largura cheia empilhados** — assinar, restaurar e um
- *   "Voltar" que só repetia a seta da barra de topo. O voltar também virou texto.
- * - Os planos ganharam `selectableGroup`, então um leitor de tela agora anuncia
- *   "opção 2 de 2, selecionada" em vez de dois botões idênticos.
- * - A mensagem de erro passou a ser uma live region: ela aparecia calada.
- */
 @Composable
 internal fun PaywallScreen(
     state: PaywallState,

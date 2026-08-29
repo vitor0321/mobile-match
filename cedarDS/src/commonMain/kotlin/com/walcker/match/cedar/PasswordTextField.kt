@@ -19,19 +19,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * Campo de senha com o olho para mostrar e esconder.
- *
- * O que mudou:
- * - Os rótulos do olho eram `"Show password"` / `"Hide password"` escritos em
- *   inglês dentro do componente. Num app em pt-BR, era o que o leitor de tela
- *   falava. Agora entram por [showPasswordLabel] e [hidePasswordLabel] — sem
- *   valor padrão de propósito: um padrão em inglês só esconderia o problema.
- * - Sem [KeyboardType.Password] o teclado tratava a senha como texto comum, com
- *   sugestão e autocorreção em cima do que o usuário digita.
- * - Ganhou [isError] e [supportingText] para o erro nascer colado no campo, e não
- *   como um parágrafo solto no fim do formulário.
- */
 @Composable
 public fun PasswordOutlinedTextField(
     value: String,

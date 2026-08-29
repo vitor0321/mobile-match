@@ -30,6 +30,8 @@ kotlin {
                 implementation(libs.kotlinx.collections.immutable)
                 implementation(libs.coil.compose)
                 implementation(libs.coil.network.ktor)
+                implementation(libs.compottie)
+                implementation(libs.compottie.dot)
             }
         }
     }

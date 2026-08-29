@@ -11,20 +11,6 @@ import com.walcker.match.firestore.DocumentSnapshot
 import com.walcker.match.firestore.FirestoreClient
 import com.walcker.match.firestore.FirestoreQueryBuilder
 
-/**
- * Firestore implementation of [RatingSource].
- *
- * Ratings a player *received* live in `profiles/{userId}/ratings`, a read model
- * the `submitPlayerRating` function writes alongside the canonical record in
- * `matches/{matchId}/ratings`. They sit under `profiles/` and not `users/`
- * because a player's reviews are public to signed-in users, while `users/` is
- * the owner's private tree (see firestore.rules).
- *
- * `createdAtMs` is a plain number (epoch millis), not a Firestore `Timestamp`:
- * numbers survive the Android/iOS interop boundary unchanged and can be used
- * directly as a `startAfter` cursor. Documents written before that convention
- * are still read through the legacy `createdAt` timestamp field.
- */
 internal class FirestoreRatingSource(
     private val firestore: FirestoreClient,
 ) : RatingSource {
@@ -43,10 +29,6 @@ internal class FirestoreRatingSource(
                 put("ratedUserId", ratedUserId)
                 put("rating", rating)
                 put("comment", comment)
-                // As quatro têm de estar aqui: `parseRatingDimensions` nas
-                // Functions recusa ausente com o mesmo erro de valor inválido.
-                // Quem trava isso antes é `RatingDimensions.isComplete`, no
-                // botão do formulário.
                 dimensions.answers.forEach { (dimension, stars) ->
                     put(dimension.wireName, stars)
                 }
@@ -54,10 +36,6 @@ internal class FirestoreRatingSource(
         )
         .mapCatching { payload -> payload.toSubmitRatingOutcome() }
 
-    /**
-     * The callable answers `recorded` or `already_rated` — resending is
-     * idempotent server-side, so it is a success here too.
-     */
     private fun Map<String, Any?>.toSubmitRatingOutcome(): SubmitRatingOutcome {
         val averageRating = (this["averageRating"] as? Number)?.toFloat() ?: 0f
         val ratingCount = (this["ratingCount"] as? Number)?.toInt() ?: 0
@@ -92,7 +70,6 @@ internal class FirestoreRatingSource(
 
         RatingsPage(
             ratings = ratings,
-            // A short page means Firestore had nothing else to give: stop paging.
             nextCursor = if (ratings.size < limit) {
                 null
             } else {
@@ -113,11 +90,6 @@ internal class FirestoreRatingSource(
                 .mapNotNull { snapshot -> snapshot.toRating() }
         }
 
-    /**
-     * `createdAtMs` is always the last `orderBy` so every ordering is total —
-     * without it two ratings with the same star count could swap places between
-     * pages and be shown twice (or skipped).
-     */
     private fun FirestoreQueryBuilder.applySort(sort: RatingSort): FirestoreQueryBuilder {
         val primary = orderBy(sort.primaryField, if (sort.descending) DESCENDING else ASCENDING)
         return if (sort.primaryField == RATING_FIELD_CREATED_AT_MS) {
@@ -152,12 +124,6 @@ internal class FirestoreRatingSource(
         null
     }
 
-    /**
-     * Dimensão ausente ou fora de 1..5 é descartada em silêncio, e não derruba
-     * a avaliação inteira: quase todo o histórico foi gravado antes das
-     * dimensões existirem, e uma nota estragada num campo novo não pode sumir
-     * com a nota principal e o comentário.
-     */
     private fun DocumentSnapshot.readDimensions(): RatingDimensions = RatingDimensions(
         answers = RatingDimension.entries.mapNotNull { dimension ->
             val stars = getLong(dimension.wireName)?.toInt()
@@ -170,7 +136,6 @@ internal class FirestoreRatingSource(
         const val ASCENDING = "asc"
         const val DESCENDING = "desc"
 
-        /** Pre-`createdAtMs` documents stored a Firestore `Timestamp` here. */
         const val LEGACY_CREATED_AT_FIELD = "createdAt"
     }
 }

@@ -28,19 +28,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/** Altura mínima, não fixa: com a fonte do sistema a 200% o campo precisa crescer. */
 private val FieldHeight = 56.dp
 private val IconSize = 20.dp
 
-/**
- * The white rounded search bar from the redesign.
- *
- * Built on [TextField] with every line stripped, because the design has no
- * underline and no container tint — the field is a white pill on a tinted canvas.
- *
- * @param onSearch fired by the keyboard's search key. Leave null when the list
- *   filters as the user types.
- */
 @Composable
 public fun CedarSearchField(
     value: String,
@@ -105,14 +95,6 @@ public fun CedarSearchField(
     )
 }
 
-/**
- * The search bar that is not a search bar: on the Home map, "Onde você quer jogar?"
- * looks like a field but opens the search screen.
- *
- * Separate composable rather than a `readOnly` flag on [CedarSearchField], because
- * this one is a button — it announces itself as a button to screen readers and
- * never takes focus or raises a keyboard.
- */
 @Composable
 public fun CedarSearchEntryPoint(
     placeholder: String,

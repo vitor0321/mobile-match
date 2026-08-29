@@ -5,23 +5,17 @@ internal data class SearchStrings(
     val subtitle: String,
     val placeholder: String,
     val emptyForQuery: (String) -> String,
-    /** Result count above the list: "8 partidas encontradas". */
     val resultsCount: (Int) -> String,
-    /** Shown before the user types anything — the list is not empty, it has not started. */
     val idlePrompt: String,
     val filtersTitle: String,
     val filterSport: String,
     val filterDate: String,
     val filterPrice: String,
     val allSports: String,
-    /** Placeholder for a filter with nothing chosen yet. */
     val filterAny: String,
-    /** Filters that exist in the state but have no UI yet. */
     val comingSoon: String,
     val clearFilters: String,
     val applyFilters: String,
-    // Accessibility labels. Every one of these used to be a hardcoded pt-BR literal
-    // in the screen, or missing entirely.
     val openFiltersContentDescription: String,
     val clearQueryContentDescription: String,
 )

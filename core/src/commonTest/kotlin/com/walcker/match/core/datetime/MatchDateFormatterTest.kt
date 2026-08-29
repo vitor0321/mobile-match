@@ -17,7 +17,7 @@ class MatchDateFormatterTest {
     @Test
     fun `formatWhen today in UTC`() {
         val now = Instant.parse("2026-08-12T15:30:00Z")
-        val matchTime = now.plus(4, DateTimeUnit.HOUR, utc) // 19:30 UTC, mesmo dia
+        val matchTime = now.plus(4, DateTimeUnit.HOUR, utc)
         assertEquals("Hoje · 19:30", formatWhen(matchTime, now, utc))
     }
 
@@ -56,7 +56,6 @@ class FormatShortDateTest {
 
     @Test
     fun `respects the requested time zone when the day differs`() {
-        // 01:00 UTC on the 19th is still the 18th in Sao Paulo (UTC-3)
         val instant = Instant.parse("2026-08-19T01:00:00Z")
 
         assertEquals("18/08/2026", formatShortDate(instant, saoPaulo))

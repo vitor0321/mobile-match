@@ -10,37 +10,26 @@ import com.walcker.games.features.domain.model.Sport
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-/**
- * Reactive, DataStore-backed preferences for the games product.
- *
- * Holds user-tunable filters and the last-known location used for
- * radius queries. Exposed as Flows so screens can recompose when the
- * user changes a setting.
- */
 internal class GamesPreferences(
     private val dataStore: DataStore<Preferences>,
 ) {
 
-    /** Selected sport filter, or `null` for "all sports". */
     val selectedSport: Flow<Sport?> = dataStore.data.map { prefs ->
         prefs[KEY_SELECTED_SPORT]
             ?.takeIf { it.isNotBlank() }
             ?.let { runCatching { Sport.valueOf(it) }.getOrNull() }
     }
 
-    /** Search radius in kilometers. Defaults to [DEFAULT_RADIUS_KM] when unset. */
     val radiusKm: Flow<Double> = dataStore.data.map { prefs ->
         prefs[KEY_RADIUS_KM] ?: DEFAULT_RADIUS_KM
     }
 
-    /** Last known location (lat, lng), or `null` if not yet captured. */
     val lastLocation: Flow<LastLocation?> = dataStore.data.map { prefs ->
         val lat = prefs[KEY_LAST_LAT]
         val lng = prefs[KEY_LAST_LNG]
         if (lat != null && lng != null) LastLocation(lat, lng) else null
     }
 
-    /** Epoch millis of the last successful Firestore sync. */
     val lastSyncAt: Flow<Long?> = dataStore.data.map { prefs -> prefs[KEY_LAST_SYNC_AT] }
 
     suspend fun setSelectedSport(sport: Sport?) {

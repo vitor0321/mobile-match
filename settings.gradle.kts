@@ -1,4 +1,4 @@
-rootProject.name = "Match"
+rootProject.name = "JoinPlay"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

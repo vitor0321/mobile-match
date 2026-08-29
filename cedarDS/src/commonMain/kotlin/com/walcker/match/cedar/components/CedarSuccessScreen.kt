@@ -32,16 +32,6 @@ import com.walcker.match.cedar.tokens.CedarTokens
 private val CheckCircleSize = 88.dp
 private val CheckIconSize = 44.dp
 
-/**
- * The "Temos Jogo!" moment — the one celebratory screen in the app.
- *
- * Generic on purpose: joining a match is the first thing that lands here, but
- * creating one and confirming a payment want the same screen, and three
- * hand-rolled variants is how a design system dies.
- *
- * @param summary the card under the headline. Anything: a match recap, a code, a
- *   receipt. Pass null for a bare confirmation.
- */
 @Composable
 public fun CedarSuccessScreen(
     title: String,
@@ -84,8 +74,6 @@ public fun CedarSuccessScreen(
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
-            // Assertive, so a screen reader announces the confirmation on arrival
-            // instead of leaving the user to go looking for it.
             modifier = Modifier.semantics {
                 heading()
                 liveRegion = LiveRegionMode.Assertive
@@ -130,12 +118,6 @@ public fun CedarSuccessScreen(
     }
 }
 
-/**
- * A short code the user may need to read out loud at the venue.
- *
- * Larger and more spaced than body text because it gets read off a screen in the
- * dark, at the gate, by someone who is already late.
- */
 @Composable
 public fun CedarCodeBlock(
     label: String,

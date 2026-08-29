@@ -4,9 +4,6 @@ import com.walcker.games.features.domain.model.RatingDimensions
 import com.walcker.games.features.domain.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.repository.RatingRepository
 
-/**
- * Use case para submeter avaliação de um jogador após partida.
- */
 internal class SubmitRatingUseCase(
     private val ratingRepository: RatingRepository,
 ) {
@@ -20,9 +17,6 @@ internal class SubmitRatingUseCase(
         ratingRepository.submitPlayerRating(matchId, ratedUserId, rating, comment, dimensions)
 }
 
-/**
- * Use case para obter avaliações recebidas por um usuário.
- */
 internal class GetUserRatingsUseCase(
     private val ratingRepository: RatingRepository,
 ) {

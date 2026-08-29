@@ -131,7 +131,6 @@ class PlayerDetailsStepModelTest {
         val state = model.state.value
         assertEquals(PlayerDetailsState.PREVIEW_RATINGS_COUNT, state.previewRatings.size)
         assertTrue(state.hasMoreRatings)
-        // The histogram still sees the whole sample, not just the preview.
         assertEquals(8, state.distribution.total)
     }
 
@@ -154,7 +153,6 @@ class PlayerDetailsStepModelTest {
         assertNull(state.player)
         assertEquals("Jogador não encontrado", state.errorMessage)
         assertFalse(state.isLoadingPlayer)
-        // Ratings are never requested when there is no profile to attach them to.
         assertTrue(repository.ratingCalls.isEmpty())
     }
 
@@ -236,7 +234,6 @@ class PlayerDetailsStepModelTest {
         advanceUntilIdle()
 
         model.effects.test {
-            // Drain the failure message emitted during loading.
             awaitItem()
 
             model.onEvent(PlayerDetailsEvents.SeeAllRatingsClicked)

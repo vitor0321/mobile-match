@@ -25,23 +25,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/** Altura mínima, não fixa: o rótulo cresce com a escala de fonte do sistema. */
 private val ButtonHeight = 56.dp
 private val CompactButtonHeight = 44.dp
 private val SpinnerSize = 20.dp
 private val IconSize = 20.dp
 
-/**
- * The main action of a screen: "Aplicar filtros", "Criar partida", "Entrar".
- *
- * Blue, because in this design system blue is what you press and green is what
- * tells you a match still has room. Full width by default — the redesign puts
- * primary actions edge to edge, one per screen.
- *
- * @param loading swaps the label for a spinner and blocks the click. The button
- *   keeps its size, so the layout does not jump — which is the whole point of
- *   having this here instead of at each call site.
- */
 @Composable
 public fun CedarPrimaryButton(
     text: String,
@@ -69,13 +57,6 @@ public fun CedarPrimaryButton(
     }
 }
 
-/**
- * The action that is about a slot rather than about navigation:
- * "Garantir minha vaga · R$ 25".
- *
- * Green on purpose, and the only green button in the system. Text is ink, not
- * white — white on this green is 2:1 and unreadable; ink is 9:1.
- */
 @Composable
 public fun CedarAvailabilityButton(
     text: String,
@@ -101,10 +82,6 @@ public fun CedarAvailabilityButton(
     }
 }
 
-/**
- * The alternative that is not the main action: "Ver detalhes da partida",
- * "Cancelar", "Sair da partida".
- */
 @Composable
 public fun CedarSecondaryButton(
     text: String,
@@ -130,13 +107,6 @@ public fun CedarSecondaryButton(
     }
 }
 
-/**
- * A low-weight action that still needs a 48dp target: "Limpar filtros",
- * "Ver todas", "Recentrar".
- *
- * [defaultMinSize] rather than a fixed height so the target survives a user
- * running the system font at 200%.
- */
 @Composable
 public fun CedarTextButton(
     text: String,
@@ -166,8 +136,6 @@ private fun ButtonContent(
     loading: Boolean,
     leadingIcon: ImageVector?,
 ) {
-    // Crossfade keeps the button's measured size while the spinner swaps in, so a
-    // slow join does not make the screen jump under the user's thumb.
     Crossfade(targetState = loading) { isLoading ->
         Box(contentAlignment = Alignment.Center) {
             if (isLoading) {
@@ -188,8 +156,6 @@ private fun ButtonContent(
                     Text(
                         text = text,
                         style = MaterialTheme.typography.labelLarge,
-                        // Duas linhas, não uma: "Enviar e-mail de recuperação" a
-                        // 200% de escala de fonte virava reticências numa linha só.
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,

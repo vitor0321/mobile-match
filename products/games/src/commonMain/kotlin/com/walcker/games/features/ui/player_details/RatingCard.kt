@@ -17,16 +17,6 @@ import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatShortDate
 
-/**
- * A single review: stars, optional comment, and the date it was left.
- *
- * The reviewer's name and photo are intentionally absent — resolving them needs one
- * profile read per review, which the ratings subcollection does not denormalize
- * yet. Adding it later is a data-layer change only.
- *
- * @param ratingLabel already-formatted score (e.g. `"4,0"`), supplied by the
- *   caller's strings layer so this composable stays locale-agnostic.
- */
 @Composable
 internal fun RatingCard(
     rating: Rating,

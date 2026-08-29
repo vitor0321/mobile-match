@@ -17,12 +17,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * ScreenModel for the paginated list of ratings a player received.
- *
- * Paging is cursor-based and server-ordered, so changing [RatingSort] restarts
- * from the first page rather than reordering what happens to be in memory.
- */
 internal class PlayerRatingsListStepModel(
     private val userId: String,
     private val playerName: String,
@@ -40,13 +34,8 @@ internal class PlayerRatingsListStepModel(
     private val _effects = Channel<PlayerRatingsEffect>(Channel.BUFFERED)
     val effects: Flow<PlayerRatingsEffect> = _effects.receiveAsFlow()
 
-    /** Cursor for the next page; `null` once the list is exhausted. */
     private var nextCursor: String? = null
 
-    /**
-     * The in-flight page request. Cancelled whenever the list restarts so a
-     * slow response from the previous sort can never append stale rows.
-     */
     private var loadJob: Job? = null
 
     init {
@@ -128,10 +117,6 @@ internal class PlayerRatingsListStepModel(
         }
     }
 
-    /**
-     * A failed first page owns the screen (empty list, retry button); a failed
-     * next page keeps what is already visible and only surfaces a snackbar.
-     */
     private suspend fun handleFailure(error: Throwable, isFirstPage: Boolean) {
         val message = error.message ?: strings.errorLoading
         _state.update {

@@ -14,11 +14,8 @@ class PixPayloadBuilderTest {
             merchant = "Joao Silva",
         )
 
-        // Verify it starts with the expected format
         assertTrue(payload.startsWith("000201"))
-        // Must contain merchant account info
         assertTrue(payload.contains("26"))
-        // Must end with CRC16 (4 hex chars)
         assertEquals(4, payload.takeLast(4).length)
         assertTrue(payload.takeLast(4).all { it in "0123456789ABCDEF" })
     }
@@ -30,9 +27,8 @@ class PixPayloadBuilderTest {
             amountCents = 0,
             merchant = "Maria",
         )
-        assertTrue(payload.contains("52040000")) // MCC
-        assertTrue(payload.contains("5303986")) // BRL
-        // Amount field (54) should be absent when amount is 0
+        assertTrue(payload.contains("52040000"))
+        assertTrue(payload.contains("5303986"))
         val idx54 = payload.indexOf("54")
         assertEquals(-1, idx54)
     }
@@ -45,8 +41,7 @@ class PixPayloadBuilderTest {
             merchant = "Teste",
             description = "Partida Futsal",
         )
-        // BR Code é texto puro (EMV), não hex: sub-TLV 02, tamanho 14, valor sanitizado.
-        assertTrue(payload.contains("0214PARTIDA FUTSAL")) // "Partida Futsal" sanitizado
+        assertTrue(payload.contains("0214PARTIDA FUTSAL"))
     }
 
     @Test
@@ -57,9 +52,7 @@ class PixPayloadBuilderTest {
             merchant = "João São Paulo",
             city = "São Paulo",
         )
-        // Should not contain accents
         assertTrue(!payload.contains("ã") && !payload.contains("é"))
-        // Should be uppercase
         assertTrue(payload.uppercase() == payload)
     }
 
@@ -71,7 +64,6 @@ class PixPayloadBuilderTest {
             amountCents = 1000,
             merchant = longMerchant,
         )
-        // Merchant field (59) max 25 chars → after sanitize
         val idx59 = payload.indexOf("59")
         assertTrue(idx59 >= 0)
     }

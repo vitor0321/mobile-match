@@ -21,18 +21,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/** Alvo mínimo de toque. Os links tinham ~36dp de altura. */
 private val MinTouchTarget = 48.dp
 
-/**
- * Termos de uso e política de privacidade, no rodapé do paywall.
- *
- * Dois links que a loja exige e que ninguém revisa. O que estava errado:
- * - **Alvo de toque de ~36dp.** Era o tamanho do texto mais 8dp de padding.
- * - **`clickable` sem papel**, então um leitor de tela lia dois parágrafos, não
- *   dois links.
- * - Cor `onSurfaceVariant`: sublinhado, mas cinza. Link é `primary`.
- */
 @Composable
 internal fun PaywallLegalFooter(
     termsLabel: String,
@@ -50,8 +40,6 @@ internal fun PaywallLegalFooter(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LegalLink(label = termsLabel, color = colors.primary, onClick = onOpenTerms)
-        // Separador puramente visual: escondido do leitor de tela, que já lê os
-        // dois links como itens distintos — um "ponto central" no meio seria ruído.
         Text(
             text = "·",
             color = colors.onSurfaceVariant,

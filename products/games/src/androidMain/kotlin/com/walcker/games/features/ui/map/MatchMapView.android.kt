@@ -21,14 +21,6 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
-/**
- * Android implementation of [MatchMapView] using Google Maps via maps-compose.
- *
- * Marker hue encodes match status:
- * - OPEN  → green
- * - FULL  → orange
- * - other → red (cancelled/finished)
- */
 @Composable
 internal actual fun MatchMapView(
     pins: List<MapPin>,
@@ -45,7 +37,6 @@ internal actual fun MatchMapView(
         )
     }
 
-    // Re-center when the camera target changes (e.g. after location resolves).
     LaunchedEffect(camera.lat, camera.lng) {
         cameraPositionState.position = CameraPosition.fromLatLngZoom(
             LatLng(camera.lat, camera.lng),
@@ -68,13 +59,12 @@ internal actual fun MatchMapView(
                     icon = BitmapDescriptorFactory.defaultMarker(pin.status.markerHue()),
                     onClick = {
                         onPinClick(pin.matchId)
-                        false // allow default info-window behavior too
+                        false
                     },
                 )
             }
         }
 
-        // Nearby matches button (bottom-right corner)
         if (nearbyCount > 0) {
             Button(
                 onClick = onNearbyTap,

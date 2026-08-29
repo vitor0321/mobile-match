@@ -46,7 +46,6 @@ internal class SearchStepModel(
     private var allMatches: List<com.walcker.games.features.domain.model.Game> = emptyList()
 
     init {
-        // Observe cache and re-apply the current query
         repository.observeMatches()
             .onEach { games ->
                 allMatches = games
@@ -94,7 +93,6 @@ internal class SearchStepModel(
         val filters = state.filters
 
         val filtered = allMatches.filter { game ->
-            // Text search
             val matchesText = if (trimmedQuery.isBlank()) {
                 true
             } else {
@@ -104,7 +102,6 @@ internal class SearchStepModel(
                     game.sport.label.lowercase().contains(trimmedQuery)
             }
 
-            // Date range filter (convert seconds to milliseconds for comparison)
             val gameStartMs = game.startsAtSeconds * 1000
             val matchesDateRange = if (filters.startDateMs != null && gameStartMs < filters.startDateMs) {
                 false
@@ -114,14 +111,12 @@ internal class SearchStepModel(
                 true
             }
 
-            // Sport filter
             val matchesSport = if (filters.sports.isEmpty()) {
                 true
             } else {
                 game.sport in filters.sports
             }
 
-            // Price filter (pricePerPlayer can be null for free matches)
             val gamePrice = game.pricePerPlayer?.toFloatOrNull() ?: 0f
             val matchesPrice = if (filters.minPrice != null && gamePrice < filters.minPrice) {
                 false
@@ -135,8 +130,6 @@ internal class SearchStepModel(
         }
 
         _state.update {
-            // Re-carimba as strings: o holder só é preenchido depois da primeira
-            // composição, então o valor inicial pode ter caído no padrão pt-BR.
             it.copy(
                 strings = gamesStrings.search,
                 cardStrings = gamesStrings.gameList,

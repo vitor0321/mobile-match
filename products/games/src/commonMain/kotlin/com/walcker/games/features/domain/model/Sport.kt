@@ -1,8 +1,5 @@
 package com.walcker.games.features.domain.model
 
-/**
- * Começa com futebol/futsal e expande conforme a visão de futuro da pauta.
- */
 internal enum class Sport(val label: String) {
     FUTSAL("Futsal"),
     FUTEBOL("Futebol"),

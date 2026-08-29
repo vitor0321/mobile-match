@@ -1,10 +1,5 @@
 package com.walcker.match.core.payments
 
-/**
- * Formats a value in cents as pt-BR BRL currency.
- *
- * Ported from `formatBRLCents` in `lib/pix.ts` (Lovable MVP).
- */
 public fun formatBRLCents(cents: Int): String {
     val reais = cents / 100
     val centavos = cents % 100

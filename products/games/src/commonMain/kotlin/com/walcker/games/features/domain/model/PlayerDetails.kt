@@ -1,16 +1,5 @@
 package com.walcker.games.features.domain.model
 
-/**
- * Detailed player profile, fetched when the user opens someone from search.
- *
- * Mirrors the real shape of `profiles/{uid}` — see `onUserCreate` in
- * `functions/src/index.ts` and `profileEditableFields()` in `firestore.rules`.
- * Experience stats (matches organized/played, join and cancel rates) are not
- * here because no writer produces them yet; they come back in Phase 6 together
- * with the trigger that maintains them.
- *
- * @param memberSinceMs epoch millis of profile creation; `0` when unknown
- */
 internal data class PlayerDetails(
     val userId: String,
     val displayName: String,
@@ -21,10 +10,5 @@ internal data class PlayerDetails(
     val city: String?,
     val neighborhood: String?,
     val memberSinceMs: Long,
-    /**
-     * Média por dimensão, só com as que alguém já respondeu. Vazio é o estado
-     * normal de perfil novo e de todo perfil avaliado antes das dimensões
-     * existirem — a tela some com a seção em vez de mostrar zeros.
-     */
     val dimensionAverages: Map<RatingDimension, DimensionAverage> = emptyMap(),
 )

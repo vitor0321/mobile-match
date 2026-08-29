@@ -36,10 +36,6 @@ internal class GameRepositoryImpl(
         }
     }
 
-    /**
-     * Returns the current cache contents without triggering a refresh.
-     * Prefer [observeMatches] for reactive UI.
-     */
     override suspend fun openGames(): Result<List<Game>> {
         return runCatching {
             cache.matches.value

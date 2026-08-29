@@ -8,11 +8,8 @@ class GeoHashTest {
 
     @Test
     fun `encodeGeoHashSãoPaulo`() {
-        // São Paulo center from the MVP
         val coords = Coordinates(lat = -23.5505, lng = -46.6333)
         val hash = encodeGeoHash(coords, precision = 9)
-        // Vetor conferido contra o mesmo geohash usado no fixture das regras
-        // (firestore.rules.test.ts) e no mirror do servidor (functions/geo.ts).
         assertEquals("6gyf4bf8m", hash)
     }
 
@@ -20,7 +17,6 @@ class GeoHashTest {
     fun `encodeGeoHashRioDeJaneiro`() {
         val coords = Coordinates(lat = -22.9068, lng = -43.1729)
         val hash = encodeGeoHash(coords, precision = 9)
-        // Vetor conferido contra o mirror do servidor (functions/geo.ts).
         assertEquals("75cm9tfqn", hash)
     }
 
@@ -43,7 +39,6 @@ class GeoHashTest {
         val center = Coordinates(lat = -23.5505, lng = -46.6333)
         val ranges = boundsForRadius(center, radiusKm = 5.0)
         assertTrue(ranges.isNotEmpty())
-        // The center's hash should be within at least one range
         val centerHash = encodeGeoHash(center)
         val covered = ranges.any { it.start <= centerHash && centerHash <= it.endInclusive }
         assertTrue(covered)
@@ -54,8 +49,6 @@ class GeoHashTest {
         val center = Coordinates(lat = -23.5505, lng = -46.6333)
         val smallRanges = boundsForRadius(center, radiusKm = 1.0)
         val largeRanges = boundsForRadius(center, radiusKm = 50.0)
-        // Larger radius may produce more intervals (or same, depending on cell boundaries)
-        // but never fewer than the number of distinct cell hashes intersected.
         assertTrue(largeRanges.size >= 1)
     }
 
@@ -64,7 +57,6 @@ class GeoHashTest {
         val sp = Coordinates(lat = -23.5505, lng = -46.6333)
         val rj = Coordinates(lat = -22.9068, lng = -43.1729)
         val dist = distanceKm(sp, rj)
-        // Known distance ~357 km
         assertTrue(dist > 350.0 && dist < 365.0)
     }
 
@@ -78,7 +70,7 @@ class GeoHashTest {
     @Test
     fun `formatDistanceUnder1km`() {
         assertEquals("850 m", formatDistance(0.85))
-        assertEquals("10 m", formatDistance(0.008)) // rounds to 10m
+        assertEquals("10 m", formatDistance(0.008))
     }
 
     @Test

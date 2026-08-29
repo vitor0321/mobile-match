@@ -29,8 +29,6 @@ private class AndroidFirestoreClient : FirestoreClient {
         runCatching {
             firestore.runTransaction { txn ->
                 val wrappedTxn = AndroidTransaction(txn)
-                // Note: Firestore's runTransaction doesn't support suspend, so we'd need a workaround.
-                // For now, this is a placeholder. Production would use Tasks.await or similar.
                 throw NotImplementedError("Transaction with suspend not yet implemented for Android")
             }.await()
         }
@@ -59,7 +57,7 @@ private class AndroidDocumentReference(private val ref: com.google.firebase.fire
                     exists = true,
                     metadata = SnapshotMetadata(
                         isFromCache = doc.metadata.isFromCache,
-                        hasPendingWrites = false, // Firebase SDK hasPendingWrites is private
+                        hasPendingWrites = false,
                     ),
                 )
             } else {

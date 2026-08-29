@@ -4,6 +4,7 @@ import com.walcker.match.core.format.formatDecimal
 
 internal data class PlayerDetailsStrings(
     val title: String,
+    val loadingLabel: String,
     val errorLoading: String,
     val retry: String,
     val back: String,
@@ -14,18 +15,13 @@ internal data class PlayerDetailsStrings(
     val memberSince: (String) -> String,
     val ratingValue: (Float) -> String,
     val ratingAccessibility: (Float) -> String,
-    /**
-     * Cabeçalho da seção de dimensões. Os rótulos das dimensões em si vivem em
-     * [RatingStrings], junto com o formulário que as coleta — texto de uma
-     * mesma coisa não deve morar em dois lugares.
-     */
     val dimensionsTitle: String,
-    /** Quantas pessoas responderam **aquela** dimensão, não o total do perfil. */
     val dimensionCount: (Int) -> String,
 )
 
 internal val playerDetailsStringsEn = PlayerDetailsStrings(
     title = "Player Profile",
+    loadingLabel = "Loading the player…",
     errorLoading = "Error loading player. Please try again.",
     retry = "Try again",
     back = "Back",
@@ -44,6 +40,7 @@ internal val playerDetailsStringsEn = PlayerDetailsStrings(
 
 internal val playerDetailsStringsPt = PlayerDetailsStrings(
     title = "Perfil do Jogador",
+    loadingLabel = "Carregando o jogador…",
     errorLoading = "Erro ao carregar jogador. Tente novamente.",
     retry = "Tentar novamente",
     back = "Voltar",

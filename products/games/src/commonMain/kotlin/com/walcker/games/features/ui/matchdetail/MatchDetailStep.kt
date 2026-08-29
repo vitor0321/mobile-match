@@ -29,7 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,6 +52,7 @@ import com.walcker.games.features.domain.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.usecase.SubmitReportUseCase
+import com.walcker.games.features.ui.common.LoginRequiredBottomSheet
 import com.walcker.games.features.ui.ratings.RatingBottomSheet
 import com.walcker.games.features.ui.reports.ReportBottomSheet
 import com.walcker.games.strings.GamesStringsHolder
@@ -59,6 +62,7 @@ import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarAvailabilityButton
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
@@ -68,25 +72,10 @@ import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.datetime.formatWhen
+import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.PromotionCoordinator
 import org.koin.compose.koinInject
 
-/**
- * Match detail.
- *
- * Rebuilt for the redesign. Three things were broken beyond the visuals:
- *
- * - **Back did nothing.** The navigation icon's `onClick` was an empty lambda with
- *   a comment saying the Navigator handled it. It did not. On Android the system
- *   back gesture covered for it; on iOS there was no way out of this screen.
- * - **The screen did not scroll.** Everything sat in a plain `Column`, so on a
- *   390×844 phone the join button was below the fold and unreachable.
- * - **Half the copy was English** on a pt-BR screen. It now comes from
- *   [MatchDetailStrings].
- *
- * The join CTA moved into the Scaffold's bottom bar: it is the point of the screen
- * and it should not depend on how far the user scrolled.
- */
 internal class MatchDetailStep(val matchId: String) : Screen {
 
     @Composable
@@ -102,6 +91,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val promotionCoordinator: PromotionCoordinator = koinInject()
         val stringsHolder: GamesStringsHolder = koinInject()
         val analytics: AnalyticsTracker = koinInject()
+        val loginCoordinator: LoginCoordinator = koinInject()
 
         val joinGame: JoinGameUseCase = koinInject()
         val leaveGame: LeaveMatchUseCase = koinInject()
@@ -128,10 +118,9 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val state by stepModel.state.collectAsState()
         val strings = rememberGamesStrings().strings
         val detail = strings.matchDetail
+        val loginRequired = strings.loginRequired
+        var showLoginSheet by remember { mutableStateOf(false) }
 
-        // Efeito é canal, não estado: a confirmação abre uma vez. `replace` (não
-        // `push`) porque a própria tela de confirmação volta com `replace(detail)`
-        // e `pop()` — só assim a pilha fica [..., lista, confirmação] → sã.
         LaunchedEffect(Unit) {
             stepModel.effects.collect { effect ->
                 when (effect) {
@@ -144,6 +133,8 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                                 sportLabel = effect.sportLabel,
                             ),
                         )
+
+                    MatchDetailEffect.RequireLogin -> showLoginSheet = true
                 }
             }
         }
@@ -153,8 +144,6 @@ internal class MatchDetailStep(val matchId: String) : Screen {
         val total = state.participants?.totalSlots ?: match?.totalPlayers ?: 0
         val openSlots = (total - confirmed).coerceAtLeast(0)
         val isFull = match != null && (confirmed >= total || match.status == MatchStatus.FULL)
-        // FINISHED stays in the check for safety, but the clock is what really closes
-        // a match — nothing writes that status (see Game.isOver).
         val isClosed = match != null && (
             state.isMatchOver ||
                 match.status == MatchStatus.FINISHED ||
@@ -220,8 +209,6 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                         onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissStatusChange) },
                     )
                 }
-                // A failed rating or report is a banner, not a full-screen error:
-                // the match itself loaded fine.
                 state.ratingErrorMessage?.let { message ->
                     Banner(
                         message = message,
@@ -242,7 +229,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 }
 
                 when {
-                    state.isLoading -> LoadingBlock()
+                    state.isLoading -> LoadingBlock(contentDescription = detail.loadingLabel)
 
                     state.errorMessage != null -> EmptyState(
                         message = state.errorMessage.orEmpty(),
@@ -328,15 +315,19 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 onDismiss = { stepModel.onEvent(MatchDetailEvent.CancelCancelMatch) },
             )
         }
+
+        LoginRequiredBottomSheet(
+            isVisible = showLoginSheet,
+            strings = loginRequired,
+            onConfirm = {
+                loginCoordinator.requestLogin()
+                showLoginSheet = false
+            },
+            onDismiss = { showLoginSheet = false },
+        )
     }
 }
 
-/**
- * The join CTA, pinned to the bottom.
- *
- * Green while there is a slot to take — the one green button in the app — and the
- * neutral primary once it becomes "join the waitlist", which is a different promise.
- */
 @Composable
 private fun JoinBar(
     label: String,
@@ -406,8 +397,6 @@ private fun MatchDetailContent(
             ),
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
     ) {
-        // Venue first, then when, then price. The sport is a chip-sized detail —
-        // it used to be the headline, but the user already filtered by it.
         Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
             Text(
                 text = "${match.sport.label} · ${match.neighborhood}",
@@ -433,7 +422,6 @@ private fun MatchDetailContent(
 
         StatusBadge(status = match.status, isMatchOver = isMatchOver, detail = detail)
 
-        // The slot count, which is the decision the user came here to make.
         Card(
             shape = CedarTokens.radius.lgShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -456,7 +444,6 @@ private fun MatchDetailContent(
                         detail.noSlotsRemaining
                     },
                     style = MaterialTheme.typography.labelMedium,
-                    // The darker green: #29D178 as text on white is 2:1.
                     color = if (openSlots > 0) {
                         CedarTokens.colors.availableText
                     } else {
@@ -485,9 +472,6 @@ private fun MatchDetailContent(
 
         CedarSectionHeader(title = detail.participants)
 
-        // A plain Column, not a LazyColumn. The old version nested a LazyColumn
-        // pinned to 240dp inside this screen — which is how a participant list ends
-        // up with its own scrollbar inside a page that does not scroll.
         if (participants != null) {
             ParticipantsList(
                 participants = participants,
@@ -556,9 +540,6 @@ private fun StatusBadge(
     detail: MatchDetailStrings,
     modifier: Modifier = Modifier,
 ) {
-    // Cancelled beats the clock: a cancelled match does not become "finished" after
-    // its end time. Otherwise anything past its end is finished, even with `status`
-    // still OPEN/FULL — nothing writes FINISHED.
     val (label, color) = when {
         status == MatchStatus.CANCELLED ->
             detail.statusCancelled to MaterialTheme.colorScheme.error
@@ -637,7 +618,6 @@ private fun ParticipantsList(
                     statusLabel = detail.queuePosition(participant.positionInWaitlist ?: 0),
                     paidLabel = detail.paidTag,
                     rateLabel = detail.rateAction,
-                    // Only confirmed players can be rated.
                     canRate = false,
                     canReport = participant.userId != currentUserId,
                     reportStrings = reportStrings,
@@ -712,7 +692,6 @@ private fun ParticipantRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                // The paid state used to be a bare 💰 with no accessible name.
                 text = if (participant.hasPaid) "$statusLabel · $paidLabel" else statusLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -727,8 +706,6 @@ private fun ParticipantRow(
             }
         }
 
-        // Report is available regardless of match status: bad behaviour does not
-        // wait for the final whistle. Hidden only on the user's own row.
         if (canReport) {
             IconButton(
                 onClick = { onReportPlayer(participant.userId, participant.displayName) },
@@ -774,7 +751,6 @@ private fun Banner(
             color = onContainer,
             modifier = Modifier.weight(1f),
         )
-        // Was a TextButton with "✕" as its label — a glyph is not an accessible name.
         IconButton(onClick = onDismiss) {
             Icon(
                 imageVector = Icons.Filled.Close,
@@ -821,13 +797,16 @@ private fun ConfirmDialog(
 private val DIALOG_SPINNER = 16.dp
 
 @Composable
-private fun LoadingBlock(modifier: Modifier = Modifier) {
+private fun LoadingBlock(
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(CedarTokens.spacing.xxl),
         contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator()
+        CedarLoading(contentDescription = contentDescription)
     }
 }

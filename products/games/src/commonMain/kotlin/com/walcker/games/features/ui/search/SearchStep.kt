@@ -48,13 +48,6 @@ import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * Search screen — filters the local cache by venue, neighborhood, city or sport
- * label. Search runs entirely client-side; the cache is updated whenever the home
- * screen refreshes.
- *
- * O `Step` só liga o model à UI: assina o estado, coleta efeitos e navega.
- */
 internal class SearchStep : Screen {
 
     @Composable
@@ -84,7 +77,6 @@ internal class SearchStep : Screen {
     }
 }
 
-/** Conteúdo da busca, stateless: recebe estado e devolve eventos. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SearchContent(
@@ -165,8 +157,6 @@ internal fun SearchContent(
             }
 
             when {
-                // Nothing typed yet. This is not an empty result — saying "no
-                // matches found" before the user has searched reads as a failure.
                 state.query.isBlank() && state.results.isEmpty() ->
                     EmptyState(
                         message = strings.idlePrompt,
@@ -217,14 +207,6 @@ internal fun SearchContent(
     }
 }
 
-/**
- * The filter sheet.
- *
- * Sport is the only filter with real behaviour today — it is multi-select and
- * applies as you tap. Date and price exist in [SearchFilters] but have no UI, so
- * they are rendered disabled rather than hidden: a filter you cannot see is a
- * filter you cannot ask for.
- */
 @Composable
 private fun SearchFiltersPanel(
     strings: SearchStrings,

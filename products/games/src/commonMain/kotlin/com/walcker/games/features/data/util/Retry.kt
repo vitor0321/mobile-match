@@ -4,12 +4,6 @@ import kotlinx.coroutines.delay
 import kotlin.math.min
 import kotlin.math.pow
 
-/**
- * Retry policy for transient network failures.
- *
- * Uses exponential backoff: 500ms, 1s, 2s, 4s, capped at [maxDelayMs].
- * Retries up to [maxAttempts] total attempts (including the first call).
- */
 internal suspend fun <T> withRetry(
     maxAttempts: Int = 3,
     initialDelayMs: Long = 500L,
@@ -38,8 +32,4 @@ internal suspend fun <T> withRetry(
     throw lastError ?: IllegalStateException("withRetry exited without error")
 }
 
-/**
- * Default retry decision: retry on any error EXCEPT validation errors
- * (which won't get better with another attempt).
- */
 internal fun defaultShouldRetry(error: Throwable): Boolean = true

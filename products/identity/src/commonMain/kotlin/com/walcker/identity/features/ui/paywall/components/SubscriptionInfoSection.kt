@@ -12,14 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * A letra miúda da cobrança: quando renova, como cancelar.
- *
- * O fundo era `surfaceVariant.copy(alpha = 0.35f)`. Cor translúcida sobre um fundo
- * que o componente não conhece dá um contraste que ninguém consegue calcular — e
- * este é justamente o texto que a loja exige que seja legível. Agora é o mesmo
- * cartão branco sobre canvas que o resto do app usa.
- */
 @Composable
 internal fun SubscriptionInfoSection(
     title: String,

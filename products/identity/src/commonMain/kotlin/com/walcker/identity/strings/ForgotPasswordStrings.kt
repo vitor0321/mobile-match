@@ -3,7 +3,6 @@ package com.walcker.identity.strings
 internal data class ForgotPasswordStrings(
     val title: String,
     val subtitle: String,
-    /** Nome acessível do botão voltar da barra de topo. */
     val back: String,
     val emailLabel: String,
     val submitButton: String,

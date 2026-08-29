@@ -3,19 +3,12 @@ package com.walcker.identity.strings
 internal data class SignUpStrings(
     val title: String,
     val subtitle: String,
-    /** Nome acessível do botão voltar da barra de topo. */
     val back: String,
     val emailLabel: String,
     val passwordLabel: String,
-    /**
-     * O mínimo que o Firebase Auth aceita. Estava só do lado do servidor: o usuário
-     * digitava quatro caracteres, tocava em criar conta e recebia o erro depois.
-     */
     val passwordHelper: String,
     val confirmPasswordLabel: String,
-    /** Nome acessível do olho quando a senha está escondida. */
     val showPassword: String,
-    /** Nome acessível do olho quando a senha está à mostra. */
     val hidePassword: String,
     val submitButton: String,
     val submitLoadingButton: String,

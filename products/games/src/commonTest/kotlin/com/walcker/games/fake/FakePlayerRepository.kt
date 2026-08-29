@@ -10,13 +10,6 @@ import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.games.features.domain.model.Sport
 import com.walcker.games.features.domain.repository.PlayerRepository
 
-/**
- * Hand-written fake instead of a mock: the assertions here are about what the
- * step models do with the results, and a fake keeps that readable.
- *
- * [ratingPages] is keyed by the cursor the caller sent (`null` for the first
- * page), so a test can describe a whole pagination sequence declaratively.
- */
 internal class FakePlayerRepository(
     var searchResult: Result<PlayerSearchResults> = Result.success(PlayerSearchResults.Empty),
     var detailsResult: Result<PlayerDetails> = Result.success(playerDetails()),
@@ -24,10 +17,8 @@ internal class FakePlayerRepository(
         mapOf(null to Result.success(RatingsPage.Empty)),
 ) : PlayerRepository {
 
-    /** Every `searchPlayers` call, in order — lets tests assert debouncing. */
     val searchCalls: MutableList<PlayerSearchFilters> = mutableListOf()
 
-    /** Every `getPlayerRatings` call, in order — lets tests assert the query. */
     val ratingCalls: MutableList<RatingCall> = mutableListOf()
 
     data class RatingCall(

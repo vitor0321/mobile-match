@@ -19,4 +19,5 @@ internal val PtBrGamesStrings = GamesStrings(
     matchConfirmed = matchConfirmedStringsPt,
     matchDetail = matchDetailStringsPt,
     map = mapStringsPt,
+    loginRequired = loginRequiredStringsPt,
 )

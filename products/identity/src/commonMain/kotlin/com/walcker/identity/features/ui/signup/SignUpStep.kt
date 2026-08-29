@@ -49,14 +49,6 @@ internal class SignUpStep : Screen {
     }
 }
 
-/**
- * Criação de conta com e-mail e senha.
- *
- * A confirmação de senha agora reage enquanto se digita: se as duas já divergem, o
- * campo fica em estado de erro na hora. Antes, a divergência só aparecia depois de
- * tocar em "Criar conta" — e o texto do erro saía no fim do formulário, longe do
- * campo que o causou.
- */
 @Composable
 internal fun SignUpScreen(
     state: SignUpState,
@@ -70,8 +62,6 @@ internal fun SignUpScreen(
     val strings = LocalIdentityStrings.current.signUp
     val enabled = !state.isLoading
 
-    // Só quando já dá para comparar: reclamar da confirmação a cada tecla, desde o
-    // primeiro caractere, é ruído.
     val passwordsDiverge = state.confirmPassword.isNotEmpty() &&
         state.password != state.confirmPassword
 

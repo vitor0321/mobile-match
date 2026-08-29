@@ -16,22 +16,6 @@ import com.walcker.match.cedar.components.CedarSuccessScreen
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
 
-/**
- * Confirmation after joining a match — screen 04 of the redesign.
- *
- * New screen: today joining shows a snackbar and leaves the user on the detail
- * screen, so the moment the product exists for ("I have a game tonight") passes
- * without anything marking it.
- *
- * Deliberately dumb — it takes the facts it renders instead of reading a
- * StepModel. The data is already in hand at the moment the join succeeds, and a
- * confirmation screen that re-fetches can contradict the thing it is confirming.
- *
- * @param matchCode short code the user reads out at the venue. The domain has no
- *   such field yet — `Game` carries only `id` — so this stays null until product
- *   decides what the code is. The block is hidden when null rather than showing a
- *   raw Firestore id.
- */
 internal data class MatchConfirmedStep(
     val matchId: String,
     val venueName: String,

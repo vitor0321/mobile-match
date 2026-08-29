@@ -17,19 +17,6 @@ import com.walcker.match.cedar.tokens.CedarTokens
 
 private val IconSize = 48.dp
 
-/**
- * The message a list shows when it has nothing to show.
- *
- * The parameter list grew so the two private copies living in `MyMatchesStep` and
- * `NotificationHistoryStep` can be deleted: one of them needed a subtitle, the
- * other an icon, and neither could use the design system version as it was.
- *
- * An empty state that only says "nothing here" leaves the user stuck. Where there
- * is a next step — widen the radius, clear the filters, create a match — pass
- * [actionLabel] and give them the way out.
- *
- * @param message stays the first parameter, so existing call sites keep compiling.
- */
 @Composable
 public fun EmptyState(
     message: String,

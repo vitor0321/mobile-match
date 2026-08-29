@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Regras do Match — marketplace de vagas esportivas.
+// Regras do Join Play — marketplace de vagas esportivas.
 //
 // Princípio central: tudo que decide lotação, dinheiro, reputação ou punição é
 // escrito exclusivamente por Cloud Functions (Admin SDK ignora estas regras).

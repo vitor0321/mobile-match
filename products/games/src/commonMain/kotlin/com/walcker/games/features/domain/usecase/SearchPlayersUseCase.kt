@@ -4,12 +4,6 @@ import com.walcker.games.features.domain.model.PlayerSearchFilters
 import com.walcker.games.features.domain.model.PlayerSearchResults
 import com.walcker.games.features.domain.repository.PlayerRepository
 
-/**
- * Use case for searching players with advanced filters.
- *
- * Delegates to [PlayerRepository], which caches and decides what runs on the
- * server versus in memory (see `FirestorePlayerSource`).
- */
 internal interface SearchPlayersUseCase {
     suspend operator fun invoke(filters: PlayerSearchFilters): Result<PlayerSearchResults>
 }

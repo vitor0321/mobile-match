@@ -15,14 +15,6 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 
-/**
- * Renders a real AdMob banner ad on Android using [AdView].
- *
- * Requires `MobileAds.initialize(...)` to be called once in the Android app before use.
- *
- * @param adUnitId AdMob banner unit ID. Use the test ID during development:
- *   `ca-app-pub-3940256099942544/6300978111`
- */
 @Composable
 public fun AdMobBannerAndroid(
     adUnitId: String,

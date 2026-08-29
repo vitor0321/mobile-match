@@ -10,11 +10,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * O corte entre Ativas e Passadas é o mesmo `Game.isOver` que libera avaliar.
- * Se divergirem, a partida cai em Passadas e continua sem botão de avaliar —
- * ou o contrário, some da lista de ativas enquanto ainda está rolando.
- */
 class GetMyMatchesUseCaseTest {
 
     private val start = 1_000_000L

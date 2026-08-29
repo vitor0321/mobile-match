@@ -12,7 +12,6 @@ import kotlin.test.assertNull
 
 class InMemoryPlayerCacheTest {
 
-    /** Controllable clock — the cache must be testable without sleeping. */
     private var now = 0L
 
     private fun cache(ttlMs: Long = InMemoryPlayerCache.DEFAULT_TTL_MS) =
@@ -83,10 +82,7 @@ class InMemoryPlayerCacheTest {
         cache.invalidatePlayer("player-1")
 
         assertNull(cache.details("player-1"))
-        // Searches are ordered by rating, so a new review can reshuffle lists
-        // this player never appeared in.
         assertNull(cache.searchResults(filters))
-        // Other players are untouched.
         assertNotNull(cache.details("player-2"))
     }
 
@@ -111,7 +107,6 @@ class InMemoryPlayerCacheTest {
             cache.putSearchResults(PlayerSearchFilters(query = "q$index"), results)
         }
 
-        // The first one made room for the extra.
         assertNull(cache.searchResults(PlayerSearchFilters(query = "q0")))
         assertNotNull(cache.searchResults(PlayerSearchFilters(query = "q1")))
         assertNotNull(cache.searchResults(PlayerSearchFilters(query = "q$cap")))
@@ -126,7 +121,6 @@ class InMemoryPlayerCacheTest {
         cache.putSearchResults(filters, results)
 
         now = 1_500L
-        // Still fresh: the second write reset the clock on this entry.
         assertNotNull(cache.searchResults(filters))
     }
 }

@@ -25,17 +25,6 @@ import com.walcker.match.cedar.tokens.CedarTokens
 private val RowMinHeight = 56.dp
 private val ChevronSize = 20.dp
 
-/**
- * A filter field: a label, the value currently chosen, and a chevron.
- *
- * The Figma draws these as white boxes with text in them, which reads as a text
- * input — during the critique this was the second-most-likely thing for a user to
- * tap expecting a keyboard. The chevron is the fix: it says "this opens something".
- *
- * @param value what is selected right now, e.g. "Hoje · 18:00–22:00". Pass
- *   [placeholder] instead when nothing is selected, so the empty state reads as
- *   muted rather than as a real choice.
- */
 @Composable
 public fun CedarFilterRow(
     label: String,
@@ -89,12 +78,6 @@ public fun CedarFilterRow(
     }
 }
 
-/**
- * A filter whose options are few enough to show at once — the sport picker.
- *
- * Chips instead of a row that opens a sheet: with ten sports and one tap to choose,
- * a sheet would be two extra taps for nothing.
- */
 @Composable
 public fun CedarFilterSection(
     label: String,

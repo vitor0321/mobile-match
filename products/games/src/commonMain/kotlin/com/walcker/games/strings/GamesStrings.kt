@@ -15,4 +15,5 @@ internal data class GamesStrings(
     val matchConfirmed: MatchConfirmedStrings,
     val matchDetail: MatchDetailStrings,
     val map: MapStrings,
+    val loginRequired: LoginRequiredStrings,
 )

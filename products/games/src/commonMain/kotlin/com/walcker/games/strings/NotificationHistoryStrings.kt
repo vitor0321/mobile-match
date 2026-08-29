@@ -1,11 +1,5 @@
 package com.walcker.games.strings
 
-/**
- * Localized strings for the notification history sheet.
- *
- * The relative-time labels are here because `formatTimeAgo` used to build them
- * inline in English — "2 hours ago" on a pt-BR screen.
- */
 internal interface NotificationHistoryStrings {
     val title: String
     val emptyState: String

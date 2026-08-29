@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-// Marker interface to avoid circular dependency on TranslationStorage
 public interface LanguageProvider {
     val selectedLanguage: Flow<String>
     suspend fun saveLanguage(language: String)
@@ -29,7 +28,6 @@ internal class ProfileStepModel(
     private val stringsHolder: IdentityStringsHolder,
 ) : StateScreenModel<ProfileState>(ProfileState()), KoinComponent {
 
-    // Try to get LanguageProvider from Koin (registered by the app module)
     private val languageProvider: LanguageProvider? = try {
         inject<LanguageProvider>().value
     } catch (e: Exception) {
@@ -50,7 +48,6 @@ internal class ProfileStepModel(
                 )
             }
         }
-        // Observe language changes if LanguageProvider is available
         if (languageProvider != null) {
             observeLanguageChanges()
         }

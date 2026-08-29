@@ -3,13 +3,6 @@ package com.walcker.games.features.data.mapper
 import com.walcker.games.features.domain.model.Participant
 import com.walcker.match.firestore.DocumentSnapshot
 
-/**
- * Converts a Firestore participant document snapshot into a [Participant],
- * returning `null` if any required field is missing or malformed.
- *
- * Required fields: userId, displayName, joinedAt, isConfirmed.
- * Optional: photoUrl, positionInWaitlist, hasPaid.
- */
 internal fun DocumentSnapshot.toParticipant(): Participant? {
     return try {
         val userId = getString("userId") ?: id

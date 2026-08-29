@@ -182,7 +182,6 @@ private fun PackageType.rank(): Int {
     }
 }
 
-
 private suspend fun Purchases.awaitOfferings(): Offerings {
     return suspendCancellableCoroutine { continuation ->
         getOfferings(

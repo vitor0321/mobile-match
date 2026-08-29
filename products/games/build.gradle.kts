@@ -16,7 +16,6 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
-    // Enable ObjC name interop on all platforms
     sourceSets.all {
         languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
     }

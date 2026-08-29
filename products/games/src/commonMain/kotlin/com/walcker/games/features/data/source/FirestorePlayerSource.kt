@@ -9,18 +9,6 @@ import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.match.firestore.DocumentSnapshot
 import com.walcker.match.firestore.FirestoreClient
 
-/**
- * Firestore implementation of [PlayerSource]. Reads `profiles/{uid}`.
- *
- * Only the sort field and the ban check run server-side. Name, rating range and
- * sport are matched here, on the [PlayerSource.DEFAULT_SEARCH_LIMIT] documents
- * the query returned: Firestore has no case-insensitive contains, and every
- * extra inequality would need its own composite index. The consequence is
- * honest but real — a search can miss someone ranked below the cap, which is
- * why the UI surfaces "narrow your search" when the cap is reached.
- *
- * Delegates rating queries to [RatingSource].
- */
 internal class FirestorePlayerSource(
     private val firestore: FirestoreClient,
     private val ratingSource: RatingSource,
@@ -35,7 +23,6 @@ internal class FirestorePlayerSource(
         val snapshots = firestore
             .collection(PROFILES_COLLECTION)
             .query()
-            // Banned players never surface in search.
             .where(PROFILE_FIELD_IS_BANNED, "==", false)
             .orderBy(sort.field, if (sort.descending) DESCENDING else ASCENDING)
             .limit(limit)
@@ -46,7 +33,6 @@ internal class FirestorePlayerSource(
             players = snapshots.mapNotNull { snapshot ->
                 snapshot.toPlayerSearchResultDto()?.takeIf { it.matches(filters) }
             },
-            // A full page means Firestore had more to give.
             reachedLimit = snapshots.size >= limit,
         )
     }
@@ -76,16 +62,6 @@ internal class FirestorePlayerSource(
             cursor = cursor,
         )
 
-    /**
-     * A contagem é o `ratingCount` do perfil, não um contador por dimensão: como
-     * toda avaliação traz as quatro, elas caminham juntas e o servidor nem grava
-     * `<dim>Count`.
-     *
-     * Sem avaliação nenhuma não devolve nada — exibir "0,0 de pontualidade" para
-     * quem nunca foi avaliado é pior do que omitir a linha. O mesmo vale para
-     * perfil avaliado antes das dimensões existirem: o campo não está lá, e a
-     * seção some inteira em vez de mostrar zeros.
-     */
     private fun DocumentSnapshot.readDimensionAverages(): Map<RatingDimension, DimensionAverage> {
         val count = (getLong(FIELD_RATING_COUNT) ?: 0L).toInt()
         if (count <= 0) return emptyMap()
@@ -96,7 +72,6 @@ internal class FirestorePlayerSource(
         }.toMap()
     }
 
-    /** Client-side leg of the filtering — see the class docs for why. */
     private fun PlayerSearchResultDto.matches(filters: PlayerSearchFilters): Boolean {
         val query = filters.query.trim()
         if (query.isNotEmpty() && !fullName.contains(query, ignoreCase = true)) return false
@@ -112,7 +87,6 @@ internal class FirestorePlayerSource(
         return true
     }
 
-    /** A profile with no name is unusable in a list — skip it rather than render a blank row. */
     private fun DocumentSnapshot.toPlayerSearchResultDto(): PlayerSearchResultDto? = try {
         PlayerSearchResultDto(
             userId = id,
@@ -136,7 +110,6 @@ internal class FirestorePlayerSource(
             sports = readSports(),
             city = getString(FIELD_CITY),
             neighborhood = getString(FIELD_NEIGHBORHOOD),
-            // createdAt is a Firestore Timestamp; getTimestamp unwraps it to millis.
             createdAtMs = getTimestamp(FIELD_CREATED_AT) ?: 0L,
             dimensionAverages = readDimensionAverages(),
         )
@@ -152,7 +125,6 @@ internal class FirestorePlayerSource(
         const val ASCENDING = "asc"
         const val DESCENDING = "desc"
 
-        // Field names of profiles/{uid} — see onUserCreate in functions/src/index.ts.
         const val FIELD_FULL_NAME = "fullName"
         const val FIELD_AVATAR_URL = "avatarUrl"
         const val FIELD_RATING = "rating"

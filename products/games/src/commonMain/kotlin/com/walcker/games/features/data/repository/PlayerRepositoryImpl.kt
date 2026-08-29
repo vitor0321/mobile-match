@@ -11,15 +11,6 @@ import com.walcker.games.features.domain.model.RatingSort
 import com.walcker.games.features.domain.model.RatingsPage
 import com.walcker.games.features.domain.repository.PlayerRepository
 
-/**
- * Implementation of [PlayerRepository].
- *
- * Reads go through [InMemoryPlayerCache] first: the search screen re-queries on
- * every filter change and on every back-navigation from a profile, and those
- * repeats are pure cost. Ratings are deliberately not cached — a paginated,
- * sortable list keyed by cursor would need its own invalidation story, and the
- * user reaches it far less often.
- */
 internal class PlayerRepositoryImpl(
     private val source: PlayerSource,
     private val cache: InMemoryPlayerCache,
@@ -59,9 +50,6 @@ internal class PlayerRepositoryImpl(
         source.getPlayerRatings(userId, limit, sort, cursor)
             .recoverCatching { error -> throw mapToGamesError(error) }
 
-    /**
-     * Convert exceptions from the source layer to domain [GamesError].
-     */
     private fun mapToGamesError(error: Throwable): GamesError = when {
         error is GamesError -> error
         error is NoSuchElementException ->

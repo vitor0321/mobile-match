@@ -1,7 +1,6 @@
 package com.walcker.match.app
 
 import android.os.Bundle
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,12 +12,9 @@ import com.walcker.match.core.ads.AdMobBannerAndroid
 private fun adMobBannerUnitId(): String =
     BuildConfig.ADMOB_BANNER_UNIT_ID.ifBlank { "ca-app-pub-8514371864627144/7820524155" }
 
-private const val MIN_SPLASH_DURATION_MS = 650L
-
 internal class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        val splashStartedAt = SystemClock.uptimeMillis()
         super.onCreate(savedInstanceState)
 
         var keepSplashOnScreen = true
@@ -35,14 +31,7 @@ internal class MainActivity : ComponentActivity() {
                 }
             ) {
                 App(
-                    onFirstFrameRendered = {
-                        val elapsed = SystemClock.uptimeMillis() - splashStartedAt
-                        val remaining = (MIN_SPLASH_DURATION_MS - elapsed).coerceAtLeast(0L)
-                        window.decorView.postDelayed(
-                            { keepSplashOnScreen = false },
-                            remaining,
-                        )
-                    },
+                    onFirstFrameRendered = { keepSplashOnScreen = false },
                 )
             }
         }

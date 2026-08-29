@@ -44,6 +44,7 @@ import androidx.compose.ui.window.Dialog
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.features.ui.common.LoginRequiredBottomSheet
 import com.walcker.games.strings.CreateMatchStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
@@ -53,33 +54,14 @@ import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
+import com.walcker.match.navigator.LoginCoordinator
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.koin.compose.koinInject
 
-/** Horário sugerido quando o usuário abre o seletor sem nada escolhido. */
 private const val DEFAULT_HOUR = 19
 
-/**
- * Criação de partida — o outro lado do marketplace.
- *
- * O formulário é longo por natureza (local, esporte, quando, quantos, quanto), então
- * ele é quebrado em três blocos com cabeçalho em vez de uma pilha única de campos:
- * quem cria uma partida precisa saber quanto falta para acabar.
- *
- * O que mudou nesta repaginação, além dos tokens:
- * - A tela não usava [CreateMatchStrings]. Ela lia `strings.gameList` e escrevia cada
- *   rótulo em pt-BR direto no código, com o arquivo de textos traduzido parado ao lado.
- * - Enviar trocava o formulário inteiro por um spinner centralizado. Agora o formulário
- *   continua na tela, desabilitado, e o botão é que carrega — o usuário não perde de
- *   vista o que acabou de preencher.
- * - Os erros de validação do estado eram desenhados sem cor de erro, e três deles
- *   (bairro, cidade, endereço) nunca eram desenhados. Agora todos saem como
- *   `supportingText` do próprio campo.
- * - Esporte era uma coluna de `FilterChip` de largura cheia. Chip de largura cheia lê
- *   como botão; e são dez esportes, o que dava dez linhas. Virou um [FlowRow] de pílulas.
- * - O diálogo de horário não tinha fundo: o [TimePicker] flutuava sobre o conteúdo.
- */
 internal class CreateMatchStep : Screen {
 
     override val key: String get() = "create-match"
@@ -90,18 +72,18 @@ internal class CreateMatchStep : Screen {
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         val strings = rememberGamesStrings().strings.createMatch
+        val loginCoordinator = koinInject<LoginCoordinator>()
+        val loginRequired = rememberGamesStrings().strings.loginRequired
+        var showLoginSheet by remember { mutableStateOf(false) }
 
         LaunchedEffect(stepModel) {
             stepModel.effects.collect { effect ->
                 when (effect) {
                     is CreateMatchEffect.ShowMessage ->
                         snackbarHostState.showSnackbar(effect.message)
-
-                    // Quem troca de aba é o TabCoordinator, lá no MatchScaffold. Aqui
-                    // só confirmamos — e sem o id do documento, que não diz nada a
-                    // ninguém fora do Firestore.
                     is CreateMatchEffect.NavigateToMyMatches ->
                         snackbarHostState.showSnackbar(strings.success)
+                    is CreateMatchEffect.RequireLogin -> showLoginSheet = true
                 }
             }
         }
@@ -145,9 +127,6 @@ internal class CreateMatchStep : Screen {
                     )
                 }
 
-                // FlowRow e não LazyRow: uma lista lazy horizontal esconderia metade
-                // dos esportes fora da tela, e são só dez itens fixos — não há o que
-                // virtualizar.
                 item(key = "sport") {
                     CedarFilterSection(label = strings.sportLabel) {
                         SportPicker(
@@ -265,8 +244,6 @@ internal class CreateMatchStep : Screen {
                             enabled = state.isFormValid,
                             loading = state.isSubmitting,
                         )
-                        // Botão desabilitado sem explicação é o jeito mais rápido de
-                        // travar alguém num formulário longo.
                         if (!state.isFormValid) {
                             Text(
                                 text = strings.validationError,
@@ -278,16 +255,18 @@ internal class CreateMatchStep : Screen {
                 }
             }
         }
+        LoginRequiredBottomSheet(
+            isVisible = showLoginSheet,
+            strings = loginRequired,
+            onConfirm = {
+                loginCoordinator.requestLogin()
+                showLoginSheet = false
+            },
+            onDismiss = { showLoginSheet = false },
+        )
     }
 }
 
-/**
- * Campo de texto do formulário.
- *
- * O erro entra como `supportingText` do próprio campo em vez de um [Text] solto
- * embaixo: assim ele herda a cor de erro e o leitor de tela o anuncia junto do campo,
- * e não como um parágrafo avulso.
- */
 @Composable
 private fun FormTextField(
     value: String,
@@ -319,12 +298,6 @@ private fun FormTextField(
     )
 }
 
-/**
- * Os dez esportes de uma vez, quebrando linha conforme couberem.
- *
- * Eram `FilterChip` de largura cheia, um por linha — dez linhas de pílula gigante
- * antes de chegar no resto do formulário.
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SportPicker(
@@ -349,13 +322,6 @@ private fun SportPicker(
     }
 }
 
-/**
- * Data e horário, lado a lado.
- *
- * Os dois campos usam [CedarFilterRow]: a seta à direita é o que diz que aquilo abre
- * um seletor. Os `OutlinedButton` de antes tinham a mesma altura e a mesma borda dos
- * campos de texto acima, então pareciam campos de digitação.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateTimeSection(
@@ -437,8 +403,6 @@ private fun DateTimeSection(
             is24Hour = true,
         )
         Dialog(onDismissRequest = { showTimePicker = false }) {
-            // Sem Surface o diálogo é transparente e o relógio fica boiando sobre o
-            // formulário. Era assim antes.
             Surface(
                 shape = CedarTokens.radius.lgShape,
                 color = MaterialTheme.colorScheme.surface,

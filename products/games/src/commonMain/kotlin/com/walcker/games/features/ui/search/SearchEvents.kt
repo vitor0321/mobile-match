@@ -9,7 +9,6 @@ internal sealed interface SearchEvents {
     data class PriceRangeChanged(val minPrice: Float?, val maxPrice: Float?) : SearchEvents
     data object ResetFilters : SearchEvents
     data object ToggleFiltersPanel : SearchEvents
-    /** Toque no card do resultado. Quem decide para onde ir é o model. */
     data class SelectGame(val gameId: String) : SearchEvents
 }
 

@@ -5,10 +5,6 @@ import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.repository.GameRepository
 import com.walcker.games.features.domain.repository.MyMatch
 
-/**
- * Returns the user's matches split into "active" (upcoming or in-progress) and
- * "past" (finished/cancelled or in the past).
- */
 internal data class MyMatches(
     val active: List<MyMatch>,
     val past: List<MyMatch>,
@@ -28,10 +24,6 @@ internal class GetMyMatchesUseCaseImpl(
         }
     }
 
-    /**
-     * O corte de "passada" é o mesmo [Game.isOver] que libera a avaliação: uma
-     * partida não pode cair na aba Passadas e continuar sem botão de avaliar.
-     */
     private fun isActive(game: Game, nowSeconds: Long): Boolean {
         if (game.status == MatchStatus.CANCELLED || game.status == MatchStatus.FINISHED) return false
         return !game.isOver(nowSeconds)

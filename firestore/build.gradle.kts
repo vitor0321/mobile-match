@@ -14,18 +14,6 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
-    // iOS cocoapods integration would be configured here once cocoapods plugin is available:
-    // cocoapods {
-    //     framework {
-    //         baseName = "FirestoreKit"
-    //         isStatic = false
-    //         export(libs.koin.core)
-    //     }
-    //     pod("FirebaseFirestore") {
-    //         version = "11.5.0"
-    //     }
-    // }
-
     sourceSets {
         commonMain.dependencies {
             implementation(libs.koin.core)
@@ -43,8 +31,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.play.services)
         }
         iosMain.dependencies {
-            // iOS requires: pod 'FirebaseFirestore' in iosApp/Podfile
-            // Interop via Objective-C bridge in actual blocks
         }
     }
 }

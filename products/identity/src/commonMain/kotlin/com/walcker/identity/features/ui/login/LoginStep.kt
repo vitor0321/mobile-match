@@ -57,18 +57,6 @@ internal class LoginStep : Screen {
     }
 }
 
-/**
- * Entrar com e-mail e senha, ou com Google/Apple.
- *
- * A hierarquia dos botões era plana: cinco botões de largura cheia empilhados, todos
- * com o mesmo peso visual — o "Entrar" não parecia mais importante que o "Esqueci
- * minha senha". Agora [CedarPrimaryButton] é o único cheio de cor, os provedores
- * sociais são secundários abaixo de um divisor, e os dois links são texto.
- *
- * Os campos ganharam tipo de teclado e ação de IME: o e-mail avança para a senha, a
- * senha envia o formulário. Antes o teclado mostrava "Enter" nos dois e o usuário
- * tinha que fechá-lo para achar o botão.
- */
 @Composable
 internal fun LoginScreen(
     state: LoginState,
@@ -168,7 +156,6 @@ internal fun LoginScreen(
     }
 }
 
-/** Linha, texto, linha — separa "entrar com senha" de "entrar com provedor". */
 @Composable
 private fun SocialDivider(
     label: String,

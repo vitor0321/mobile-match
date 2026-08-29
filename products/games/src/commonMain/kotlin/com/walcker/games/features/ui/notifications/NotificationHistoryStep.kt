@@ -46,17 +46,6 @@ import org.koin.compose.koinInject
 
 private val UnreadDotSize = 8.dp
 
-/**
- * Notification history, in a bottom sheet.
- *
- * Three things were wrong beyond the styling:
- *
- * - **The ✕ in the header called `Refresh`.** Tapping the close button reloaded the
- *   list and left the sheet open. It closes the sheet now.
- * - **Relative times were hardcoded English** — "2 hours ago" on a pt-BR screen.
- * - **`onDelete` was passed down and never used**, so `NotificationHistoryEvent.Delete`
- *   was unreachable from the UI. There is a delete button now.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationHistoryStep(
@@ -132,7 +121,6 @@ private fun NotificationHistoryContent(
                 subtitle = if (state.isLoading) strings.refreshing else null,
                 modifier = Modifier.weight(1f),
             )
-            // Was a TextButton labelled "✕" wired to Refresh.
             IconButton(onClick = onClose) {
                 Icon(
                     imageVector = Icons.Filled.Close,
@@ -288,10 +276,6 @@ private const val HOUR_MS = 3_600_000L
 private const val DAY_MS = 86_400_000L
 private const val WEEK_MS = 604_800_000L
 
-/**
- * Relative time for a notification. The labels come from [strings]; the maths does
- * not need translating, the words do.
- */
 internal fun formatTimeAgo(
     timestamp: Long,
     strings: NotificationHistoryStrings,
@@ -306,10 +290,4 @@ internal fun formatTimeAgo(
     }
 }
 
-/**
- * Current time in milliseconds.
- *
- * Stays here — `MatchDetailStepModel` imports it from this package, and the
- * `actual`s live in `androidMain`/`iosMain` next to this declaration.
- */
 internal expect fun getCurrentTimeMillis(): Long

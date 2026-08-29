@@ -34,24 +34,9 @@ import com.walcker.match.cedar.tokens.CedarTokens
 
 private const val MAX_RATING = 5f
 
-/** Aceita vírgula: num teclado pt-BR, o separador decimal é ela. */
 private fun String.toRatingOrNull(): Float? =
     replace(',', '.').toFloatOrNull()?.coerceIn(0f, MAX_RATING)
 
-/**
- * Filtros avançados da busca de jogadores, numa bottom sheet.
- *
- * Só nota e esporte: os filtros por número de partidas saíram no Sprint 3 porque
- * nada escreve aqueles contadores, então eles excluíam todo mundo em silêncio.
- *
- * O que mudou nesta repaginação:
- * - **Dez `FilterChip` de largura cheia, um por linha.** Aqui a seleção múltipla
- *   está certa — esportes favoritos são um conjunto — mas dez linhas de pílula
- *   gigante empurravam os botões para fora da sheet. Virou [FlowRow].
- * - **"Aplicar" dividia a linha com "Limpar filtros".** A ação que fecha a sheet
- *   agora ocupa a linha; limpar é texto abaixo.
- * - **Não dava para digitar uma nota decimal.** Ver [RatingBoundField].
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PlayerFiltersPanel(
@@ -130,20 +115,6 @@ internal fun PlayerFiltersPanel(
     }
 }
 
-/**
- * Limite de nota, de 0 a 5.
- *
- * O texto digitado é estado local e só o `Float` sobe. Era o contrário: o campo
- * desenhava `value?.toString()`, então todo texto intermediário que não parseava —
- * `"4,"`, `"4."`, `""` — virava nulo e apagava o que a pessoa estava digitando antes
- * do segundo dígito. Não dava para digitar uma nota decimal.
- *
- * O [LaunchedEffect] existe para o caminho contrário, o "Limpar filtros": quando o
- * valor muda de fora e deixa de corresponder ao texto, o texto acompanha.
- *
- * Um texto impossível limpa o limite em vez de travar o campo — o filtro é uma dica,
- * não um formulário a validar.
- */
 @Composable
 private fun RatingBoundField(
     value: Float?,

@@ -18,16 +18,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 
-/**
- * The app's top bar: transparent, so it sits on the tinted canvas rather than
- * cutting a white band across the top.
- *
- * @param backContentDescription label for the back button. It used to be the
- *   hardcoded string "Voltar", which is the only piece of user-facing pt-BR left
- *   in the design system — pass the translated string from the screen's `strings`.
- *   Defaults to null so existing call sites keep compiling; a null description on
- *   a real control is an accessibility gap worth closing as each screen is touched.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 public fun CedarTopBar(

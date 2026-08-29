@@ -6,43 +6,21 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-/**
- * Which colour carries the brand.
- *
- * The redesign puts blue on actions and keeps green for availability, so a green
- * pill always means "there are slots left" and never "press me". [Green] keeps the
- * previous identity for whoever needs it — the schemes below are symmetric, so the
- * switch is one line in `CedarTheme`.
- */
 public enum class CedarBrand { Blue, Green }
 
-/**
- * Colours the Material 3 scheme has no slot for.
- *
- * Read as `CedarTokens.colors.available`.
- */
 @Immutable
 public data class CedarColors(
-    /** Screen background — the faint blue that makes white cards read as raised. */
     val canvas: Color,
-    /** A card nested inside another card. */
     val surfaceSubtle: Color,
-    /** Background of "there are slots left". Never a button. */
     val available: Color,
-    /** Text and icons on top of [available]. */
     val onAvailable: Color,
-    /** Green as *text* on a light surface — a darker tone, because [available] fails AA as text. */
     val availableText: Color,
-    /** Soft availability container, for a whole card that is about availability. */
     val availableContainer: Color,
-    /** Map base while tiles load. */
     val mapBase: Color,
-    /** Streets on the map placeholder. */
     val mapLine: Color,
-    /** Venue photo placeholder. */
     val imagePlaceholder: Color,
-    /** Scrim over a photo so white text stays readable on it. */
     val overlayScrim: Color,
+    val splashBackground: Color,
 )
 
 internal val CedarLightColors: CedarColors = CedarColors(
@@ -56,6 +34,7 @@ internal val CedarLightColors: CedarColors = CedarColors(
     mapLine = CedarPalette.MapLine,
     imagePlaceholder = CedarPalette.ImagePlaceholder,
     overlayScrim = Color(0x66091729),
+    splashBackground = CedarPalette.SplashBackground,
 )
 
 internal val CedarDarkColors: CedarColors = CedarColors(
@@ -69,9 +48,8 @@ internal val CedarDarkColors: CedarColors = CedarColors(
     mapLine = CedarPalette.MapLineDark,
     imagePlaceholder = CedarPalette.ImagePlaceholderDark,
     overlayScrim = Color(0x990B1220),
+    splashBackground = CedarPalette.SplashBackground,
 )
-
-// ── Material 3 schemes ────────────────────────────────────────────────────────
 
 internal fun cedarLightColorScheme(brand: CedarBrand): ColorScheme {
     val primary = when (brand) {
@@ -92,8 +70,6 @@ internal fun cedarLightColorScheme(brand: CedarBrand): ColorScheme {
         primaryContainer = primaryContainer,
         onPrimaryContainer = onPrimaryContainer,
 
-        // Secondary is the availability green — used for the "guarantee my slot" CTA,
-        // the one button in the app that is about a slot rather than about navigation.
         secondary = CedarPalette.Green500,
         onSecondary = CedarPalette.Ink900,
         secondaryContainer = CedarPalette.Green100,
@@ -109,7 +85,6 @@ internal fun cedarLightColorScheme(brand: CedarBrand): ColorScheme {
         onSurface = CedarPalette.Ink900,
 
         surfaceVariant = CedarPalette.SurfaceSubtle,
-        // Was #B6B6B6, 2.03:1 on white — this is the AA failure the old theme shipped.
         onSurfaceVariant = CedarPalette.Ink500,
 
         surfaceContainerLowest = CedarPalette.Surface,

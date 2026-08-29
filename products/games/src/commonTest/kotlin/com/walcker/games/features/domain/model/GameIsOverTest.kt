@@ -6,11 +6,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/**
- * A borda aqui não é cosmética: é o mesmo instante em que `requireMatchIsOver`
- * das Functions passa a aceitar `submitPlayerRating`. Se o cliente e o servidor
- * discordarem em um segundo, a tela oferece um botão que a Function recusa.
- */
 class GameIsOverTest {
 
     private val start = 1_000_000L
@@ -39,8 +34,6 @@ class GameIsOverTest {
 
     @Test
     fun `acabou exatamente no fim`() {
-        // O servidor recusa quando `endsAtMillis > Date.now()`, ou seja: no
-        // instante exato do fim ele já aceita. O cliente tem de aceitar junto.
         assertTrue(sixtyMin.isOver(nowSeconds = end))
     }
 
@@ -112,8 +105,6 @@ class GameCanBeRatedByTest {
 
     @Test
     fun `status OPEN nao impede avaliar - e o caso normal`() {
-        // Nada escreve FINISHED. Uma partida encerrada segue com status OPEN, e
-        // era exatamente isso que deixava o botão invisível para sempre.
         val stillOpen = match(status = MatchStatus.OPEN)
 
         assertTrue(stillOpen.canBeRatedBy(userId = player, nowSeconds = end))

@@ -36,24 +36,18 @@ import com.walcker.games.features.ui.player_details.RatingCard
 import com.walcker.games.strings.PlayerRatingsStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
 import org.koin.core.parameter.parametersOf
 
-/** How many items before the end trigger the next page request. */
 private const val PREFETCH_DISTANCE = 3
 
 private val NextPageRowHeight = 56.dp
 private val NextPageSpinnerSize = 24.dp
 
-/**
- * Full list of the reviews a player received: 20 per page, sorted server-side.
- *
- * Reached from the player details screen; the player's name is passed in so the
- * title renders immediately instead of waiting on a second profile read.
- */
 internal data class PlayerRatingsListStep(
     val userId: String,
     val playerName: String,
@@ -81,7 +75,6 @@ internal data class PlayerRatingsListStep(
             }
         }
 
-        // Prefetch the next page slightly before the user reaches the bottom.
         val shouldLoadMore by remember {
             derivedStateOf {
                 val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -125,7 +118,7 @@ internal data class PlayerRatingsListStep(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator()
+                        CedarLoading(contentDescription = strings.loadingLabel)
                     }
 
                     state.ratings.isEmpty() && state.errorMessage != null -> EmptyState(
@@ -173,8 +166,6 @@ internal data class PlayerRatingsListStep(
                                 }
                             }
                         } else if (state.hasMore) {
-                            // Manual fallback for when auto-prefetch cannot fire
-                            // (short lists, accessibility navigation).
                             item(key = "next-page-button") {
                                 CedarSecondaryButton(
                                     text = strings.loadMore,
@@ -191,10 +182,6 @@ internal data class PlayerRatingsListStep(
     }
 }
 
-/**
- * Sort options. A [LazyRow] rather than a plain Row: three chips fit today, but the
- * labels grow with translation and a fixed Row would clip them.
- */
 @Composable
 private fun SortRow(
     selected: RatingSort,

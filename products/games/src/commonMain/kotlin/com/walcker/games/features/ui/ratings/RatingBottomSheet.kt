@@ -10,16 +10,6 @@ import com.walcker.games.features.domain.model.RatingDimensions
 import com.walcker.games.strings.RatingStrings
 import com.walcker.match.cedar.tokens.CedarTokens
 
-/**
- * Bottom sheet modal para avaliar um jogador após partida.
- *
- * @param isVisible Se o modal está visível
- * @param playerName Nome do jogador sendo avaliado
- * @param onDismiss Chamado quando modal fecha
- * @param onSubmit Chamado quando usuário submete avaliação. `dimensions` vem vazio
- *   quando ele só deu estrelas — o servidor aceita assim
- * @param isLoading Se está enviando (mostra loading state)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RatingBottomSheet(

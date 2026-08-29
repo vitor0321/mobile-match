@@ -22,21 +22,6 @@ import com.walcker.match.cedar.components.CedarTagTone
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
 
-/**
- * A match in "Minhas partidas": the same skeleton as `MatchCard`, plus the user's
- * role and the action that belongs to it (cancel if organiser, leave if participant).
- *
- * Two fixes beyond the visuals:
- * - It rendered `game.sport.name` — the enum constant, so the card said `FUTEBOL`
- *   while every other screen said `Futebol`. Same bug the map had.
- * - The role badge was a **disabled `AssistChip`**, which a screen reader announces
- *   as a disabled button. It is a label, so it is a label now.
- *
- * @param isPast the card came from the Passadas tab. It is the only source of
- *   "it's over": `status` never becomes [MatchStatus.FINISHED], so without this a
- *   yesterday's match showed no label at all. `GetMyMatchesUseCase` makes the cut
- *   by the clock.
- */
 @Composable
 internal fun MyMatchCard(
     myMatch: MyMatch,
@@ -121,7 +106,6 @@ internal fun MyMatchCard(
                 }
             }
 
-            // A finished or cancelled match has nothing left to cancel or leave.
             if (statusLabel == null) {
                 CedarSecondaryButton(
                     text = when (myMatch.role) {

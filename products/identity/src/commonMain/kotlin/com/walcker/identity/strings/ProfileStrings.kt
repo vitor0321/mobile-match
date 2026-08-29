@@ -2,10 +2,8 @@ package com.walcker.identity.strings
 
 internal data class ProfileStrings(
     val title: String,
-    /** Nome acessível do botão voltar da barra de topo. */
     val back: String,
     val fallbackAccountName: String,
-    /** Cabeçalho do bloco final: restaurar compras, sair, excluir conta. */
     val accountActionsLabel: String,
     val proStatusLabel: String,
     val proStatusDescription: String,

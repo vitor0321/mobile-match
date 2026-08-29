@@ -19,4 +19,5 @@ internal val EnGamesStrings = GamesStrings(
     matchConfirmed = matchConfirmedStringsEn,
     matchDetail = matchDetailStringsEn,
     map = mapStringsEn,
+    loginRequired = loginRequiredStringsEn,
 )
