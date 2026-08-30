@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -59,6 +60,10 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
+import kotlin.collections.forEach
+import kotlin.let
+import kotlin.ranges.rangeTo
+import kotlin.text.padStart
 
 private const val DEFAULT_HOUR = 19
 
@@ -103,7 +108,8 @@ internal class CreateMatchStep : Screen {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .imePadding(),
                 contentPadding = PaddingValues(
                     horizontal = CedarTokens.spacing.lg,
                     vertical = CedarTokens.spacing.md,

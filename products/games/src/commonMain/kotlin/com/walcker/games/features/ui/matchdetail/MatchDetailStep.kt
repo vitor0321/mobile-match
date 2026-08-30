@@ -75,6 +75,12 @@ import com.walcker.match.core.datetime.formatWhen
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.PromotionCoordinator
 import org.koin.compose.koinInject
+import kotlin.collections.emptyList
+import kotlin.collections.forEach
+import kotlin.collections.forEachIndexed
+import kotlin.collections.isNotEmpty
+import kotlin.ranges.coerceAtLeast
+import kotlin.to
 
 internal class MatchDetailStep(val matchId: String) : Screen {
 
@@ -149,6 +155,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 match.status == MatchStatus.FINISHED ||
                 match.status == MatchStatus.CANCELLED
             )
+        val isParticipant = state.currentUserId != null && state.currentUserId in (match?.participants ?: emptyList())
 
         Scaffold(
             containerColor = CedarTokens.colors.canvas,
@@ -160,7 +167,7 @@ internal class MatchDetailStep(val matchId: String) : Screen {
                 )
             },
             bottomBar = {
-                if (match != null) {
+                if (match != null && !isParticipant) {
                     JoinBar(
                         label = when {
                             isClosed -> detail.matchClosed
@@ -490,26 +497,31 @@ private fun MatchDetailContent(
             )
         }
 
+        val isOrganizer = currentUserId != null && currentUserId == match.organizerId
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
         ) {
-            CedarSecondaryButton(
-                text = detail.leaveMatch,
-                onClick = onLeaveMatch,
-                enabled = !isClosed && !isLeavingMatch && !isCancellingMatch,
-                loading = isLeavingMatch,
-                fillWidth = false,
-                modifier = Modifier.weight(1f),
-            )
-            CedarSecondaryButton(
-                text = detail.cancelMatch,
-                onClick = onCancelMatch,
-                enabled = !isClosed && !isCancellingMatch && !isLeavingMatch,
-                loading = isCancellingMatch,
-                fillWidth = false,
-                modifier = Modifier.weight(1f),
-            )
+            if (isOrganizer) {
+                CedarSecondaryButton(
+                    text = detail.cancelMatch,
+                    onClick = onCancelMatch,
+                    enabled = !isClosed && !isCancellingMatch,
+                    loading = isCancellingMatch,
+                    fillWidth = false,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                CedarSecondaryButton(
+                    text = detail.leaveMatch,
+                    onClick = onLeaveMatch,
+                    enabled = !isClosed && !isLeavingMatch,
+                    loading = isLeavingMatch,
+                    fillWidth = false,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }

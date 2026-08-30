@@ -3,7 +3,13 @@ package com.walcker.games.features.data.mapper
 import com.walcker.games.features.domain.model.Game
 import com.walcker.games.features.domain.model.MatchStatus
 import com.walcker.games.features.domain.model.Sport
+import com.walcker.match.core.payments.formatBRLCents
 import com.walcker.match.firestore.DocumentSnapshot
+import kotlin.collections.emptyList
+import kotlin.collections.filterIsInstance
+import kotlin.let
+import kotlin.runCatching
+import kotlin.takeIf
 
 internal fun DocumentSnapshot.toGame(): Game? {
     return try {
@@ -26,10 +32,10 @@ internal fun DocumentSnapshot.toGame(): Game? {
             durationMin = (getLong("durationMin")?.toInt()) ?: 60,
             confirmedPlayers = (getLong("confirmedCount")?.toInt()) ?: 0,
             totalPlayers = (getLong("totalSlots")?.toInt()) ?: 1,
-            pricePerPlayer = getString("priceCents")?.let { price ->
-                // TODO: Use formatBRLCents from core/payments
-                "R$ $price"
-            },
+            pricePerPlayer = (getLong("priceCents")?.toInt() ?: 0)
+                .takeIf { it > 0 }
+                ?.let(::formatBRLCents),
+            priceCents = getLong("priceCents")?.toInt() ?: 0,
             organizerName = getString("organizerName") ?: return null,
             organizerId = getString("organizerId") ?: return null,
             organizerRating = getDouble("organizerRating") ?: 5.0,

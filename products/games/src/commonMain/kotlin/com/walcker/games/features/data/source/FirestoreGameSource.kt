@@ -18,8 +18,14 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlin.collections.emptyList
+import kotlin.collections.mapNotNull
+import kotlin.collections.mapOf
+import kotlin.fold
+import kotlin.getOrThrow
+import kotlin.math.roundToInt
+import kotlin.to
 
 internal class FirestoreGameSource(
     private val firestore: FirestoreClient,
@@ -114,9 +120,9 @@ internal class FirestoreGameSource(
             "geohash" to request.geohash,
             "startsAtSeconds" to request.startsAtSeconds,
             "durationMin" to request.durationMin,
-            "confirmedPlayers" to 1,
-            "totalPlayers" to request.totalPlayers,
-            "pricePerPlayer" to request.pricePerPlayer,
+            "confirmedCount" to 1,
+            "totalSlots" to request.totalPlayers,
+            "priceCents" to (request.pricePerPlayer?.toDoubleOrNull()?.times(100)?.roundToInt() ?: 0),
             "status" to "OPEN",
             "organizerName" to organizerName,
             "organizerId" to organizerId,

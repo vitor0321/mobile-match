@@ -33,8 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.deleteAccount = exports.onUserCreate = void 0;
+exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
 exports.requireEmptyPayload = requireEmptyPayload;
+exports.shouldCancelOnOrganizerDeletion = shouldCancelOnOrganizerDeletion;
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
 const firestore_1 = require("firebase-admin/firestore");
@@ -44,6 +45,7 @@ const firestore_2 = require("firebase-functions/v2/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const geo_js_1 = require("./geo.js");
 const notifications_js_1 = require("./notifications.js");
+const verification_js_1 = require("./verification.js");
 const moderation_js_1 = require("./moderation.js");
 (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
@@ -71,7 +73,7 @@ exports.onUserCreate = functionsV1
         sports: [],
         city: null,
         neighborhood: null,
-        rating: 5,
+        rating: 0,
         ratingCount: 0,
         matchesPlayed: 0,
         isBanned: false,
@@ -86,7 +88,16 @@ exports.onUserCreate = functionsV1
         lng: null,
         geohash: null,
         radiusKm: DEFAULT_RADIUS_KM,
-        isAvailable: false,
+        // Nasce disponível de propósito. `selectRecipients` filtra por este campo
+        // (regra B5), então `false` no cadastro significaria que quem se inscreve
+        // e nunca abre o perfil não recebe aviso de partida nenhuma — o produto
+        // vive de avisar sobre vaga, e um padrão que cala é pior do que um que
+        // incomoda. Desligar é um toque no switch do perfil.
+        //
+        // `availableUntil: null` é "até eu desligar"; sem coordenada ninguém é
+        // notificado de qualquer jeito (parseCandidate descarta), então isto não
+        // dispara nada antes da pessoa permitir localização.
+        isAvailable: true,
         availableUntil: null,
         availableSports: [],
         updatedAt: now,
@@ -118,10 +129,21 @@ exports.deleteAccount = (0, https_1.onCall)({ region: REGION }, async (request) 
     requireAuthentication(uid);
     requireRecentAuthentication(request.auth?.token.auth_time);
     requireEmptyPayload(request.data);
+    // A ordem importa. Sair das partidas primeiro, porque isso lê o perfil e
+    // libera vagas; apagar o usuário do Auth por último, para que uma falha no
+    // meio deixe a pessoa capaz de repetir a chamada.
+    await leaveAllMatches(uid);
+    await cleanUpOrganizedMatches(uid);
+    await anonymizeAuthoredContent(uid);
+    await deleteModerationTrail(uid);
     await Promise.all([
         db.recursiveDelete(db.doc(`profiles/${uid}`)),
         db.recursiveDelete(db.doc(`users/${uid}`)),
     ]);
+    await (0, auth_1.getAuth)()
+        .deleteUser(uid)
+        // Repetir a exclusão não pode falhar: o usuário já ter sumido é sucesso.
+        .catch(() => undefined);
     return { deleted: true };
 });
 function requireAuthentication(uid) {
@@ -140,6 +162,108 @@ function requireEmptyPayload(value) {
     if (Object.keys(value).length > 0) {
         throw new https_1.HttpsError("invalid-argument", "Payload must be empty.");
     }
+}
+// ---------------------------------------------------------------------------
+// adminSetModeration — Callable (painel de moderação)
+//
+// A decisão humana que o escalonamento automático nunca toma: banir, e também
+// desfazer. Exige a custom claim `admin`.
+//
+// Existe porque firestore.rules nega escrita em moderation/{uid} até para
+// admin: o mesmo movimento precisa espelhar `isBanned` no perfil, que é onde a
+// regra de criar partida e o filtro da busca olham. Duas escritas que têm de
+// andar juntas não podem sair do cliente.
+// ---------------------------------------------------------------------------
+exports.adminSetModeration = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    if (request.auth?.token.admin !== true) {
+        throw new https_1.HttpsError("permission-denied", "Admin only.");
+    }
+    const data = (request.data ?? {});
+    if (typeof data.userId !== "string" || data.userId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "userId is required.");
+    }
+    if (!(0, moderation_js_1.isModerationLevel)(data.level)) {
+        throw new https_1.HttpsError("invalid-argument", "level is not a known moderation level.");
+    }
+    // Um admin se banindo por engano perderia o acesso ao próprio painel.
+    if (data.userId === uid) {
+        throw new https_1.HttpsError("failed-precondition", "You cannot moderate your own account.");
+    }
+    const reason = typeof data.reason === "string" ? data.reason.trim() : "";
+    if (reason.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "reason is required.");
+    }
+    const nowMs = Date.now();
+    const state = (0, moderation_js_1.manualModerationState)(data.level, typeof data.days === "number" ? data.days : null, nowMs);
+    await db.runTransaction(async (txn) => {
+        const moderationRef = db.doc(`moderation/${data.userId}`);
+        const profileRef = db.doc(`profiles/${data.userId}`);
+        const [current, profile] = await txn.getAll(moderationRef, profileRef);
+        if (!profile.exists) {
+            throw new https_1.HttpsError("not-found", "Profile not found.");
+        }
+        const history = Array.isArray(current.data()?.history) ? current.data().history : [];
+        txn.set(moderationRef, {
+            level: state.level,
+            untilMs: state.untilMs,
+            requiresReview: state.requiresReview,
+            reason,
+            decidedBy: uid,
+            updatedAtMs: nowMs,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            history: [
+                ...history,
+                { level: state.level, atMs: nowMs, decidedBy: uid, reason },
+            ].slice(-MAX_HISTORY_ENTRIES),
+        }, { merge: true });
+        // Espelho lido por isBannedUser() nas regras e pelo filtro da busca.
+        txn.update(profileRef, { isBanned: state.isBanned, updatedAt: firestore_1.FieldValue.serverTimestamp() });
+    });
+    return { userId: data.userId, level: state.level, untilMs: state.untilMs };
+});
+// ---------------------------------------------------------------------------
+// syncVerificationStatus — Callable
+//
+// Espelha no perfil o que o ID token já afirma. Quem verifica é o Firebase
+// Auth; aqui só se copia a claim assinada para um lugar que outras pessoas
+// conseguem ler, porque o selo de verificado é sinal de confiança público e
+// `profiles/{uid}` é o único documento com leitura aberta a quem está logado.
+//
+// O app precisa forçar refresh do token antes de chamar: o `email_verified`
+// entra na próxima emissão, e um token velho faria a chamada não fazer nada.
+// Chamar de novo é inofensivo — a operação é idempotente.
+// ---------------------------------------------------------------------------
+exports.syncVerificationStatus = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    requireEmptyPayload(request.data);
+    const status = (0, verification_js_1.verificationFromClaims)(request.auth?.token);
+    await db.doc(`profiles/${uid}`).set({
+        emailVerified: status.emailVerified,
+        phoneVerified: status.phoneVerified,
+        verificationCheckedAtMs: Date.now(),
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return status;
+});
+/**
+ * Barra a ação quando a política exigir verificação que a conta não tem.
+ *
+ * Lê direto das claims do token, e não do espelho no perfil: o espelho pode
+ * estar desatualizado se o app ainda não chamou `syncVerificationStatus`, e
+ * recusar alguém que já verificou seria pior que o contrário.
+ *
+ * Com a política toda desligada (o padrão), sai antes de fazer qualquer coisa.
+ */
+function requireVerification(token, requirement) {
+    if (!(0, verification_js_1.isEnforcementEnabled)(requirement))
+        return;
+    const status = (0, verification_js_1.verificationFromClaims)(token);
+    if ((0, verification_js_1.meetsRequirement)(status, requirement))
+        return;
+    throw new https_1.HttpsError("failed-precondition", `Verification required: ${(0, verification_js_1.missingVerification)(status, requirement)}`);
 }
 // ---------------------------------------------------------------------------
 // exportUserData — Callable (LGPD, direito de acesso)
@@ -229,6 +353,7 @@ exports.joinMatch = (0, https_1.onCall)({ region: REGION }, async (request) => {
         // fazer. Sair e cancelar continuam liberados de propósito: bloquear a
         // saída prenderia a pessoa segurando uma vaga.
         await requireNotBlocked(txn, uid, Date.now());
+        requireVerification(request.auth?.token, verification_js_1.VERIFICATION_POLICY.joinMatch);
         const matchRef = db.doc(`matches/${matchId}`);
         const participantRef = db.doc(`matches/${matchId}/participants/${uid}`);
         const matchSnap = await txn.get(matchRef);
@@ -339,48 +464,7 @@ exports.leaveMatch = (0, https_1.onCall)({ region: REGION }, async (request) => 
         if (match.organizerId === uid) {
             throw new https_1.HttpsError("failed-precondition", "Organizer must cancel the match, not leave it.");
         }
-        const myParticipantRef = db.doc(`matches/${matchId}/participants/${uid}`);
-        const mySnap = await txn.get(myParticipantRef);
-        const wasConfirmed = mySnap.exists ? Boolean(mySnap.data()?.isConfirmed) : false;
-        // Delete participant doc + remove from array.
-        txn.delete(myParticipantRef);
-        txn.update(matchRef, {
-            participants: firestore_1.FieldValue.arrayRemove(uid),
-            updatedAt: firestore_1.FieldValue.serverTimestamp(),
-        });
-        let promotedUserId;
-        if (wasConfirmed) {
-            // B3: promote first FIFO from waitlist inside the same transaction.
-            const waitlistQuery = db
-                .collection(`matches/${matchId}/participants`)
-                .where("isConfirmed", "==", false)
-                .orderBy("positionInWaitlist", "asc")
-                .limit(1);
-            const waitlistSnap = await txn.get(waitlistQuery);
-            const firstWaitlist = waitlistSnap.docs[0];
-            if (firstWaitlist) {
-                promotedUserId = firstWaitlist.id;
-                // Flip to confirmed, clear waitlist position.
-                txn.update(firstWaitlist.ref, {
-                    isConfirmed: true,
-                    positionInWaitlist: null,
-                    promotedAt: firestore_1.FieldValue.serverTimestamp(),
-                });
-                txn.update(matchRef, {
-                    confirmedCount: firestore_1.FieldValue.increment(1),
-                    status: "OPEN", // opening back up since waitlist shrank
-                    updatedAt: firestore_1.FieldValue.serverTimestamp(),
-                });
-            }
-            else {
-                // No one to promote — just decrement.
-                txn.update(matchRef, {
-                    confirmedCount: firestore_1.FieldValue.increment(-1),
-                    status: "OPEN",
-                    updatedAt: firestore_1.FieldValue.serverTimestamp(),
-                });
-            }
-        }
+        const promotedUserId = await removeParticipant(txn, matchId, uid);
         return { matchId, promotedUserId };
     });
 });
@@ -453,7 +537,7 @@ const RATING_AVERAGE_DECIMALS = 2;
 exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (request) => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
-    const { matchId, ratedUserId, rating, comment } = parseSubmitRatingPayload(request.data, uid);
+    const { matchId, ratedUserId, rating, comment, dimensions } = parseSubmitRatingPayload(request.data, uid);
     return db.runTransaction(async (txn) => {
         // Uma conta restrita não mexe na reputação de ninguém.
         await requireNotBlocked(txn, uid, Date.now());
@@ -500,17 +584,21 @@ exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (requ
             };
         }
         const nextCount = previousCount + 1;
-        // Perfis nascem com rating 5 e ratingCount 0 (ver onUserCreate). Esse 5 é
-        // um placeholder de exibição, não uma avaliação: não pode entrar na média.
-        const nextAverage = previousCount === 0
-            ? rating
-            : roundTo((previousAverage * previousCount + rating) / nextCount, RATING_AVERAGE_DECIMALS);
+        const nextAverage = (0, moderation_js_1.nextRatingAverage)(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
+        // Toda avaliação traz as quatro dimensões, então as contagens caminham
+        // juntas com ratingCount — não existe perfil com metade agregada.
+        const dimensionAggregates = {};
+        for (const dimension of moderation_js_1.RATING_DIMENSIONS) {
+            const key = `${dimension}Average`;
+            dimensionAggregates[key] = (0, moderation_js_1.nextRatingAverage)(Number(ratedProfile[key] ?? 0), previousCount, dimensions[dimension], RATING_AVERAGE_DECIMALS);
+        }
         const now = Date.now();
         const ratingDocument = {
             matchId,
             ratedUserId,
             raterUserId: uid,
             rating,
+            ...dimensions,
             comment,
             // Número, não Timestamp: atravessa o interop Android/iOS sem conversão e
             // serve direto como cursor startAfter na paginação de avaliações.
@@ -522,6 +610,7 @@ exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (requ
         txn.update(ratedProfileRef, {
             rating: nextAverage,
             ratingCount: nextCount,
+            ...dimensionAggregates,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         });
         return {
@@ -551,7 +640,16 @@ function parseSubmitRatingPayload(value, uid) {
     if (comment.length > MAX_RATING_COMMENT_LENGTH) {
         throw new https_1.HttpsError("invalid-argument", `comment must be at most ${MAX_RATING_COMMENT_LENGTH} characters.`);
     }
-    return { matchId: data.matchId, ratedUserId: data.ratedUserId, rating: data.rating, comment };
+    const dimensions = (0, moderation_js_1.parseRatingDimensions)(data, (dimension) => {
+        throw new https_1.HttpsError("invalid-argument", `${dimension} is required and must be an integer between 1 and 5.`);
+    });
+    return {
+        matchId: data.matchId,
+        ratedUserId: data.ratedUserId,
+        rating: data.rating,
+        comment,
+        dimensions,
+    };
 }
 /**
  * Avaliação é pós-partida. Não dá para exigir status FINISHED porque nada marca
@@ -567,10 +665,6 @@ function requireMatchIsOver(match) {
     if (endsAtMillis > Date.now()) {
         throw new https_1.HttpsError("failed-precondition", "Match has not finished yet.");
     }
-}
-function roundTo(value, decimals) {
-    const factor = 10 ** decimals;
-    return Math.round(value * factor) / factor;
 }
 // ---------------------------------------------------------------------------
 // submitReport — Callable (invocada por products/games)
@@ -847,6 +941,208 @@ async function sendPush(userIds, payload) {
         // trigger e provocar retentativa da escrita já feita.
         console.error("push delivery failed", error);
     }
+}
+/**
+ * Tira alguém da partida e promove o primeiro da fila (regra B3).
+ *
+ * Compartilhado entre `leaveMatch` e `deleteAccount`: sair por vontade própria
+ * e sair porque a conta acabou têm de mexer no contador exatamente igual, e
+ * duas cópias dessa lógica divergiriam na primeira mudança.
+ *
+ * Precisa rodar dentro de uma transação já iniciada — todas as leituras aqui
+ * acontecem antes de qualquer escrita.
+ *
+ * @returns o uid promovido, se houve promoção
+ */
+async function removeParticipant(txn, matchId, uid) {
+    const matchRef = db.doc(`matches/${matchId}`);
+    const participantRef = db.doc(`matches/${matchId}/participants/${uid}`);
+    const participantSnap = await txn.get(participantRef);
+    const wasConfirmed = participantSnap.exists
+        ? Boolean(participantSnap.data()?.isConfirmed)
+        : false;
+    // Quem estava na fila só sai; a vaga confirmada é que precisa de sucessor.
+    const firstWaitlist = wasConfirmed ? await firstInWaitlist(txn, matchId, uid) : undefined;
+    txn.delete(participantRef);
+    txn.update(matchRef, {
+        participants: firestore_1.FieldValue.arrayRemove(uid),
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+    });
+    if (!wasConfirmed)
+        return undefined;
+    if (firstWaitlist) {
+        txn.update(firstWaitlist.ref, {
+            isConfirmed: true,
+            positionInWaitlist: null,
+            promotedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        // Sai um confirmado, entra um: o total não muda. Somar aqui inflava o
+        // contador a cada promoção e a partida ficava "cheia" com vaga sobrando.
+        txn.update(matchRef, {
+            status: "OPEN",
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        return firstWaitlist.id;
+    }
+    txn.update(matchRef, {
+        confirmedCount: firestore_1.FieldValue.increment(-1),
+        status: "OPEN",
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+    });
+    return undefined;
+}
+/** Primeiro da fila por ordem de entrada, ignorando quem está saindo. */
+async function firstInWaitlist(txn, matchId, leavingUid) {
+    const snapshot = await txn.get(db
+        .collection(`matches/${matchId}/participants`)
+        .where("isConfirmed", "==", false)
+        .orderBy("positionInWaitlist", "asc")
+        .limit(2));
+    return snapshot.docs.find((document) => document.id !== leavingUid);
+}
+/** Documentos lidos de uma vez em cada etapa da exclusão. */
+const DELETION_PAGE_SIZE = 200;
+/**
+ * Sai de toda partida em que a pessoa aparece.
+ *
+ * Uma transação por partida, e não uma só para todas: elas são independentes, e
+ * uma transação gigante falharia inteira por causa de uma partida em conflito.
+ * Reaproveita [removeParticipant], então a fila é promovida igual a uma saída
+ * comum — a vaga não fica presa.
+ */
+async function leaveAllMatches(uid) {
+    const participations = await db
+        .collectionGroup("participants")
+        .where("userId", "==", uid)
+        .limit(DELETION_PAGE_SIZE)
+        .get();
+    for (const participation of participations.docs) {
+        const matchId = participation.ref.parent.parent?.id;
+        if (!matchId)
+            continue;
+        await db
+            .runTransaction(async (txn) => {
+            const matchSnap = await txn.get(db.doc(`matches/${matchId}`));
+            if (!matchSnap.exists)
+                return;
+            // Organizador não "sai" da própria partida — ela é tratada adiante.
+            if (matchSnap.data()?.organizerId === uid)
+                return;
+            await removeParticipant(txn, matchId, uid);
+        })
+            // Uma partida problemática não pode impedir o resto da exclusão.
+            .catch((error) => console.error(`leaveAllMatches ${matchId}`, error));
+    }
+}
+/**
+ * Cancela o que ainda vai acontecer e despersonaliza o que já passou.
+ *
+ * Apagar as partidas levaria junto o histórico de todo mundo que jogou. O que
+ * precisa sumir é o nome do organizador, não o registro do jogo.
+ */
+async function cleanUpOrganizedMatches(uid) {
+    const organized = await db
+        .collection("matches")
+        .where("organizerId", "==", uid)
+        .limit(DELETION_PAGE_SIZE)
+        .get();
+    if (organized.empty)
+        return;
+    const nowMs = Date.now();
+    const batch = db.batch();
+    for (const match of organized.docs) {
+        const data = match.data();
+        const anonymous = {
+            organizerName: ANONYMOUS_NAME,
+            organizerAvatarUrl: null,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        };
+        if (shouldCancelOnOrganizerDeletion(data, nowMs)) {
+            batch.update(match.ref, {
+                ...anonymous,
+                status: "CANCELLED",
+                cancelledAt: firestore_1.FieldValue.serverTimestamp(),
+                cancelledBy: "account_deleted",
+            });
+        }
+        else {
+            batch.update(match.ref, anonymous);
+        }
+    }
+    await batch.commit();
+}
+/**
+ * Partida futura sem organizador não tem como acontecer — cancela, para que
+ * quem ia jogar descubra agora e não na quadra.
+ */
+function shouldCancelOnOrganizerDeletion(match, nowMs) {
+    const status = String(match.status ?? "OPEN").toUpperCase();
+    if (status === "CANCELLED" || status === "FINISHED")
+        return false;
+    const startsAt = readEpochSeconds(match.startsAtSeconds ?? match.startsAt);
+    // Sem horário legível, cancelar é a escolha conservadora.
+    if (startsAt === null)
+        return true;
+    return startsAt * 1_000 > nowMs;
+}
+const ANONYMOUS_NAME = "Jogador removido";
+/**
+ * Tira o nome de quem sai das avaliações e denúncias que escreveu.
+ *
+ * Não apaga: a avaliação também é dado de quem foi avaliado, e a denúncia é a
+ * prova contra outra pessoa — apagá-la deixaria qualquer um limpar o próprio
+ * rastro excluindo a conta. Como o uid está no id do documento, o único jeito
+ * de removê-lo é recriar o documento com id novo.
+ */
+async function anonymizeAuthoredContent(uid) {
+    const [ratings, reports] = await Promise.all([
+        db
+            .collectionGroup("ratings")
+            .where("raterUserId", "==", uid)
+            .limit(DELETION_PAGE_SIZE)
+            .get(),
+        db.collection("reports").where("reporterId", "==", uid).limit(DELETION_PAGE_SIZE).get(),
+    ]);
+    const batch = db.batch();
+    const anonymizedAtMs = Date.now();
+    for (const rating of ratings.docs) {
+        batch.set(rating.ref.parent.doc(), {
+            ...rating.data(),
+            raterUserId: null,
+            anonymizedAtMs,
+        });
+        batch.delete(rating.ref);
+    }
+    for (const report of reports.docs) {
+        batch.set(report.ref.parent.doc(), {
+            ...report.data(),
+            reporterId: null,
+            anonymizedAtMs,
+        });
+        batch.delete(report.ref);
+    }
+    if (ratings.empty && reports.empty)
+        return;
+    await batch.commit();
+}
+/**
+ * Apaga o que só existia por causa desta conta: o status de moderação dela e as
+ * denúncias feitas contra ela.
+ *
+ * Guardar isso depois que o uid deixou de existir não protege ninguém — não há
+ * mais conta para restringir — e seria dado pessoal sem finalidade.
+ */
+async function deleteModerationTrail(uid) {
+    const against = await db
+        .collection("reports")
+        .where("reportedUserId", "==", uid)
+        .limit(DELETION_PAGE_SIZE)
+        .get();
+    const batch = db.batch();
+    for (const report of against.docs)
+        batch.delete(report.ref);
+    batch.delete(db.doc(`moderation/${uid}`));
+    await batch.commit();
 }
 function readEpochSeconds(value) {
     if (typeof value === "number")

@@ -163,29 +163,33 @@ service cloud.firestore {
 
     function matchEditableFields() {
       return [
-        'title', 'venue', 'address', 'neighborhood',
-        'lat', 'lng', 'geohash', 'startsAt', 'durationMin',
-        'totalSlots', 'priceCents', 'level', 'rules', 'pixKey',
-        'status', 'updatedAt'
+        'sport', 'venueName', 'address', 'neighborhood', 'city',
+        'lat', 'lng', 'geohash', 'startsAtSeconds', 'durationMin',
+        'totalSlots', 'priceCents', 'status'
       ];
     }
 
+    // Schema real gravado por FirestoreGameSource.createMatch() e lido por
+    // GameMapper.toGame() / functions/src/index.ts. status é maiúsculo
+    // (MatchStatus.name); startsAtSeconds é epoch em segundos, não Timestamp.
     function isValidMatchContent(data) {
       return isText(data.sport, 30)
-        && isText(data.title, 120)
-        && isText(data.venue, 120)
-        && (!('address' in data) || data.address == null || isText(data.address, 200))
-        && (!('neighborhood' in data) || data.neighborhood == null || isText(data.neighborhood, 80))
+        && isText(data.venueName, 120)
+        && isText(data.address, 200)
+        && isText(data.neighborhood, 80)
+        && isText(data.city, 80)
         && isLatitude(data.lat)
         && isLongitude(data.lng)
         && isText(data.geohash, 12)
-        && data.startsAt is timestamp
+        && data.startsAtSeconds is int
         && data.durationMin is int && data.durationMin >= 15 && data.durationMin <= 480
         && data.totalSlots is int && data.totalSlots >= 2 && data.totalSlots <= 40
+        && data.confirmedCount is int && data.confirmedCount >= 0 && data.confirmedCount <= data.totalSlots
         && data.priceCents is int && data.priceCents >= 0 && data.priceCents <= 100000
-        && isText(data.level, 30)
-        && data['rules'] is list && data['rules'].size() <= 20
-        && (!('pixKey' in data) || data.pixKey == null || isText(data.pixKey, 140));
+        && data.status is string
+        && isText(data.organizerName, 80)
+        && data.organizerRating is number
+        && data.participants is list && data.participants.size() <= data.totalSlots;
     }
 
     match /matches/{matchId} {
@@ -195,31 +199,28 @@ service cloud.firestore {
         && !isRestrictedUser()
         && incoming().organizerId == uid()
         && isValidMatchContent(incoming())
-        && incoming().startsAt > request.time
-        && incoming().status == 'open'
-        && incoming().confirmedCount == 0
-        && incoming().waitlistCount == 0
-        && incoming().platformFeeCents == 0
-        && incoming().createdAt == request.time;
+        && incoming().startsAtSeconds > request.time.toMillis() / 1000
+        && incoming().status == 'OPEN'
+        && incoming().confirmedCount == 1
+        && incoming().participants == [uid()];
 
-      // O organizador edita os dados da partida, mas nunca os contadores —
-      // confirmedCount e waitlistCount são a fonte da verdade da lotação e
-      // pertencem às Functions joinMatch/leaveMatch.
+      // O organizador edita os dados da partida, mas nunca o contador —
+      // confirmedCount é a fonte da verdade da lotação e pertence às
+      // Functions joinMatch/leaveMatch.
       allow update: if isSignedIn()
         && current().organizerId == uid()
         && changedKeys().hasOnly(matchEditableFields())
         && isValidMatchContent(incoming())
         && incoming().totalSlots >= current().confirmedCount
-        // 'full' e 'finished' são estados calculados pelo servidor.
-        && incoming().status in ['open', 'cancelled'];
+        // 'FULL' e 'FINISHED' são estados calculados pelo servidor.
+        && incoming().status in ['OPEN', 'CANCELLED'];
 
       allow update: if isAdmin();
 
       // Só apaga partida que ninguém entrou; com gente dentro, cancela-se.
       allow delete: if isSignedIn()
         && current().organizerId == uid()
-        && current().confirmedCount == 0
-        && current().waitlistCount == 0;
+        && current().confirmedCount == 0;
 
       allow delete: if isAdmin();
 

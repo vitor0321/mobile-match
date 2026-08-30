@@ -1,5 +1,11 @@
+import com.android.build.gradle.ProguardFiles.getDefaultProguardFile
+import org.jetbrains.compose.ComposePlugin.CommonComponentsDependencies.resources
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.idea.proto.com.google.protobuf.api
+import org.jetbrains.kotlin.gradle.internal.types.error.ErrorModuleDescriptor.platform
 import java.util.Properties
+import kotlin.text.isBlank
+import kotlin.text.isNotBlank
 
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
@@ -172,6 +178,7 @@ android {
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+    add("androidTestImplementation", platform(libs.firebase.bom))
 }
 
 if (googleMapsApiKey.isBlank()) {
@@ -182,8 +189,9 @@ if (googleMapsApiKey.isBlank()) {
 }
 
 tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    val googleMapsApiKeyForRelease = googleMapsApiKey
     doFirst {
-        check(googleMapsApiKey.isNotBlank()) {
+        check(googleMapsApiKeyForRelease.isNotBlank()) {
             "GOOGLE_MAPS_API_KEY ausente. Defina em local.properties ou na variável de ambiente " +
                 "antes de gerar um build de release."
         }

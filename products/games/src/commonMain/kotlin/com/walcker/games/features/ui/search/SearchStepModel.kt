@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.collections.emptyList
+import kotlin.collections.filter
 
 internal class SearchStepModel(
     private val repository: GameRepository,
@@ -117,7 +119,7 @@ internal class SearchStepModel(
                 game.sport in filters.sports
             }
 
-            val gamePrice = game.pricePerPlayer?.toFloatOrNull() ?: 0f
+            val gamePrice = game.priceCents / 100f
             val matchesPrice = if (filters.minPrice != null && gamePrice < filters.minPrice) {
                 false
             } else if (filters.maxPrice != null && gamePrice > filters.maxPrice) {

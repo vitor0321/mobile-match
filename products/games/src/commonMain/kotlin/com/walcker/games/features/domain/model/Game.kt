@@ -1,5 +1,8 @@
 package com.walcker.games.features.domain.model
 
+import kotlin.collections.emptyList
+import kotlin.ranges.coerceAtLeast
+
 internal data class Game(
     val id: String,
     val sport: Sport,
@@ -15,6 +18,7 @@ internal data class Game(
     val confirmedPlayers: Int,
     val totalPlayers: Int,
     val pricePerPlayer: String?,
+    val priceCents: Int = 0,
     val organizerName: String,
     val organizerId: String,
     val organizerRating: Double,

@@ -8,6 +8,10 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlin.collections.filterNotNull
+import kotlin.collections.map
+import kotlin.runCatching
+import kotlin.text.lowercase
 
 private val firestore: FirebaseFirestore by lazy {
     FirebaseFirestore.getInstance()
@@ -35,12 +39,14 @@ private class AndroidFirestoreClient : FirestoreClient {
 
     override suspend fun callFunction(name: String, data: Map<String, Any?>): Result<Map<String, Any?>> =
         runCatching {
-            val functions = FirebaseFunctions.getInstance()
+            val functions = FirebaseFunctions.getInstance(FUNCTIONS_REGION)
             val result = functions.getHttpsCallable(name).call(data).await()
             @Suppress("UNCHECKED_CAST")
             (result.data as Map<String, Any?>) ?: emptyMap()
         }.map { it }
 }
+
+private const val FUNCTIONS_REGION = "southamerica-east1"
 
 private class AndroidDocumentReference(private val ref: com.google.firebase.firestore.DocumentReference) :
     FirestoreDocumentReference {
