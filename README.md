@@ -8,6 +8,8 @@ A partida já existe e a quadra já está reservada; o app resolve o espaço vaz
 Kotlin Multiplatform + Compose Multiplatform, rodando em Android e iOS a partir
 de um único codebase. Derivado da base do projeto Lexis.
 
+
+
 ## Módulos
 
 ```

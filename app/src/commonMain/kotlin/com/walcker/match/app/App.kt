@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.withFrameNanos
-import com.walcker.bible.features.ui.entrypoint.BibleEntrypoint
 import com.walcker.match.cedar.CedarTheme
 import com.walcker.match.cedar.CedarLoadingIndicator
 
@@ -32,7 +31,6 @@ internal fun App(onFirstFrameRendered: (() -> Unit)? = null) {
                 CedarLoadingIndicator()
             }
         } else {
-            BibleEntrypoint()
         }
     }
 }
