@@ -3,7 +3,6 @@ import FirebaseCore
 import FirebaseMessaging
 import Foundation
 import GoogleSignIn
-import GoogleMobileAds
 import SwiftUI
 import UIKit
 import UserNotifications
@@ -16,10 +15,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         FirebaseApp.configure()
         configureGoogleSignIn()
         configurePushNotifications(application)
-        BannerFactoryHolder.shared.factory = AdMobBridge()
-        MobileAds.shared.start { _ in
-            AdMobBridge.notifyMobileAdsReady()
-        }
         return true
     }
 

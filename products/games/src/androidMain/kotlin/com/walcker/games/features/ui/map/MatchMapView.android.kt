@@ -13,13 +13,13 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.walcker.games.features.domain.model.MatchStatus
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.walcker.games.features.domain.model.MatchStatus
 
 @Composable
 internal actual fun MatchMapView(
@@ -28,6 +28,7 @@ internal actual fun MatchMapView(
     onPinClick: (String) -> Unit,
     onNearbyTap: () -> Unit,
     nearbyCount: Int,
+    hasLocationPermission: Boolean,
     modifier: Modifier,
 ) {
     val cameraPositionState = rememberCameraPositionState {
@@ -48,8 +49,11 @@ internal actual fun MatchMapView(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = true),
-            uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = true),
+            properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = hasLocationPermission,
+            ),
         ) {
             pins.forEach { pin ->
                 Marker(

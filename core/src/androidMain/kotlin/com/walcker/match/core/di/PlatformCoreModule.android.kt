@@ -7,7 +7,9 @@ import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.analytics.FirebaseAnalyticsTracker
 import com.walcker.match.core.analytics.FirebaseCrashReporter
 import com.walcker.match.core.location.LocationProvider
+import com.walcker.match.core.location.ReverseGeocoder
 import com.walcker.match.core.location.createLocationProvider
+import com.walcker.match.core.location.createReverseGeocoder
 import com.walcker.match.core.navigation.CurrentActivityHolder
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
@@ -26,4 +28,5 @@ internal actual val platformCoreModule: Module = module {
         }
     }
     single<LocationProvider> { createLocationProvider() }
+    single<ReverseGeocoder> { createReverseGeocoder() }
 }

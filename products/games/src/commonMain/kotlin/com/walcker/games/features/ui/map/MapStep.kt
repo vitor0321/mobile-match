@@ -12,11 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -44,6 +49,7 @@ import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.geo.formatDistance
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
+import com.walcker.match.navigator.HomeViewCoordinator
 import org.koin.compose.koinInject
 
 internal class MapStep : Screen {
@@ -54,6 +60,7 @@ internal class MapStep : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val stepModel = koinScreenModel<MapStepModel>()
         val deepLinkCoordinator: DeepLinkCoordinator = koinInject()
+        val homeViewCoordinator: HomeViewCoordinator = koinInject()
         val state by stepModel.state.collectAsState()
         val strings = rememberGamesStrings().strings.map
         var showNearbySheet by remember { mutableStateOf(false) }
@@ -73,6 +80,7 @@ internal class MapStep : Screen {
                     },
                     onNearbyTap = { showNearbySheet = true },
                     nearbyCount = state.nearbyMatches.size,
+                    hasLocationPermission = state.hasLocationPermission,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -85,6 +93,22 @@ internal class MapStep : Screen {
                     .padding(WindowInsets.statusBars.asPaddingValues())
                     .padding(CedarTokens.spacing.md),
             )
+
+            Surface(
+                shape = CedarTokens.radius.smShape,
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(WindowInsets.statusBars.asPaddingValues())
+                    .padding(CedarTokens.spacing.md),
+            ) {
+                IconButton(onClick = { homeViewCoordinator.setShowMap(false) }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.List,
+                        contentDescription = strings.showListAction,
+                    )
+                }
+            }
 
             if (state.isLoading) {
                 CedarLoading(

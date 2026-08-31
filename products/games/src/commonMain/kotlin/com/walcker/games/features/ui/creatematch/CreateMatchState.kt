@@ -7,12 +7,12 @@ internal data class CreateMatchState(
     val venueNameError: String? = null,
     val selectedSport: Sport? = null,
     val sportError: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
     val neighborhood: String = "",
-    val neighborhoodError: String? = null,
     val city: String = "",
-    val cityError: String? = null,
     val address: String = "",
-    val addressError: String? = null,
+    val isResolvingLocation: Boolean = false,
     val selectedDate: Long? = null,
     val dateError: String? = null,
     val selectedTime: Pair<Int, Int>? = null,
@@ -28,9 +28,8 @@ internal data class CreateMatchState(
     val isFormValid: Boolean
         get() = venueName.isNotBlank() &&
                 selectedSport != null &&
-                neighborhood.isNotBlank() &&
-                city.isNotBlank() &&
-                address.isNotBlank() &&
+                lat != null &&
+                lng != null &&
                 selectedDate != null &&
                 selectedTime != null &&
                 totalPlayers >= 2 &&
@@ -48,9 +47,7 @@ internal data class CreateMatchState(
 internal sealed class CreateMatchEvents {
     data class VenueNameChanged(val name: String) : CreateMatchEvents()
     data class SportSelected(val sport: Sport?) : CreateMatchEvents()
-    data class NeighborhoodChanged(val neighborhood: String) : CreateMatchEvents()
-    data class CityChanged(val city: String) : CreateMatchEvents()
-    data class AddressChanged(val address: String) : CreateMatchEvents()
+    data class LocationSelected(val lat: Double, val lng: Double) : CreateMatchEvents()
     data class DateSelected(val dateMillis: Long) : CreateMatchEvents()
     data class TimeSelected(val hour: Int, val minute: Int) : CreateMatchEvents()
     data class DurationSelected(val durationMin: Int) : CreateMatchEvents()

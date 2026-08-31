@@ -10,7 +10,10 @@ import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.geo.Coordinates
+import com.walcker.match.core.geo.DefaultCenter
 import com.walcker.match.core.geo.encodeGeoHash
+import com.walcker.match.core.location.LocationProvider
+import com.walcker.match.core.location.ReverseGeocoder
 import com.walcker.match.navigator.MainTab
 import com.walcker.match.navigator.TabCoordinator
 import kotlinx.coroutines.channels.Channel
@@ -22,6 +25,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 
 private const val MILLIS_PER_SECOND = 1000L
 private const val SECONDS_PER_HOUR = 3600L
@@ -33,22 +38,40 @@ internal class CreateMatchStepModel(
     private val sessionHolder: SessionHolder,
     private val tabCoordinator: TabCoordinator,
     private val analytics: AnalyticsTracker,
+    private val locationProvider: LocationProvider,
+    private val reverseGeocoder: ReverseGeocoder,
 ) : ScreenModel {
 
     private val strings get() = stringsHolder.resolveStringsOrDefault().createMatch
-
-    // TODO Phase 3: replace with real LocationProvider. For now hardcoded to SP center.
-    private val defaultLat = -23.5505
-    private val defaultLng = -46.6333
-
-    private val defaultGeohash: String
-        get() = encodeGeoHash(Coordinates(defaultLat, defaultLng))
 
     private val _state = MutableStateFlow(CreateMatchState())
     val state: StateFlow<CreateMatchState> = _state.asStateFlow()
 
     private val _effects = Channel<CreateMatchEffect>(Channel.BUFFERED)
     val effects: Flow<CreateMatchEffect> = _effects.receiveAsFlow()
+
+    init {
+        resolveInitialLocation()
+    }
+
+    private fun resolveInitialLocation() {
+        screenModelScope.launch {
+            _state.update { it.copy(isResolvingLocation = true) }
+
+            val current = withTimeoutOrNull(5.seconds) {
+                if (locationProvider.requestPermission()) {
+                    locationProvider.currentLocation().getOrNull()
+                } else {
+                    null
+                }
+            }
+
+            selectLocation(
+                lat = current?.lat ?: DefaultCenter.lat,
+                lng = current?.lng ?: DefaultCenter.lng,
+            )
+        }
+    }
 
     fun onEvent(event: CreateMatchEvents) {
         when (event) {
@@ -58,17 +81,7 @@ internal class CreateMatchStepModel(
             is CreateMatchEvents.SportSelected -> {
                 _state.update { it.copy(selectedSport = event.sport, sportError = null) }
             }
-            is CreateMatchEvents.NeighborhoodChanged -> {
-                _state.update {
-                    it.copy(neighborhood = event.neighborhood, neighborhoodError = null)
-                }
-            }
-            is CreateMatchEvents.CityChanged -> {
-                _state.update { it.copy(city = event.city, cityError = null) }
-            }
-            is CreateMatchEvents.AddressChanged -> {
-                _state.update { it.copy(address = event.address, addressError = null) }
-            }
+            is CreateMatchEvents.LocationSelected -> selectLocation(event.lat, event.lng)
             is CreateMatchEvents.DateSelected -> {
                 _state.update { it.copy(selectedDate = event.dateMillis, dateError = null) }
             }
@@ -88,6 +101,21 @@ internal class CreateMatchStepModel(
         }
     }
 
+    private fun selectLocation(lat: Double, lng: Double) {
+        _state.update { it.copy(lat = lat, lng = lng, isResolvingLocation = true) }
+        screenModelScope.launch {
+            val geocoded = reverseGeocoder.reverseGeocode(lat, lng)
+            _state.update {
+                it.copy(
+                    neighborhood = geocoded?.neighborhood.orEmpty(),
+                    city = geocoded?.city.orEmpty(),
+                    address = geocoded?.address.orEmpty(),
+                    isResolvingLocation = false,
+                )
+            }
+        }
+    }
+
     private fun submitForm() {
         val currentState = _state.value
         if (!currentState.isFormValid) return
@@ -95,6 +123,8 @@ internal class CreateMatchStepModel(
         val selectedSport = currentState.selectedSport ?: return
         val selectedDate = currentState.selectedDate ?: return
         val (hour, minute) = currentState.selectedTime ?: return
+        val lat = currentState.lat ?: return
+        val lng = currentState.lng ?: return
 
         screenModelScope.launch {
             val session = sessionHolder.currentUser.first()
@@ -116,9 +146,9 @@ internal class CreateMatchStepModel(
                     neighborhood = currentState.neighborhood,
                     city = currentState.city,
                     address = currentState.address,
-                    lat = defaultLat, // TODO Phase 3: integrate LocationProvider
-                    lng = defaultLng, // TODO Phase 3: integrate LocationProvider
-                    geohash = defaultGeohash,
+                    lat = lat,
+                    lng = lng,
+                    geohash = encodeGeoHash(Coordinates(lat, lng)),
                     startsAtSeconds = startSeconds,
                     durationMin = currentState.durationMin,
                     totalPlayers = currentState.totalPlayers,

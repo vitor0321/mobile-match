@@ -8,7 +8,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -28,14 +27,13 @@ public enum class MatchBottomBarTab(public val icon: ImageVector) {
     Profile(Icons.Filled.Person),
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 public fun MatchBottomBar(
     selectedTab: MatchBottomBarTab,
     onTabSelected: (MatchBottomBarTab) -> Unit,
     label: (MatchBottomBarTab) -> String,
     modifier: Modifier = Modifier,
-    badgeCount: (MatchBottomBarTab) -> Int = { 0 },
+    showDot: (MatchBottomBarTab) -> Boolean = { false },
 ) {
     NavigationBar(
         modifier = modifier,
@@ -44,13 +42,12 @@ public fun MatchBottomBar(
     ) {
         MatchBottomBarTab.entries.forEach { tab ->
             val caption = label(tab)
-            val count = badgeCount(tab)
             NavigationBarItem(
                 selected = tab == selectedTab,
                 onClick = { onTabSelected(tab) },
                 icon = {
-                    if (count > 0) {
-                        BadgedBox(badge = { Badge { Text(count.badgeLabel()) } }) {
+                    if (showDot(tab)) {
+                        BadgedBox(badge = { Badge() }) {
                             Icon(tab.icon, contentDescription = caption)
                         }
                     } else {
@@ -74,7 +71,3 @@ public fun MatchBottomBar(
         }
     }
 }
-
-private fun Int.badgeLabel(): String = if (this > MAX_BADGE_COUNT) "$MAX_BADGE_COUNT+" else toString()
-
-private const val MAX_BADGE_COUNT = 99

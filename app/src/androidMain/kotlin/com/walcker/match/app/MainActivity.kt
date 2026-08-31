@@ -1,39 +1,55 @@
 package com.walcker.match.app
 
+import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.walcker.match.cedar.ads.LocalAdBannerContent
-import com.walcker.match.core.ads.AdMobBannerAndroid
+import com.walcker.match.core.location.LocationPermissionRequester
+import com.walcker.match.core.location.LocationPermissionRequesterHolder
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.suspendCancellableCoroutine
 
-private fun adMobBannerUnitId(): String =
-    BuildConfig.ADMOB_BANNER_UNIT_ID.ifBlank { "ca-app-pub-8514371864627144/7820524155" }
+internal class MainActivity : ComponentActivity(), LocationPermissionRequester {
 
-internal class MainActivity : ComponentActivity() {
+    private var pendingPermissionContinuation: CancellableContinuation<Boolean>? = null
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        pendingPermissionContinuation?.resume(granted) { _, _, _ -> }
+        pendingPermissionContinuation = null
+    }
+
+    override suspend fun requestFineLocationPermission(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            pendingPermissionContinuation = continuation
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        LocationPermissionRequesterHolder.requester = this
 
         var keepSplashOnScreen = true
         splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
 
         enableEdgeToEdge()
         setContent {
-            CompositionLocalProvider(
-                LocalAdBannerContent provides { onVisibilityChanged ->
-                    AdMobBannerAndroid(
-                        adUnitId = adMobBannerUnitId(),
-                        onVisibilityChanged = onVisibilityChanged,
-                    )
-                }
-            ) {
-                App(
-                    onFirstFrameRendered = { keepSplashOnScreen = false },
-                )
-            }
+            App(
+                onFirstFrameRendered = { keepSplashOnScreen = false },
+            )
         }
+    }
+
+    override fun onDestroy() {
+        if (LocationPermissionRequesterHolder.requester === this) {
+            LocationPermissionRequesterHolder.requester = null
+        }
+        super.onDestroy()
     }
 }

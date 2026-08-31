@@ -19,6 +19,7 @@ internal val gamesUiModule = module {
             preferences = get(),
             stringsHolder = get(),
             analytics = get(),
+            homeViewCoordinator = get(),
         )
     }
     factory {
@@ -43,6 +44,8 @@ internal val gamesUiModule = module {
             sessionHolder = get(),
             tabCoordinator = get(),
             analytics = get(),
+            locationProvider = get(),
+            reverseGeocoder = get(),
         )
     }
     factory {

@@ -1,11 +1,10 @@
-import com.android.build.gradle.ProguardFiles.getDefaultProguardFile
-import org.jetbrains.compose.ComposePlugin.CommonComponentsDependencies.resources
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.idea.proto.com.google.protobuf.api
 import org.jetbrains.kotlin.gradle.internal.types.error.ErrorModuleDescriptor.platform
 import java.util.Properties
+import kotlin.let
 import kotlin.text.isBlank
 import kotlin.text.isNotBlank
+import kotlin.text.toInt
 
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
@@ -16,8 +15,6 @@ val releaseKeyAlias = localProps.getProperty("release.keyAlias")
 val releaseKeyPassword = localProps.getProperty("release.keyPassword")
 val releaseStoreFile = localProps.getProperty("release.storeFile")
 val releaseStorePassword = localProps.getProperty("release.storePassword")
-val admobAppId = localProps.getProperty("ADMOB_APP_ID", "ca-app-pub-8514371864627144~1123615258")
-val admobBannerUnitId = localProps.getProperty("ADMOB_BANNER_UNIT_ID", "ca-app-pub-8514371864627144/6345620957")
 val revenueCatAndroidKey = localProps.getProperty("REVENUECAT_ANDROID_KEY", "")
 
 val googleMapsApiKey: String = localProps.getProperty("GOOGLE_MAPS_API_KEY")
@@ -126,12 +123,8 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = libs.versions.android.version.code.get().toInt()
         versionName = libs.versions.android.version.name.get()
-        manifestPlaceholders["admobAppId"] = admobAppId
-        manifestPlaceholders["admobBannerUnitId"] = admobBannerUnitId
         manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
 
-        buildConfigField("String", "ADMOB_APP_ID", "\"$admobAppId\"")
-        buildConfigField("String", "ADMOB_BANNER_UNIT_ID", "\"$admobBannerUnitId\"")
         buildConfigField("String", "REVENUECAT_ANDROID_KEY", "\"$revenueCatAndroidKey\"")
     }
     packaging {
@@ -142,18 +135,12 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".dev"
-            val testAdmobAppId = "ca-app-pub-3940256099942544~3347511713"
-            val testAdmobBannerUnitId = "ca-app-pub-3940256099942544/6300978111"
             versionNameSuffix = "-debug"
             isDebuggable = true
             isMinifyEnabled = false
             resValue("string", "app_name", "Join Play Dev")
             buildConfigField("Boolean", "IS_DEBUG", "true")
-            manifestPlaceholders["admobAppId"] = testAdmobAppId
-            manifestPlaceholders["admobBannerUnitId"] = testAdmobBannerUnitId
             manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
-            buildConfigField("String", "ADMOB_APP_ID", "\"$testAdmobAppId\"")
-            buildConfigField("String", "ADMOB_BANNER_UNIT_ID", "\"$testAdmobBannerUnitId\"")
         }
         release {
             isDebuggable = false

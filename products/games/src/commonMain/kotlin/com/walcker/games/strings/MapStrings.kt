@@ -9,9 +9,11 @@ internal data class MapStrings(
     val locationUnavailableBody: String,
     val retry: String,
     val closeContentDescription: String,
+    val showListAction: String,
 )
 
 internal val mapStringsEn = MapStrings(
+    showListAction = "Show list",
     searchPlaceholder = "Where do you want to play?",
     loadingLabel = "Loading the map…",
     nearbyTitle = "Matches near you",
@@ -24,6 +26,7 @@ internal val mapStringsEn = MapStrings(
 )
 
 internal val mapStringsPt = MapStrings(
+    showListAction = "Ver em lista",
     searchPlaceholder = "Onde você quer jogar?",
     loadingLabel = "Carregando o mapa…",
     nearbyTitle = "Partidas perto de você",

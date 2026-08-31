@@ -4,17 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -27,7 +17,6 @@ import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
-import com.walcker.games.features.ui.notifications.NotificationHistoryStep
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.app.strings.AppShellStrings
 import com.walcker.match.app.strings.rememberAppShellStrings
@@ -38,6 +27,7 @@ import com.walcker.match.core.navigation.NavigatorHolder
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.GamesDestination
+import com.walcker.match.navigator.HomeViewCoordinator
 import com.walcker.match.navigator.IdentityDestination
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.MainTab
@@ -75,7 +65,6 @@ private fun AttachedNavigator(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AuthenticatedShell() {
     val gamesDestination = koinInject<GamesDestination>()
@@ -83,14 +72,14 @@ private fun AuthenticatedShell() {
     val tabCoordinator = koinInject<TabCoordinator>()
     val deepLinkCoordinator = koinInject<DeepLinkCoordinator>()
     val loginCoordinator = koinInject<LoginCoordinator>()
+    val homeViewCoordinator = koinInject<HomeViewCoordinator>()
     val navigatorHolder = koinInject<NavigatorHolder>()
     val sessionHolder = koinInject<SessionHolder>()
     val strings = rememberAppShellStrings()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(MainTab.Home) }
-    val (showNotificationHistory, setShowNotificationHistory) = remember { mutableStateOf(false) }
     val (detailScreen, setDetailScreen) = remember { mutableStateOf<Screen?>(null) }
-    val (showMapView, setShowMapView) = remember { mutableStateOf(false) }
     val (showLogin, setShowLogin) = remember { mutableStateOf(false) }
+    val showMap by homeViewCoordinator.showMap.collectAsState()
 
     val isAuthenticated: Boolean? by remember(sessionHolder) {
         sessionHolder.isAuthenticated
@@ -120,46 +109,6 @@ private fun AuthenticatedShell() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            TopAppBar(
-                title = { Text(strings.appTitle) },
-                actions = {
-                    if (selectedTab == MainTab.Home) {
-                        IconButton(onClick = { setShowMapView(!showMapView) }) {
-                            Icon(
-                                imageVector = if (showMapView) {
-                                    Icons.AutoMirrored.Filled.List
-                                } else {
-                                    Icons.Filled.Map
-                                },
-                                contentDescription = if (showMapView) {
-                                    strings.showListAction
-                                } else {
-                                    strings.showMapAction
-                                },
-                            )
-                        }
-                    }
-                    IconButton(
-                        onClick = {
-                            if (isAuthenticated == true) {
-                                setShowNotificationHistory(true)
-                            } else {
-                                loginCoordinator.requestLogin()
-                            }
-                        },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Notifications,
-                            contentDescription = strings.notificationsAction,
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-            )
-
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -169,13 +118,14 @@ private fun AuthenticatedShell() {
                 if (detailScreen == null) {
                     val tabScreen = when (selectedTab) {
                         MainTab.Home ->
-                            if (showMapView) gamesDestination.map() else gamesDestination.gameList()
+                            if (showMap) gamesDestination.map() else gamesDestination.gameList()
+
                         MainTab.Search -> gamesDestination.search()
                         MainTab.Create -> gamesDestination.create()
                         MainTab.MyMatches -> gamesDestination.myMatches()
                         MainTab.PlayerProfile -> gamesDestination.playerProfile()
                     }
-                    key(selectedTab, showMapView) {
+                    key(selectedTab, showMap) {
                         AttachedNavigator(
                             screen = tabScreen,
                             navigatorHolder = navigatorHolder,
@@ -185,7 +135,7 @@ private fun AuthenticatedShell() {
                 } else {
                     key(detailScreen) {
                         AttachedNavigator(
-                            screen = detailScreen!!,
+                            screen = detailScreen,
                             navigatorHolder = navigatorHolder,
                             attachEnabled = !showLogin,
                             onBackPressed = { setDetailScreen(null); true },
@@ -198,6 +148,7 @@ private fun AuthenticatedShell() {
                 selectedTab = MatchBottomBarTab.entries[selectedTab.index],
                 onTabSelected = { tab -> setSelectedTab(tab.toMainTab()) },
                 label = { tab -> strings.labelFor(tab) },
+                showDot = { tab -> tab == MatchBottomBarTab.Activity },
             )
         }
 
@@ -216,9 +167,4 @@ private fun AuthenticatedShell() {
             }
         }
     }
-
-    NotificationHistoryStep(
-        isVisible = showNotificationHistory,
-        onDismiss = { setShowNotificationHistory(false) },
-    )
 }

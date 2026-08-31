@@ -27,6 +27,7 @@ internal data class MapState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val locationUnavailable: Boolean = false,
+    val hasLocationPermission: Boolean = false,
 ) {
     internal companion object {
         val DEFAULT_CAMERA = MapCamera(lat = -23.5505, lng = -46.6333, zoom = 13f)
@@ -110,7 +111,10 @@ internal class MapStepModel(
         screenModelScope.launch {
             _state.update { it.copy(locationUnavailable = false) }
 
-            if (!locationProvider.requestPermission()) {
+            val permissionGranted = locationProvider.requestPermission()
+            _state.update { it.copy(hasLocationPermission = permissionGranted) }
+
+            if (!permissionGranted) {
                 _state.update { it.copy(locationUnavailable = true) }
                 return@launch
             }

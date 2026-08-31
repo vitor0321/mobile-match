@@ -34,7 +34,6 @@ material3 = "1.10.0-alpha05"
 firebase-bom = "33.12.0"
 firebase-crashlytics-gradle = "3.0.4"
 google-services = "4.4.2"
-play-services-ads = "25.2.0"
 play-services-location = "21.3.0"
 maps-compose = "6.4.1"
 play-services-maps = "19.0.0"
@@ -139,7 +138,6 @@ firebase-functions = { group = "com.google.firebase", name = "firebase-functions
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
-play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "play-services-ads" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "play-services-maps" }
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "maps-compose" }

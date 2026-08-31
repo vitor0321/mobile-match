@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.internal.types.error.ErrorModuleDescriptor.platform
 
 plugins {
     alias(libs.plugins.androidLibrary)
@@ -35,7 +36,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
         }
         androidMain.dependencies {
-            api(libs.play.services.ads)
             implementation(libs.koin.android)
             implementation(libs.play.services.location)
             implementation(libs.kotlinx.coroutines.play.services)

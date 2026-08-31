@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -37,7 +41,9 @@ import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
+import com.walcker.match.navigator.HomeViewCoordinator
 import kotlinx.collections.immutable.ImmutableList
+import org.koin.compose.koinInject
 
 internal class GameListStep : Screen {
 
@@ -45,6 +51,7 @@ internal class GameListStep : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val stepModel = koinScreenModel<GameListStepModel>()
+        val homeViewCoordinator = koinInject<HomeViewCoordinator>()
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -63,6 +70,7 @@ internal class GameListStep : Screen {
         GameListContent(
             state = state,
             onEvent = stepModel::onEvent,
+            onShowMap = { homeViewCoordinator.setShowMap(true) },
             snackbarHostState = snackbarHostState,
         )
     }
@@ -73,6 +81,7 @@ internal fun GameListContent(
     state: GameListState,
     onEvent: (GameListEvents) -> Unit,
     modifier: Modifier = Modifier,
+    onShowMap: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val strings = state.strings
@@ -87,14 +96,27 @@ internal fun GameListContent(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            CedarScreenTitle(
-                title = strings.title,
-                subtitle = strings.subtitle,
-                modifier = Modifier.padding(
-                    horizontal = CedarTokens.spacing.lg,
-                    vertical = CedarTokens.spacing.md,
-                ),
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CedarScreenTitle(
+                    title = strings.title,
+                    subtitle = strings.subtitle,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onShowMap) {
+                    Icon(
+                        imageVector = Icons.Filled.Map,
+                        contentDescription = strings.showMapAction,
+                    )
+                }
+            }
 
             if (state.preferencesLoaded) {
                 FilterBar(

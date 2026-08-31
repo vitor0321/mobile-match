@@ -1,5 +1,6 @@
 package com.walcker.games.features.ui.creatematch
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,8 +41,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
@@ -51,6 +55,7 @@ import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarFilterRow
 import com.walcker.match.cedar.components.CedarFilterSection
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.SportChip
@@ -60,10 +65,6 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
-import kotlin.collections.forEach
-import kotlin.let
-import kotlin.ranges.rangeTo
-import kotlin.text.padStart
 
 private const val DEFAULT_HOUR = 19
 
@@ -143,39 +144,47 @@ internal class CreateMatchStep : Screen {
                     }
                 }
 
-                item(key = "neighborhood") {
-                    FormTextField(
-                        value = state.neighborhood,
-                        onValueChange = {
-                            stepModel.onEvent(CreateMatchEvents.NeighborhoodChanged(it))
-                        },
-                        label = strings.neighborhoodLabel,
-                        placeholder = strings.neighborhoodPlaceholder,
-                        error = state.neighborhoodError,
-                        enabled = enabled,
+                item(key = "location-hint") {
+                    Text(
+                        text = strings.pickLocationHint,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
-                item(key = "city") {
-                    FormTextField(
-                        value = state.city,
-                        onValueChange = { stepModel.onEvent(CreateMatchEvents.CityChanged(it)) },
-                        label = strings.cityLabel,
-                        placeholder = strings.cityPlaceholder,
-                        error = state.cityError,
-                        enabled = enabled,
-                    )
+                item(key = "location-picker") {
+                    val initialLat = state.lat
+                    val initialLng = state.lng
+                    if (initialLat != null && initialLng != null) {
+                        LocationPickerMap(
+                            initialLat = initialLat,
+                            initialLng = initialLng,
+                            onLocationSettled = { picked ->
+                                stepModel.onEvent(
+                                    CreateMatchEvents.LocationSelected(picked.lat, picked.lng),
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(CedarTokens.radius.lgShape),
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(CedarTokens.radius.lgShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CedarLoading(contentDescription = strings.resolvingLocation)
+                        }
+                    }
                 }
 
-                item(key = "address") {
-                    FormTextField(
-                        value = state.address,
-                        onValueChange = { stepModel.onEvent(CreateMatchEvents.AddressChanged(it)) },
-                        label = strings.addressLabel,
-                        placeholder = strings.addressPlaceholder,
-                        error = state.addressError,
-                        enabled = enabled,
-                    )
+                item(key = "location-summary") {
+                    LocationSummary(strings = strings, state = state)
                 }
 
                 item(key = "section-when") {
@@ -270,6 +279,56 @@ internal class CreateMatchStep : Screen {
             },
             onDismiss = { showLoginSheet = false },
         )
+    }
+}
+
+@Composable
+private fun LocationSummary(
+    strings: CreateMatchStrings,
+    state: CreateMatchState,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+    ) {
+        when {
+            state.isResolvingLocation -> {
+                Text(
+                    text = strings.resolvingLocation,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            state.address.isBlank() && state.neighborhood.isBlank() && state.city.isBlank() -> {
+                Text(
+                    text = strings.locationNotResolved,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            else -> {
+                if (state.address.isNotBlank()) {
+                    Text(
+                        text = state.address,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                val neighborhoodCity = listOf(state.neighborhood, state.city)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" · ")
+                if (neighborhoodCity.isNotBlank()) {
+                    Text(
+                        text = neighborhoodCity,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 

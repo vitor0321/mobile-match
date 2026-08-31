@@ -9,6 +9,7 @@ import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.analytics.MatchListSource
+import com.walcker.match.navigator.HomeViewCoordinator
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,7 @@ internal class GameListStepModel(
     private val preferences: GamesPreferences,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
+    private val homeViewCoordinator: HomeViewCoordinator,
 ) : ScreenModel {
 
     init {
@@ -84,6 +86,7 @@ internal class GameListStepModel(
                     isLoading = false,
                 )
             }
+            homeViewCoordinator.markHomeDataReady()
         }.launchIn(screenModelScope)
     }
 
@@ -98,6 +101,7 @@ internal class GameListStepModel(
                             errorMessage = error.message ?: strings.loadErrorMessage,
                         )
                     }
+                    homeViewCoordinator.markHomeDataReady()
                 }
         }
     }

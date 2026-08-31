@@ -16,5 +16,6 @@ internal expect fun MatchMapView(
     onPinClick: (String) -> Unit,
     onNearbyTap: () -> Unit,
     nearbyCount: Int,
+    hasLocationPermission: Boolean,
     modifier: Modifier,
 )

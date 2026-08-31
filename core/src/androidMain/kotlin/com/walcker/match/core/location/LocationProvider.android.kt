@@ -15,13 +15,14 @@ import com.walcker.match.core.geo.Coordinates
 import com.walcker.match.core.navigation.CurrentActivityHolder
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+import org.koin.mp.KoinPlatform
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.Duration.Companion.seconds
 
 internal actual fun createLocationProvider(): LocationProvider =
     AndroidLocationProvider(
-        application = CurrentActivityHolder().application
+        application = KoinPlatform.getKoin().get<CurrentActivityHolder>().application
             ?: error("Application context not available; ensure CurrentActivityHolder is initialized"),
     )
 
@@ -90,6 +91,6 @@ private class AndroidLocationProvider(
     }
 
     private suspend fun requestPermissionViaActivity(): Boolean {
-        return false
+        return LocationPermissionRequesterHolder.requester?.requestFineLocationPermission() ?: false
     }
 }
