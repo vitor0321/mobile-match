@@ -1,6 +1,5 @@
 package com.walcker.match.core.datetime
 
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -30,16 +29,16 @@ public fun formatWhen(
     startsAtSeconds: Long,
     now: Instant = getCurrentTime(),
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
-): String = formatWhen(
-    starts = Instant.fromEpochSeconds(startsAtSeconds),
-    now = now,
-    timeZone = timeZone,
-)
+): String =
+    formatWhen(
+        starts = Instant.fromEpochSeconds(startsAtSeconds),
+        now = now,
+        timeZone = timeZone,
+    )
 
 internal expect fun getCurrentTime(): Instant
 
-private fun LocalDateTime.isSameDayAs(other: LocalDateTime): Boolean =
-    year == other.year && monthNumber == other.monthNumber && dayOfMonth == other.dayOfMonth
+private fun LocalDateTime.isSameDayAs(other: LocalDateTime): Boolean = year == other.year && monthNumber == other.monthNumber && dayOfMonth == other.dayOfMonth
 
 private fun Int.pad2(): String = if (this < 10) "0$this" else toString()
 
@@ -54,8 +53,9 @@ public fun formatShortDate(
 public fun formatShortDate(
     epochMillis: Long,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
-): String = if (epochMillis <= 0L) {
-    ""
-} else {
-    formatShortDate(Instant.fromEpochMilliseconds(epochMillis), timeZone)
-}
+): String =
+    if (epochMillis <= 0L) {
+        ""
+    } else {
+        formatShortDate(Instant.fromEpochMilliseconds(epochMillis), timeZone)
+    }

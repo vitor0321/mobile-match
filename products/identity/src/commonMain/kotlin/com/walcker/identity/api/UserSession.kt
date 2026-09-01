@@ -6,4 +6,3 @@ public data class UserSession(
     val displayName: String?,
     val creationTimestamp: Long? = null,
 )
-

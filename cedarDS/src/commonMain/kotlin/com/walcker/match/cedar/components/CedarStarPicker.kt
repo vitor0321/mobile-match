@@ -45,24 +45,25 @@ public fun CedarStarPicker(
 
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(StarTouchTarget)
-                    .selectable(
-                        selected = value == rating,
-                        enabled = enabled,
-                        role = Role.RadioButton,
-                        onClick = { onRatingChange(value) },
-                    )
-                    .semantics { contentDescription = label },
+                modifier =
+                    Modifier
+                        .size(StarTouchTarget)
+                        .selectable(
+                            selected = value == rating,
+                            enabled = enabled,
+                            role = Role.RadioButton,
+                            onClick = { onRatingChange(value) },
+                        ).semantics { contentDescription = label },
             ) {
                 Icon(
                     imageVector = if (isFilled) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     contentDescription = null,
-                    tint = if (isFilled) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant
-                    },
+                    tint =
+                        if (isFilled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
                     modifier = Modifier.size(starSize),
                 )
             }

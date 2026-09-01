@@ -16,6 +16,7 @@ import org.koin.core.component.inject
 
 public interface LanguageProvider {
     val selectedLanguage: Flow<String>
+
     suspend fun saveLanguage(language: String)
 }
 
@@ -26,13 +27,14 @@ internal class ProfileStepModel(
     private val navigatorHolder: NavigatorHolder,
     private val identityDestination: IdentityDestination,
     private val stringsHolder: IdentityStringsHolder,
-) : StateScreenModel<ProfileState>(ProfileState()), KoinComponent {
-
-    private val languageProvider: LanguageProvider? = try {
-        inject<LanguageProvider>().value
-    } catch (e: Exception) {
-        null
-    }
+) : StateScreenModel<ProfileState>(ProfileState()),
+    KoinComponent {
+    private val languageProvider: LanguageProvider? =
+        try {
+            inject<LanguageProvider>().value
+        } catch (e: Exception) {
+            null
+        }
 
     init {
         screenModelScope.launch {
@@ -42,10 +44,11 @@ internal class ProfileStepModel(
         }
         screenModelScope.launch {
             profileAccountUseCase.observeSubscription().collect { subscription ->
-                mutableState.value = mutableState.value.copy(
-                    isPro = subscription.isPro,
-                    managementUrl = subscription.managementUrl,
-                )
+                mutableState.value =
+                    mutableState.value.copy(
+                        isPro = subscription.isPro,
+                        managementUrl = subscription.managementUrl,
+                    )
             }
         }
         if (languageProvider != null) {
@@ -66,26 +69,28 @@ internal class ProfileStepModel(
         val strings = stringsHolder.strings.profile
         mutableState.value = mutableState.value.copy(isLoading = true, error = null, message = null)
         screenModelScope.launch {
-            signUseCase.signOut()
+            signUseCase
+                .signOut()
                 .onSuccess {
                     mutableState.value = mutableState.value.copy(isLoading = false)
                     navigatorHolder.navigator?.pop()
-                }
-                .onFailure {
-                    mutableState.value = mutableState.value.copy(
-                        isLoading = false,
-                        error = strings.signOutError,
-                    )
+                }.onFailure {
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            error = strings.signOutError,
+                        )
                 }
         }
     }
 
     fun onDeleteAccountClicked() {
-        mutableState.value = mutableState.value.copy(
-            showDeleteAccountConfirmation = true,
-            error = null,
-            message = null,
-        )
+        mutableState.value =
+            mutableState.value.copy(
+                showDeleteAccountConfirmation = true,
+                error = null,
+                message = null,
+            )
     }
 
     fun onDeleteAccountConfirmationDismissed() {
@@ -94,12 +99,13 @@ internal class ProfileStepModel(
 
     fun onDeleteAccountConfirmed() {
         val strings = stringsHolder.strings.profile
-        mutableState.value = mutableState.value.copy(
-            isDeletingAccount = true,
-            showDeleteAccountConfirmation = false,
-            error = null,
-            message = null,
-        )
+        mutableState.value =
+            mutableState.value.copy(
+                isDeletingAccount = true,
+                showDeleteAccountConfirmation = false,
+                error = null,
+                message = null,
+            )
         screenModelScope.launch {
             when (deleteAccountUseCase()) {
                 DeleteAccountResult.Success -> {
@@ -107,19 +113,21 @@ internal class ProfileStepModel(
                     navigatorHolder.navigator?.pop()
                 }
                 DeleteAccountResult.RequiresRecentLogin -> {
-                    mutableState.value = mutableState.value.copy(
-                        isDeletingAccount = false,
-                        error = strings.deleteAccountRequiresRecentLogin,
-                    )
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isDeletingAccount = false,
+                            error = strings.deleteAccountRequiresRecentLogin,
+                        )
                 }
                 is DeleteAccountResult.RemoteDataFailure,
                 is DeleteAccountResult.AuthDeletionFailure,
                 is DeleteAccountResult.LocalCleanupFailure,
                 -> {
-                    mutableState.value = mutableState.value.copy(
-                        isDeletingAccount = false,
-                        error = strings.deleteAccountError,
-                    )
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isDeletingAccount = false,
+                            error = strings.deleteAccountError,
+                        )
                 }
             }
         }
@@ -127,28 +135,32 @@ internal class ProfileStepModel(
 
     fun onRestorePurchasesClicked() {
         val strings = stringsHolder.strings.profile
-        mutableState.value = mutableState.value.copy(
-            isRestoringPurchases = true,
-            error = null,
-            message = null,
-        )
+        mutableState.value =
+            mutableState.value.copy(
+                isRestoringPurchases = true,
+                error = null,
+                message = null,
+            )
         screenModelScope.launch {
-            profileAccountUseCase.restorePurchases()
+            profileAccountUseCase
+                .restorePurchases()
                 .onSuccess { hasProAccess ->
-                    mutableState.value = mutableState.value.copy(
-                        isRestoringPurchases = false,
-                        message = if (hasProAccess) {
-                            strings.restorePurchasesSuccess
-                        } else {
-                            strings.restorePurchasesNoneFound
-                        },
-                    )
-                }
-                .onFailure { error ->
-                    mutableState.value = mutableState.value.copy(
-                        isRestoringPurchases = false,
-                        error = strings.restorePurchasesError,
-                    )
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isRestoringPurchases = false,
+                            message =
+                                if (hasProAccess) {
+                                    strings.restorePurchasesSuccess
+                                } else {
+                                    strings.restorePurchasesNoneFound
+                                },
+                        )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isRestoringPurchases = false,
+                            error = strings.restorePurchasesError,
+                        )
                 }
         }
     }

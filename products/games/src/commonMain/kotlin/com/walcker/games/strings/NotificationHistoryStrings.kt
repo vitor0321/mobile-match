@@ -30,13 +30,11 @@ internal data class PtBrNotificationHistoryStrings(
     override val youWereAdded: String = "Você foi adicionado",
     override val refreshing: String = "Atualizando...",
     override val error: String = "Erro ao carregar notificações",
-
     override val closeContentDescription: String = "Fechar",
     override val markAsReadContentDescription: String = "Marcar como lida",
     override val deleteContentDescription: String = "Apagar notificação",
     override val unreadContentDescription: String = "Não lida",
     override val dismissErrorContentDescription: String = "Dispensar",
-
     override val timeJustNow: String = "Agora",
     override val timeMinutesAgo: (Int) -> String = { n ->
         if (n == 1) "há 1 minuto" else "há $n minutos"
@@ -60,13 +58,11 @@ internal data class EnNotificationHistoryStrings(
     override val youWereAdded: String = "You were added",
     override val refreshing: String = "Refreshing...",
     override val error: String = "Error loading notifications",
-
     override val closeContentDescription: String = "Close",
     override val markAsReadContentDescription: String = "Mark as read",
     override val deleteContentDescription: String = "Delete notification",
     override val unreadContentDescription: String = "Unread",
     override val dismissErrorContentDescription: String = "Dismiss",
-
     override val timeJustNow: String = "Just now",
     override val timeMinutesAgo: (Int) -> String = { n ->
         if (n == 1) "1 minute ago" else "$n minutes ago"

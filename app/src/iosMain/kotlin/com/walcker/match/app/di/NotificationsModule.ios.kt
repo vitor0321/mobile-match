@@ -5,8 +5,9 @@ import com.walcker.match.app.notifications.PushNotificationService
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
-internal actual fun pushNotificationServiceModule(): Module = module {
-    single<PushNotificationService> {
-        IosPushNotificationService.getInstance()
+internal actual fun pushNotificationServiceModule(): Module =
+    module {
+        single<PushNotificationService> {
+            IosPushNotificationService.getInstance()
+        }
     }
-}

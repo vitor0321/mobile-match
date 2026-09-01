@@ -6,18 +6,21 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 
 public object CedarTokens {
-
     public val colors: CedarColors
-        @Composable @ReadOnlyComposable get() = LocalCedarColors.current
+        @Composable @ReadOnlyComposable
+        get() = LocalCedarColors.current
 
     public val spacing: CedarSpacing
-        @Composable @ReadOnlyComposable get() = LocalCedarSpacing.current
+        @Composable @ReadOnlyComposable
+        get() = LocalCedarSpacing.current
 
     public val radius: CedarRadius
-        @Composable @ReadOnlyComposable get() = LocalCedarRadius.current
+        @Composable @ReadOnlyComposable
+        get() = LocalCedarRadius.current
 
     public val elevation: CedarElevation
-        @Composable @ReadOnlyComposable get() = LocalCedarElevation.current
+        @Composable @ReadOnlyComposable
+        get() = LocalCedarElevation.current
 }
 
 @Composable

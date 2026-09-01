@@ -7,9 +7,9 @@ import com.walcker.identity.features.domain.error.appleSignInMessage
 import com.walcker.identity.features.domain.error.googleSignInMessage
 import com.walcker.identity.features.domain.error.loginMessage
 import com.walcker.identity.features.domain.usecase.SignUseCase
-import com.walcker.identity.strings.IdentityStringsHolder
-import com.walcker.identity.features.ui.signup.SignUpStep
 import com.walcker.identity.features.ui.forgotpassword.ForgotPasswordStep
+import com.walcker.identity.features.ui.signup.SignUpStep
+import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.match.core.navigation.NavigatorHolder
 import kotlinx.coroutines.launch
 
@@ -66,17 +66,19 @@ internal class LoginStepModel(
         }
         mutableState.value = mutableState.value.copy(isLoading = true, error = null, email = email)
         screenModelScope.launch {
-            signUseCase.signInWithEmail(email = email, password = password)
+            signUseCase
+                .signInWithEmail(email = email, password = password)
                 .onSuccess {
                     mutableState.value = mutableState.value.copy(isLoading = false)
                     navigateBack()
-                }
-                .onFailure { error ->
-                    mutableState.value = mutableState.value.copy(
-                        isLoading = false,
-                        error = (error as? IdentityError)?.loginMessage(strings)
-                            ?: if (error is IdentityError.Cancelled) null else strings.signInError,
-                    )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            error =
+                                (error as? IdentityError)?.loginMessage(strings)
+                                    ?: if (error is IdentityError.Cancelled) null else strings.signInError,
+                        )
                 }
         }
     }
@@ -85,20 +87,22 @@ internal class LoginStepModel(
         val strings = stringsHolder.strings.login
         mutableState.value = mutableState.value.copy(isLoading = true, error = null)
         screenModelScope.launch {
-            signUseCase.signInWithGoogle()
+            signUseCase
+                .signInWithGoogle()
                 .onSuccess {
                     mutableState.value = mutableState.value.copy(isLoading = false)
                     navigateBack()
-                }
-                .onFailure { error ->
-                    mutableState.value = mutableState.value.copy(
-                        isLoading = false,
-                        error = when (error) {
-                            IdentityError.Cancelled -> null
-                            is IdentityError -> error.googleSignInMessage(strings)
-                            else -> strings.googleSignInError
-                        },
-                    )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            error =
+                                when (error) {
+                                    IdentityError.Cancelled -> null
+                                    is IdentityError -> error.googleSignInMessage(strings)
+                                    else -> strings.googleSignInError
+                                },
+                        )
                 }
         }
     }
@@ -107,20 +111,22 @@ internal class LoginStepModel(
         val strings = stringsHolder.strings.login
         mutableState.value = mutableState.value.copy(isLoading = true, error = null)
         screenModelScope.launch {
-            signUseCase.signInWithApple()
+            signUseCase
+                .signInWithApple()
                 .onSuccess {
                     mutableState.value = mutableState.value.copy(isLoading = false)
                     navigateBack()
-                }
-                .onFailure { error ->
-                    mutableState.value = mutableState.value.copy(
-                        isLoading = false,
-                        error = when (error) {
-                            IdentityError.Cancelled -> null
-                            is IdentityError -> error.appleSignInMessage(strings)
-                            else -> strings.appleSignInError
-                        },
-                    )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            error =
+                                when (error) {
+                                    IdentityError.Cancelled -> null
+                                    is IdentityError -> error.appleSignInMessage(strings)
+                                    else -> strings.appleSignInError
+                                },
+                        )
                 }
         }
     }

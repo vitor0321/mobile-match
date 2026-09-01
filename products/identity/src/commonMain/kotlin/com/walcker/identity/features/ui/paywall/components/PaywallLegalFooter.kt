@@ -33,10 +33,11 @@ internal fun PaywallLegalFooter(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(
-            space = CedarTokens.spacing.xs,
-            alignment = Alignment.CenterHorizontally,
-        ),
+        horizontalArrangement =
+            Arrangement.spacedBy(
+                space = CedarTokens.spacing.xs,
+                alignment = Alignment.CenterHorizontally,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LegalLink(label = termsLabel, color = colors.primary, onClick = onOpenTerms)
@@ -62,10 +63,11 @@ private fun LegalLink(
         color = color,
         textDecoration = TextDecoration.Underline,
         textAlign = TextAlign.Center,
-        modifier = modifier
-            .defaultMinSize(minHeight = MinTouchTarget)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = CedarTokens.spacing.xs)
-            .wrapContentHeight(align = Alignment.CenterVertically),
+        modifier =
+            modifier
+                .defaultMinSize(minHeight = MinTouchTarget)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = CedarTokens.spacing.xs)
+                .wrapContentHeight(align = Alignment.CenterVertically),
     )
 }

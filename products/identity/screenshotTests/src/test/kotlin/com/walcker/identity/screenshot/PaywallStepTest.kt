@@ -15,97 +15,108 @@ import org.junit.Rule
 import org.junit.Test
 
 class PaywallStepTest {
-
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    private val monthlyOffering = ProductOffering(
-        id = "default:${'$'}rc_monthly",
-        offeringId = "default",
-        packageId = "${'$'}rc_monthly",
-        title = "Plano mensal",
-        description = "Apoie o Match e tenha acesso antecipado ao que vem.",
-        priceLabel = "R$ 14,90",
-    )
+    private val monthlyOffering =
+        ProductOffering(
+            id = "default:${'$'}rc_monthly",
+            offeringId = "default",
+            packageId = "${'$'}rc_monthly",
+            title = "Plano mensal",
+            description = "Apoie o Match e tenha acesso antecipado ao que vem.",
+            priceLabel = "R$ 14,90",
+        )
 
-    private val annualOffering = ProductOffering(
-        id = "default:${'$'}rc_annual",
-        offeringId = "default",
-        packageId = "${'$'}rc_annual",
-        title = "Plano anual",
-        description = "Melhor custo-benefício para usar o Match todos os dias.",
-        priceLabel = "R$ 119,90",
-    )
+    private val annualOffering =
+        ProductOffering(
+            id = "default:${'$'}rc_annual",
+            offeringId = "default",
+            packageId = "${'$'}rc_annual",
+            title = "Plano anual",
+            description = "Melhor custo-benefício para usar o Match todos os dias.",
+            priceLabel = "R$ 119,90",
+        )
 
-    private val loadedState = PaywallState(
-        isLoading = false,
-        offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
-        selectedOfferingId = annualOffering.id,
-        selectedOffering = annualOffering,
-        selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
-    )
+    private val loadedState =
+        PaywallState(
+            isLoading = false,
+            offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
+            selectedOfferingId = annualOffering.id,
+            selectedOffering = annualOffering,
+            selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
+        )
 
-    private val monthlySelectedState = PaywallState(
-        isLoading = false,
-        offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
-        selectedOfferingId = monthlyOffering.id,
-        selectedOffering = monthlyOffering,
-        selectedOfferingPeriod = PaywallOfferingPeriod.MONTHLY,
-    )
+    private val monthlySelectedState =
+        PaywallState(
+            isLoading = false,
+            offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
+            selectedOfferingId = monthlyOffering.id,
+            selectedOffering = monthlyOffering,
+            selectedOfferingPeriod = PaywallOfferingPeriod.MONTHLY,
+        )
 
-    private val loadingState = PaywallState(
-        isLoading = true,
-        offerings = persistentListOf(),
-    )
+    private val loadingState =
+        PaywallState(
+            isLoading = true,
+            offerings = persistentListOf(),
+        )
 
-    private val emptyState = PaywallState(
-        isLoading = false,
-        offerings = persistentListOf(),
-        error = null,
-    )
+    private val emptyState =
+        PaywallState(
+            isLoading = false,
+            offerings = persistentListOf(),
+            error = null,
+        )
 
-    private val errorNetworkState = PaywallState(
-        isLoading = false,
-        offerings = persistentListOf(),
-        error = PaywallError.Network,
-        errorMessage = "Não foi possível acessar o billing agora.",
-    )
+    private val errorNetworkState =
+        PaywallState(
+            isLoading = false,
+            offerings = persistentListOf(),
+            error = PaywallError.Network,
+            errorMessage = "Não foi possível acessar o billing agora.",
+        )
 
-    private val purchaseInProgressState = loadedState.copy(
-        purchaseInProgress = annualOffering.id,
-    )
+    private val purchaseInProgressState =
+        loadedState.copy(
+            purchaseInProgress = annualOffering.id,
+        )
 
-    private val restoreInProgressState = loadedState.copy(
-        isRestoring = true,
-    )
+    private val restoreInProgressState =
+        loadedState.copy(
+            isRestoring = true,
+        )
 
-    private val singleOfferingState = PaywallState(
-        isLoading = false,
-        offerings = listOf(annualOffering).toImmutableList(),
-        selectedOfferingId = annualOffering.id,
-        selectedOffering = annualOffering,
-        selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
-    )
+    private val singleOfferingState =
+        PaywallState(
+            isLoading = false,
+            offerings = listOf(annualOffering).toImmutableList(),
+            selectedOfferingId = annualOffering.id,
+            selectedOffering = annualOffering,
+            selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
+        )
 
-    private val proCustomerState = PaywallState(
-        isLoading = false,
-        offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
-        selectedOfferingId = annualOffering.id,
-        selectedOffering = annualOffering,
-        selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
-        isPro = true,
-        managementUrl = "https://play.google.com/store/account/subscriptions",
-    )
+    private val proCustomerState =
+        PaywallState(
+            isLoading = false,
+            offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
+            selectedOfferingId = annualOffering.id,
+            selectedOffering = annualOffering,
+            selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
+            isPro = true,
+            managementUrl = "https://play.google.com/store/account/subscriptions",
+        )
 
-    private val proCustomerManagementUnavailableState = PaywallState(
-        isLoading = false,
-        offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
-        selectedOfferingId = annualOffering.id,
-        selectedOffering = annualOffering,
-        selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
-        isPro = true,
-        managementUrl = null,
-    )
+    private val proCustomerManagementUnavailableState =
+        PaywallState(
+            isLoading = false,
+            offerings = listOf(monthlyOffering, annualOffering).toImmutableList(),
+            selectedOfferingId = annualOffering.id,
+            selectedOffering = annualOffering,
+            selectedOfferingPeriod = PaywallOfferingPeriod.YEARLY,
+            isPro = true,
+            managementUrl = null,
+        )
 
     @Test
     fun content_lightMode() = snapshot(loadedState, darkTheme = false)
@@ -162,14 +173,15 @@ class PaywallStepTest {
     fun proCustomer_darkMode() = snapshot(proCustomerState, darkTheme = true)
 
     @Test
-    fun proCustomerManagementUnavailable_lightMode() =
-        snapshot(proCustomerManagementUnavailableState, darkTheme = false)
+    fun proCustomerManagementUnavailable_lightMode() = snapshot(proCustomerManagementUnavailableState, darkTheme = false)
 
     @Test
-    fun proCustomerManagementUnavailable_darkMode() =
-        snapshot(proCustomerManagementUnavailableState, darkTheme = true)
+    fun proCustomerManagementUnavailable_darkMode() = snapshot(proCustomerManagementUnavailableState, darkTheme = true)
 
-    private fun snapshot(state: PaywallState, darkTheme: Boolean) {
+    private fun snapshot(
+        state: PaywallState,
+        darkTheme: Boolean,
+    ) {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = darkTheme) {
                 PaywallScreen(

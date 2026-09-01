@@ -25,9 +25,10 @@ internal fun SubscriptionInfoSection(
         color = colors.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(CedarTokens.spacing.md),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(CedarTokens.spacing.md),
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
         ) {
             Text(

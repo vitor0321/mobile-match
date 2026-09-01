@@ -33,9 +33,10 @@ public fun MatchCard(
     val shape = CedarTokens.radius.mdShape
     val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     val elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat)
-    val cardModifier = modifier
-        .fillMaxWidth()
-        .semantics(mergeDescendants = true) { }
+    val cardModifier =
+        modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { }
 
     if (onClick != null) {
         Card(

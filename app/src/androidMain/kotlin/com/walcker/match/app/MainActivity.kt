@@ -12,16 +12,18 @@ import com.walcker.match.core.location.LocationPermissionRequesterHolder
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-internal class MainActivity : ComponentActivity(), LocationPermissionRequester {
-
+internal class MainActivity :
+    ComponentActivity(),
+    LocationPermissionRequester {
     private var pendingPermissionContinuation: CancellableContinuation<Boolean>? = null
 
-    private val locationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        pendingPermissionContinuation?.resume(granted) { _, _, _ -> }
-        pendingPermissionContinuation = null
-    }
+    private val locationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            pendingPermissionContinuation?.resume(granted) { _, _, _ -> }
+            pendingPermissionContinuation = null
+        }
 
     override suspend fun requestFineLocationPermission(): Boolean =
         suspendCancellableCoroutine { continuation ->

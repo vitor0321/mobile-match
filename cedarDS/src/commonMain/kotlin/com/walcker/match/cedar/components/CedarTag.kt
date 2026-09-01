@@ -25,18 +25,20 @@ public fun CedarTag(
     modifier: Modifier = Modifier,
     tone: CedarTagTone = CedarTagTone.Neutral,
 ) {
-    val background = when (tone) {
-        CedarTagTone.Neutral -> MaterialTheme.colorScheme.surfaceVariant
-        CedarTagTone.Info -> MaterialTheme.colorScheme.primaryContainer
-        CedarTagTone.Available -> CedarTokens.colors.availableContainer
-        CedarTagTone.Danger -> MaterialTheme.colorScheme.errorContainer
-    }
-    val foreground = when (tone) {
-        CedarTagTone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
-        CedarTagTone.Info -> MaterialTheme.colorScheme.onPrimaryContainer
-        CedarTagTone.Available -> CedarTokens.colors.availableText
-        CedarTagTone.Danger -> MaterialTheme.colorScheme.onErrorContainer
-    }
+    val background =
+        when (tone) {
+            CedarTagTone.Neutral -> MaterialTheme.colorScheme.surfaceVariant
+            CedarTagTone.Info -> MaterialTheme.colorScheme.primaryContainer
+            CedarTagTone.Available -> CedarTokens.colors.availableContainer
+            CedarTagTone.Danger -> MaterialTheme.colorScheme.errorContainer
+        }
+    val foreground =
+        when (tone) {
+            CedarTagTone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
+            CedarTagTone.Info -> MaterialTheme.colorScheme.onPrimaryContainer
+            CedarTagTone.Available -> CedarTokens.colors.availableText
+            CedarTagTone.Danger -> MaterialTheme.colorScheme.onErrorContainer
+        }
 
     Text(
         text = label,
@@ -44,11 +46,12 @@ public fun CedarTag(
         style = MaterialTheme.typography.labelSmall,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-            .background(color = background, shape = CedarTokens.radius.pill)
-            .padding(
-                horizontal = CedarTokens.spacing.sm,
-                vertical = CedarTokens.spacing.xxs,
-            ),
+        modifier =
+            modifier
+                .background(color = background, shape = CedarTokens.radius.pill)
+                .padding(
+                    horizontal = CedarTokens.spacing.sm,
+                    vertical = CedarTokens.spacing.xxs,
+                ),
     )
 }

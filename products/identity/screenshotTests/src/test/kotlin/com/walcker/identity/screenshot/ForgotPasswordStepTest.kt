@@ -10,7 +10,6 @@ import org.junit.Rule
 import org.junit.Test
 
 class ForgotPasswordStepTest {
-
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
@@ -19,9 +18,10 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},
@@ -35,9 +35,10 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},
@@ -51,10 +52,11 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                        isLoading = true,
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                            isLoading = true,
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},
@@ -68,10 +70,11 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                        isLoading = true,
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                            isLoading = true,
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},
@@ -85,10 +88,11 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                        error = "E-mail inválido",
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                            error = "E-mail inválido",
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},
@@ -102,10 +106,11 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                        error = "E-mail inválido",
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                            error = "E-mail inválido",
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},
@@ -119,10 +124,11 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                        isSuccess = true,
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                            isSuccess = true,
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},
@@ -136,10 +142,11 @@ class ForgotPasswordStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 ForgotPasswordScreen(
-                    state = ForgotPasswordState(
-                        email = "user@match.app",
-                        isSuccess = true,
-                    ),
+                    state =
+                        ForgotPasswordState(
+                            email = "user@match.app",
+                            isSuccess = true,
+                        ),
                     onEmailChanged = {},
                     onSubmit = {},
                     onBack = {},

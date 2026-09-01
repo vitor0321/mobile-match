@@ -30,7 +30,6 @@ import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.tokens.CedarTokens
 
 internal class LoginStep : Screen {
-
     override val key: String get() = "login"
 
     @Composable
@@ -87,10 +86,11 @@ internal fun LoginScreen(
             singleLine = true,
             shape = CedarTokens.radius.smShape,
             isError = state.error != null,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next,
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next,
+                ),
             enabled = enabled,
         )
 
@@ -102,10 +102,11 @@ internal fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             label = { Text(strings.passwordLabel) },
             isError = state.error != null,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done,
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
             enabled = enabled,
         )
 

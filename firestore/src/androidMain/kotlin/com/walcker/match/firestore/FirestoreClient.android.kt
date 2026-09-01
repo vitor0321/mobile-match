@@ -8,10 +8,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import kotlin.collections.filterNotNull
-import kotlin.collections.map
-import kotlin.runCatching
-import kotlin.text.lowercase
 
 private val firestore: FirebaseFirestore by lazy {
     FirebaseFirestore.getInstance()
@@ -20,24 +16,25 @@ private val firestore: FirebaseFirestore by lazy {
 public actual fun createFirestoreClient(): FirestoreClient = AndroidFirestoreClient()
 
 private class AndroidFirestoreClient : FirestoreClient {
-    override fun document(path: String): FirestoreDocumentReference =
-        AndroidDocumentReference(firestore.document(path))
+    override fun document(path: String): FirestoreDocumentReference = AndroidDocumentReference(firestore.document(path))
 
-    override fun collection(path: String): FirestoreCollectionReference =
-        AndroidCollectionReference(firestore.collection(path))
+    override fun collection(path: String): FirestoreCollectionReference = AndroidCollectionReference(firestore.collection(path))
 
-    override fun query(path: String): FirestoreQueryBuilder =
-        AndroidQueryBuilder(firestore.collection(path))
+    override fun query(path: String): FirestoreQueryBuilder = AndroidQueryBuilder(firestore.collection(path))
 
     override suspend fun <T> runTransaction(block: suspend (FirestoreTransaction) -> T): Result<T> =
         runCatching {
-            firestore.runTransaction { txn ->
-                val wrappedTxn = AndroidTransaction(txn)
-                throw NotImplementedError("Transaction with suspend not yet implemented for Android")
-            }.await()
+            firestore
+                .runTransaction { txn ->
+                    val wrappedTxn = AndroidTransaction(txn)
+                    throw NotImplementedError("Transaction with suspend not yet implemented for Android")
+                }.await()
         }
 
-    override suspend fun callFunction(name: String, data: Map<String, Any?>): Result<Map<String, Any?>> =
+    override suspend fun callFunction(
+        name: String,
+        data: Map<String, Any?>,
+    ): Result<Map<String, Any?>> =
         runCatching {
             val functions = FirebaseFunctions.getInstance(FUNCTIONS_REGION)
             val result = functions.getHttpsCallable(name).call(data).await()
@@ -48,8 +45,9 @@ private class AndroidFirestoreClient : FirestoreClient {
 
 private const val FUNCTIONS_REGION = "southamerica-east1"
 
-private class AndroidDocumentReference(private val ref: com.google.firebase.firestore.DocumentReference) :
-    FirestoreDocumentReference {
+private class AndroidDocumentReference(
+    private val ref: com.google.firebase.firestore.DocumentReference,
+) : FirestoreDocumentReference {
     override val path: String get() = ref.path
 
     override suspend fun get(): Result<DocumentSnapshot?> =
@@ -61,42 +59,47 @@ private class AndroidDocumentReference(private val ref: com.google.firebase.fire
                     id = doc.id,
                     data = doc.data ?: emptyMap(),
                     exists = true,
-                    metadata = SnapshotMetadata(
-                        isFromCache = doc.metadata.isFromCache,
-                        hasPendingWrites = false,
-                    ),
+                    metadata =
+                        SnapshotMetadata(
+                            isFromCache = doc.metadata.isFromCache,
+                            hasPendingWrites = false,
+                        ),
                 )
             } else {
                 null
             }
         }
 
-    override fun snapshots(): Flow<Result<DocumentSnapshot?>> = callbackFlow {
-        val listener = ref.addSnapshotListener { doc, error ->
-            if (error != null) {
-                trySend(Result.failure(error))
-            } else if (doc != null) {
-                val snapshot = if (doc.exists()) {
-                    DocumentSnapshot(
-                        path = doc.reference.path,
-                        id = doc.id,
-                        data = doc.data ?: emptyMap(),
-                        exists = true,
-                        metadata = SnapshotMetadata(
-                            isFromCache = doc.metadata.isFromCache,
-                            hasPendingWrites = false,
-                        ),
-                    )
-                } else {
-                    null
+    override fun snapshots(): Flow<Result<DocumentSnapshot?>> =
+        callbackFlow {
+            val listener =
+                ref.addSnapshotListener { doc, error ->
+                    if (error != null) {
+                        trySend(Result.failure(error))
+                    } else if (doc != null) {
+                        val snapshot =
+                            if (doc.exists()) {
+                                DocumentSnapshot(
+                                    path = doc.reference.path,
+                                    id = doc.id,
+                                    data = doc.data ?: emptyMap(),
+                                    exists = true,
+                                    metadata =
+                                        SnapshotMetadata(
+                                            isFromCache = doc.metadata.isFromCache,
+                                            hasPendingWrites = false,
+                                        ),
+                                )
+                            } else {
+                                null
+                            }
+                        trySend(Result.success(snapshot))
+                    }
                 }
-                trySend(Result.success(snapshot))
+            awaitClose {
+                listener.remove()
             }
         }
-        awaitClose {
-            listener.remove()
-        }
-    }
 
     override suspend fun delete(): Result<Unit> =
         runCatching {
@@ -113,12 +116,12 @@ private class AndroidDocumentReference(private val ref: com.google.firebase.fire
             ref.update(data).await()
         }
 
-    override fun collection(name: String): FirestoreCollectionReference =
-        AndroidCollectionReference(ref.collection(name))
+    override fun collection(name: String): FirestoreCollectionReference = AndroidCollectionReference(ref.collection(name))
 }
 
-private class AndroidCollectionReference(private val ref: com.google.firebase.firestore.CollectionReference) :
-    FirestoreCollectionReference {
+private class AndroidCollectionReference(
+    private val ref: com.google.firebase.firestore.CollectionReference,
+) : FirestoreCollectionReference {
     override val path: String get() = ref.path
 
     override fun query(): FirestoreQueryBuilder = AndroidQueryBuilder(ref)
@@ -136,27 +139,30 @@ private class AndroidCollectionReference(private val ref: com.google.firebase.fi
             }
         }
 
-    override fun snapshots(query: FirestoreQueryBuilder?): Flow<Result<List<DocumentSnapshot>>> = callbackFlow {
-        val fbQuery = if (query is AndroidQueryBuilder) query.build() else ref
-        val listener = fbQuery.addSnapshotListener { docs, error ->
-            if (error != null) {
-                trySend(Result.failure(error))
-            } else if (docs != null) {
-                val snapshots = docs.map { doc ->
-                    DocumentSnapshot(
-                        path = doc.reference.path,
-                        id = doc.id,
-                        data = doc.data,
-                        exists = true,
-                    )
+    override fun snapshots(query: FirestoreQueryBuilder?): Flow<Result<List<DocumentSnapshot>>> =
+        callbackFlow {
+            val fbQuery = if (query is AndroidQueryBuilder) query.build() else ref
+            val listener =
+                fbQuery.addSnapshotListener { docs, error ->
+                    if (error != null) {
+                        trySend(Result.failure(error))
+                    } else if (docs != null) {
+                        val snapshots =
+                            docs.map { doc ->
+                                DocumentSnapshot(
+                                    path = doc.reference.path,
+                                    id = doc.id,
+                                    data = doc.data,
+                                    exists = true,
+                                )
+                            }
+                        trySend(Result.success(snapshots))
+                    }
                 }
-                trySend(Result.success(snapshots))
+            awaitClose {
+                listener.remove()
             }
         }
-        awaitClose {
-            listener.remove()
-        }
-    }
 
     override suspend fun add(data: Map<String, Any?>): Result<String> =
         runCatching {
@@ -165,35 +171,45 @@ private class AndroidCollectionReference(private val ref: com.google.firebase.fi
         }
 }
 
-private class AndroidQueryBuilder(private val baseQuery: com.google.firebase.firestore.Query) :
-    FirestoreQueryBuilder {
+private class AndroidQueryBuilder(
+    private val baseQuery: com.google.firebase.firestore.Query,
+) : FirestoreQueryBuilder {
     private var currentQuery: com.google.firebase.firestore.Query = baseQuery
 
-    override fun where(field: String, operator: String, value: Any?): FirestoreQueryBuilder {
+    override fun where(
+        field: String,
+        operator: String,
+        value: Any?,
+    ): FirestoreQueryBuilder {
         val newBuilder = AndroidQueryBuilder(baseQuery)
         @Suppress("UNCHECKED_CAST")
-        newBuilder.currentQuery = when (operator.lowercase()) {
-            "==" -> currentQuery.whereEqualTo(field, value)
-            "!=" -> currentQuery.whereNotEqualTo(field, value)
-            "<" -> if (value != null) currentQuery.whereLessThan(field, value) else currentQuery
-            "<=" -> if (value != null) currentQuery.whereLessThanOrEqualTo(field, value) else currentQuery
-            ">" -> if (value != null) currentQuery.whereGreaterThan(field, value) else currentQuery
-            ">=" -> if (value != null) currentQuery.whereGreaterThanOrEqualTo(field, value) else currentQuery
-            "in" -> currentQuery.whereIn(field, value as? List<Any> ?: emptyList())
-            "array-contains" -> if (value != null) currentQuery.whereArrayContains(field, value) else currentQuery
-            "array-contains-any" -> currentQuery.whereArrayContainsAny(field, value as? List<Any> ?: emptyList())
-            else -> throw IllegalArgumentException("Unknown operator: $operator")
-        }
+        newBuilder.currentQuery =
+            when (operator.lowercase()) {
+                "==" -> currentQuery.whereEqualTo(field, value)
+                "!=" -> currentQuery.whereNotEqualTo(field, value)
+                "<" -> if (value != null) currentQuery.whereLessThan(field, value) else currentQuery
+                "<=" -> if (value != null) currentQuery.whereLessThanOrEqualTo(field, value) else currentQuery
+                ">" -> if (value != null) currentQuery.whereGreaterThan(field, value) else currentQuery
+                ">=" -> if (value != null) currentQuery.whereGreaterThanOrEqualTo(field, value) else currentQuery
+                "in" -> currentQuery.whereIn(field, value as? List<Any> ?: emptyList())
+                "array-contains" -> if (value != null) currentQuery.whereArrayContains(field, value) else currentQuery
+                "array-contains-any" -> currentQuery.whereArrayContainsAny(field, value as? List<Any> ?: emptyList())
+                else -> throw IllegalArgumentException("Unknown operator: $operator")
+            }
         return newBuilder
     }
 
-    override fun orderBy(field: String, direction: String): FirestoreQueryBuilder {
+    override fun orderBy(
+        field: String,
+        direction: String,
+    ): FirestoreQueryBuilder {
         val newBuilder = AndroidQueryBuilder(baseQuery)
-        newBuilder.currentQuery = if (direction.lowercase() == "desc") {
-            currentQuery.orderBy(field, Query.Direction.DESCENDING)
-        } else {
-            currentQuery.orderBy(field, Query.Direction.ASCENDING)
-        }
+        newBuilder.currentQuery =
+            if (direction.lowercase() == "desc") {
+                currentQuery.orderBy(field, Query.Direction.DESCENDING)
+            } else {
+                currentQuery.orderBy(field, Query.Direction.ASCENDING)
+            }
         return newBuilder
     }
 
@@ -244,31 +260,36 @@ private class AndroidQueryBuilder(private val baseQuery: com.google.firebase.fir
             }
         }
 
-    override fun snapshots(): Flow<Result<List<DocumentSnapshot>>> = callbackFlow {
-        val listener = currentQuery.addSnapshotListener { docs, error ->
-            if (error != null) {
-                trySend(Result.failure(error))
-            } else if (docs != null) {
-                val snapshots = docs.map { doc ->
-                    DocumentSnapshot(
-                        path = doc.reference.path,
-                        id = doc.id,
-                        data = doc.data,
-                        exists = true,
-                    )
+    override fun snapshots(): Flow<Result<List<DocumentSnapshot>>> =
+        callbackFlow {
+            val listener =
+                currentQuery.addSnapshotListener { docs, error ->
+                    if (error != null) {
+                        trySend(Result.failure(error))
+                    } else if (docs != null) {
+                        val snapshots =
+                            docs.map { doc ->
+                                DocumentSnapshot(
+                                    path = doc.reference.path,
+                                    id = doc.id,
+                                    data = doc.data,
+                                    exists = true,
+                                )
+                            }
+                        trySend(Result.success(snapshots))
+                    }
                 }
-                trySend(Result.success(snapshots))
+            awaitClose {
+                listener.remove()
             }
         }
-        awaitClose {
-            listener.remove()
-        }
-    }
 
     internal fun build(): com.google.firebase.firestore.Query = currentQuery
 }
 
-private class AndroidTransaction(private val txn: Transaction) : FirestoreTransaction {
+private class AndroidTransaction(
+    private val txn: Transaction,
+) : FirestoreTransaction {
     override suspend fun get(path: String): Result<DocumentSnapshot?> =
         runCatching {
             val doc = txn.get(FirebaseFirestore.getInstance().document(path))
@@ -284,12 +305,18 @@ private class AndroidTransaction(private val txn: Transaction) : FirestoreTransa
             }
         }
 
-    override suspend fun set(path: String, data: Map<String, Any?>): Result<Unit> =
+    override suspend fun set(
+        path: String,
+        data: Map<String, Any?>,
+    ): Result<Unit> =
         runCatching {
             txn.set(FirebaseFirestore.getInstance().document(path), data)
         }
 
-    override suspend fun update(path: String, data: Map<String, Any?>): Result<Unit> =
+    override suspend fun update(
+        path: String,
+        data: Map<String, Any?>,
+    ): Result<Unit> =
         runCatching {
             txn.update(FirebaseFirestore.getInstance().document(path), data)
         }

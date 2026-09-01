@@ -16,16 +16,18 @@ public fun SlotBadge(
     modifier: Modifier = Modifier,
 ) {
     val hasRoom = openSlots > 0
-    val background = if (hasRoom) {
-        CedarTokens.colors.available
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-    val foreground = if (hasRoom) {
-        CedarTokens.colors.onAvailable
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val background =
+        if (hasRoom) {
+            CedarTokens.colors.available
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val foreground =
+        if (hasRoom) {
+            CedarTokens.colors.onAvailable
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
 
     Text(
         text = label,
@@ -33,11 +35,12 @@ public fun SlotBadge(
         style = MaterialTheme.typography.labelSmall,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-            .background(color = background, shape = CedarTokens.radius.pill)
-            .padding(
-                horizontal = CedarTokens.spacing.sm,
-                vertical = CedarTokens.spacing.xs,
-            ),
+        modifier =
+            modifier
+                .background(color = background, shape = CedarTokens.radius.pill)
+                .padding(
+                    horizontal = CedarTokens.spacing.sm,
+                    vertical = CedarTokens.spacing.xs,
+                ),
     )
 }

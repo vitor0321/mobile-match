@@ -7,7 +7,10 @@ public data class GeocodedAddress(
 )
 
 public interface ReverseGeocoder {
-    public suspend fun reverseGeocode(lat: Double, lng: Double): GeocodedAddress?
+    public suspend fun reverseGeocode(
+        lat: Double,
+        lng: Double,
+    ): GeocodedAddress?
 }
 
 internal expect fun createReverseGeocoder(): ReverseGeocoder

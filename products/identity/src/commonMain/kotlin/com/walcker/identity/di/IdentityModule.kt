@@ -6,9 +6,10 @@ import com.walcker.identity.features.ui.di.identityUiModule
 import com.walcker.identity.strings.di.identityStringsModule
 import org.koin.core.module.Module
 
-public val identityModule: List<Module> = listOf(
-    identityStringsModule,
-    identityPlatformModule,
-    identityDataModule,
-    identityUiModule,
-)
+public val identityModule: List<Module> =
+    listOf(
+        identityStringsModule,
+        identityPlatformModule,
+        identityDataModule,
+        identityUiModule,
+    )

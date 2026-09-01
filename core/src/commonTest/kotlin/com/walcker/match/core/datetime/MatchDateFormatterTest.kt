@@ -10,7 +10,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class MatchDateFormatterTest {
-
     private val utc = TimeZone.UTC
     private val saoPaulo = TimeZone.of("America/Sao_Paulo")
 
@@ -44,7 +43,6 @@ class MatchDateFormatterTest {
 }
 
 class FormatShortDateTest {
-
     private val saoPaulo = TimeZone.of("America/Sao_Paulo")
 
     @Test

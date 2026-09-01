@@ -6,14 +6,13 @@ import com.walcker.match.app.di.initKoin
 import platform.Foundation.NSBundle
 import platform.UIKit.UIViewController
 
-private fun revenueCatIosSdkKey(): String =
-    NSBundle.mainBundle.objectForInfoDictionaryKey("RevenueCatIosSdkKey") as? String ?: ""
+private fun revenueCatIosSdkKey(): String = NSBundle.mainBundle.objectForInfoDictionaryKey("RevenueCatIosSdkKey") as? String ?: ""
 
-@Suppress("unused")
+@Suppress("unused", "ktlint:standard:function-naming")
 public fun MainViewController(
     onFirstFrameRendered: (() -> Unit)? = null,
-): UIViewController {
-    return ComposeUIViewController(
+): UIViewController =
+    ComposeUIViewController(
         configure = {
             PurchasesBootstrap.configure(revenueCatIosSdkKey())
             initKoin()
@@ -21,4 +20,3 @@ public fun MainViewController(
     ) {
         App(onFirstFrameRendered = onFirstFrameRendered)
     }
-}

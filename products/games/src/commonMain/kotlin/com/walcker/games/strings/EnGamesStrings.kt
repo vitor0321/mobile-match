@@ -4,20 +4,21 @@ import cafe.adriel.lyricist.LyricistStrings
 import com.walcker.match.core.strings.Locales
 
 @LyricistStrings(languageTag = Locales.EN)
-internal val EnGamesStrings = GamesStrings(
-    gameList = gameListStringsEn,
-    search = searchStringsEn,
-    myMatches = myMatchesStringsEn,
-    createMatch = createMatchStringsEn,
-    playerProfile = playerProfileStringsEn,
-    notificationHistory = EnNotificationHistoryStrings(),
-    playerSearch = playerSearchStringsEn,
-    playerDetails = playerDetailsStringsEn,
-    playerRatings = playerRatingsStringsEn,
-    ratings = ratingStringsEn,
-    reports = reportStringsEn,
-    matchConfirmed = matchConfirmedStringsEn,
-    matchDetail = matchDetailStringsEn,
-    map = mapStringsEn,
-    loginRequired = loginRequiredStringsEn,
-)
+internal val EnGamesStrings =
+    GamesStrings(
+        gameList = gameListStringsEn,
+        search = searchStringsEn,
+        myMatches = myMatchesStringsEn,
+        createMatch = createMatchStringsEn,
+        playerProfile = playerProfileStringsEn,
+        notificationHistory = EnNotificationHistoryStrings(),
+        playerSearch = playerSearchStringsEn,
+        playerDetails = playerDetailsStringsEn,
+        playerRatings = playerRatingsStringsEn,
+        ratings = ratingStringsEn,
+        reports = reportStringsEn,
+        matchConfirmed = matchConfirmedStringsEn,
+        matchDetail = matchDetailStringsEn,
+        map = mapStringsEn,
+        loginRequired = loginRequiredStringsEn,
+    )

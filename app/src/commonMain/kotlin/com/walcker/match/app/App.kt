@@ -7,7 +7,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.walcker.match.app.SplashScreen
 import com.walcker.match.cedar.CedarTheme
 import com.walcker.match.navigator.HomeViewCoordinator
 import org.koin.compose.koinInject

@@ -44,14 +44,16 @@ public fun CedarPrimaryButton(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = CedarTokens.radius.mdShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-        ),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
         contentPadding = ButtonDefaults.ContentPadding,
-        modifier = modifier
-            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
-            .defaultMinSize(minHeight = ButtonHeight),
+        modifier =
+            modifier
+                .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+                .defaultMinSize(minHeight = ButtonHeight),
     ) {
         ButtonContent(text = text, loading = loading, leadingIcon = leadingIcon)
     }
@@ -70,13 +72,15 @@ public fun CedarAvailabilityButton(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = CedarTokens.radius.mdShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = CedarTokens.colors.available,
-            contentColor = CedarTokens.colors.onAvailable,
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = ButtonHeight),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = CedarTokens.colors.available,
+                contentColor = CedarTokens.colors.onAvailable,
+            ),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = ButtonHeight),
     ) {
         ButtonContent(text = text, loading = loading, leadingIcon = leadingIcon)
     }
@@ -96,12 +100,14 @@ public fun CedarSecondaryButton(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = CedarTokens.radius.mdShape,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.primary,
-        ),
-        modifier = modifier
-            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
-            .defaultMinSize(minHeight = ButtonHeight),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary,
+            ),
+        modifier =
+            modifier
+                .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+                .defaultMinSize(minHeight = ButtonHeight),
     ) {
         ButtonContent(text = text, loading = loading, leadingIcon = leadingIcon)
     }
@@ -159,11 +165,12 @@ private fun ButtonContent(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
-                        modifier = if (leadingIcon != null) {
-                            Modifier.padding(start = CedarTokens.spacing.xs)
-                        } else {
-                            Modifier
-                        },
+                        modifier =
+                            if (leadingIcon != null) {
+                                Modifier.padding(start = CedarTokens.spacing.xs)
+                            } else {
+                                Modifier
+                            },
                     )
                 }
             }

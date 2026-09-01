@@ -28,10 +28,11 @@ fun CedarLoading(
         )
     }
     Image(
-        painter = rememberLottiePainter(
-            composition = composition,
-            iterations = Compottie.IterateForever,
-        ),
+        painter =
+            rememberLottiePainter(
+                composition = composition,
+                iterations = Compottie.IterateForever,
+            ),
         contentDescription = contentDescription,
         modifier = modifier.size(size),
     )

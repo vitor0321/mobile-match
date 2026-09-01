@@ -9,9 +9,15 @@ private const val BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
 private const val EARTH_MERIDIONAL_CIRCUMFERENCE = 40007.86
 private const val METERS_PER_DEGREE_LATITUDE = 110574.0
 
-public data class GeoHashRange(val start: String, val endInclusive: String)
+public data class GeoHashRange(
+    val start: String,
+    val endInclusive: String,
+)
 
-public fun encodeGeoHash(coords: Coordinates, precision: Int = DEFAULT_GEOHASH_PRECISION): String {
+public fun encodeGeoHash(
+    coords: Coordinates,
+    precision: Int = DEFAULT_GEOHASH_PRECISION,
+): String {
     require(precision in 1..22) { "geohash precision must be in 1..22" }
 
     val hash = StringBuilder(precision)
@@ -71,26 +77,29 @@ public fun boundsForRadius(
     val lngMin = center.lng - lngDegrees
     val lngMax = center.lng + lngDegrees
 
-    val corners = listOf(
-        Coordinates(latMin, lngMin),
-        Coordinates(latMin, lngMax),
-        Coordinates(latMax, lngMin),
-        Coordinates(latMax, lngMax),
-        Coordinates(center.lat, lngMin),
-        Coordinates(center.lat, lngMax),
-        Coordinates(latMin, center.lng),
-        Coordinates(latMax, center.lng),
-    )
+    val corners =
+        listOf(
+            Coordinates(latMin, lngMin),
+            Coordinates(latMin, lngMax),
+            Coordinates(latMax, lngMin),
+            Coordinates(latMax, lngMax),
+            Coordinates(center.lat, lngMin),
+            Coordinates(center.lat, lngMax),
+            Coordinates(latMin, center.lng),
+            Coordinates(latMax, center.lng),
+        )
 
-    val hashes = corners
-        .map { encodeGeoHash(it, precision) }
-        .toMutableSet()
+    val hashes =
+        corners
+            .map { encodeGeoHash(it, precision) }
+            .toMutableSet()
 
     hashes.add(encodeGeoHash(center, precision))
 
-    val ranges = hashes
-        .sorted()
-        .map { GeoHashRange(start = it, endInclusive = it + "~") }
+    val ranges =
+        hashes
+            .sorted()
+            .map { GeoHashRange(start = it, endInclusive = it + "~") }
 
     return mergeAdjacent(ranges)
 }
@@ -111,7 +120,10 @@ private fun latitudeSpanKm(precision: Int): Double {
     return (spanDegrees / 360.0) * EARTH_MERIDIONAL_CIRCUMFERENCE
 }
 
-private fun kmToLongitudeDegrees(radiusKm: Double, latitude: Double): Double {
+private fun kmToLongitudeDegrees(
+    radiusKm: Double,
+    latitude: Double,
+): Double {
     val radians = radiusKm / (METERS_PER_DEGREE_LATITUDE / 1000.0) * PI / 180.0
     val latRad = latitude * PI / 180.0
     val numerator = sin(radians)
@@ -127,10 +139,11 @@ private fun mergeAdjacent(ranges: List<GeoHashRange>): List<GeoHashRange> {
     for (i in 1 until ranges.size) {
         val next = ranges[i]
         if (current.endInclusive >= next.start) {
-            current = GeoHashRange(
-                start = current.start,
-                endInclusive = maxOf(current.endInclusive, next.endInclusive),
-            )
+            current =
+                GeoHashRange(
+                    start = current.start,
+                    endInclusive = maxOf(current.endInclusive, next.endInclusive),
+                )
         } else {
             merged.add(current)
             current = next

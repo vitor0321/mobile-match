@@ -8,18 +8,20 @@ internal data class MatchConfirmedStrings(
     val backToMatches: String,
 )
 
-internal val matchConfirmedStringsEn = MatchConfirmedStrings(
-    title = "You're in!",
-    subtitle = "Your slot is confirmed.",
-    codeLabel = "Match code",
-    viewDetails = "View match details",
-    backToMatches = "Back to matches",
-)
+internal val matchConfirmedStringsEn =
+    MatchConfirmedStrings(
+        title = "You're in!",
+        subtitle = "Your slot is confirmed.",
+        codeLabel = "Match code",
+        viewDetails = "View match details",
+        backToMatches = "Back to matches",
+    )
 
-internal val matchConfirmedStringsPt = MatchConfirmedStrings(
-    title = "Temos Jogo!",
-    subtitle = "Sua vaga está garantida.",
-    codeLabel = "Código da partida",
-    viewDetails = "Ver detalhes da partida",
-    backToMatches = "Voltar para as partidas",
-)
+internal val matchConfirmedStringsPt =
+    MatchConfirmedStrings(
+        title = "Temos Jogo!",
+        subtitle = "Sua vaga está garantida.",
+        codeLabel = "Código da partida",
+        viewDetails = "Ver detalhes da partida",
+        backToMatches = "Voltar para as partidas",
+    )

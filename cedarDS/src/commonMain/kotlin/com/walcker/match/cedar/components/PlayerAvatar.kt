@@ -17,7 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
-public enum class PlayerAvatarSize(public val dp: Dp) {
+public enum class PlayerAvatarSize(
+    public val dp: Dp,
+) {
     Small(32.dp),
 
     Medium(48.dp),
@@ -33,9 +35,10 @@ public fun PlayerAvatar(
     size: PlayerAvatarSize = PlayerAvatarSize.Medium,
 ) {
     Surface(
-        modifier = modifier
-            .size(size.dp)
-            .clip(CircleShape),
+        modifier =
+            modifier
+                .size(size.dp)
+                .clip(CircleShape),
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {

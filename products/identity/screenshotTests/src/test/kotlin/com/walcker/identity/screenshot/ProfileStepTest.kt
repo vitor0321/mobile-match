@@ -10,7 +10,6 @@ import org.junit.Rule
 import org.junit.Test
 
 class ProfileStepTest {
-
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
@@ -45,11 +44,12 @@ class ProfileStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ProfileScreen(
-                    state = ProfileState(
-                        userSession = fakeUserSession,
-                        isPro = true,
-                        managementUrl = "https://play.google.com/store/account/subscriptions",
-                    ),
+                    state =
+                        ProfileState(
+                            userSession = fakeUserSession,
+                            isPro = true,
+                            managementUrl = "https://play.google.com/store/account/subscriptions",
+                        ),
                     onBack = {},
                     onSignOut = {},
                 )
@@ -62,11 +62,12 @@ class ProfileStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 ProfileScreen(
-                    state = ProfileState(
-                        userSession = fakeUserSession,
-                        isPro = true,
-                        managementUrl = "https://play.google.com/store/account/subscriptions",
-                    ),
+                    state =
+                        ProfileState(
+                            userSession = fakeUserSession,
+                            isPro = true,
+                            managementUrl = "https://play.google.com/store/account/subscriptions",
+                        ),
                     onBack = {},
                     onSignOut = {},
                 )
@@ -79,11 +80,12 @@ class ProfileStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ProfileScreen(
-                    state = ProfileState(
-                        userSession = fakeUserSession,
-                        isPro = true,
-                        managementUrl = null,
-                    ),
+                    state =
+                        ProfileState(
+                            userSession = fakeUserSession,
+                            isPro = true,
+                            managementUrl = null,
+                        ),
                     onBack = {},
                     onSignOut = {},
                 )
@@ -96,10 +98,11 @@ class ProfileStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ProfileScreen(
-                    state = ProfileState(
-                        userSession = fakeUserSession,
-                        isLoading = true,
-                    ),
+                    state =
+                        ProfileState(
+                            userSession = fakeUserSession,
+                            isLoading = true,
+                        ),
                     onBack = {},
                     onSignOut = {},
                 )
@@ -112,10 +115,11 @@ class ProfileStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 ProfileScreen(
-                    state = ProfileState(
-                        userSession = fakeUserSession,
-                        isLoading = true,
-                    ),
+                    state =
+                        ProfileState(
+                            userSession = fakeUserSession,
+                            isLoading = true,
+                        ),
                     onBack = {},
                     onSignOut = {},
                 )
@@ -128,10 +132,11 @@ class ProfileStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 ProfileScreen(
-                    state = ProfileState(
-                        userSession = fakeUserSession,
-                        error = "Não foi possível sair",
-                    ),
+                    state =
+                        ProfileState(
+                            userSession = fakeUserSession,
+                            error = "Não foi possível sair",
+                        ),
                     onBack = {},
                     onSignOut = {},
                 )
@@ -144,10 +149,11 @@ class ProfileStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 ProfileScreen(
-                    state = ProfileState(
-                        userSession = fakeUserSession,
-                        error = "Não foi possível sair",
-                    ),
+                    state =
+                        ProfileState(
+                            userSession = fakeUserSession,
+                            error = "Não foi possível sair",
+                        ),
                     onBack = {},
                     onSignOut = {},
                 )
@@ -155,4 +161,3 @@ class ProfileStepTest {
         }
     }
 }
-

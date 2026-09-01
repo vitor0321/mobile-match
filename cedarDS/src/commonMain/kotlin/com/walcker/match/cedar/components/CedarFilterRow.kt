@@ -46,24 +46,25 @@ public fun CedarFilterRow(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = RowMinHeight)
-                .background(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = CedarTokens.radius.smShape,
-                )
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .padding(horizontal = CedarTokens.spacing.md),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = RowMinHeight)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = CedarTokens.radius.smShape,
+                    ).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                    .padding(horizontal = CedarTokens.spacing.md),
         ) {
             Text(
                 text = value ?: placeholder,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (value != null) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+                color =
+                    if (value != null) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),

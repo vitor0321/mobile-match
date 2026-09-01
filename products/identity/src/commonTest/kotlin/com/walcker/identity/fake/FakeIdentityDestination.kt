@@ -44,4 +44,3 @@ private data class TestIdentityScreen(
     @Composable
     override fun Content() = Unit
 }
-

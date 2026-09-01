@@ -5,6 +5,7 @@ import * as functionsV1 from "firebase-functions/v1";
 import {getMessaging} from "firebase-admin/messaging";
 import {onDocumentCreated, onDocumentWritten} from "firebase-functions/v2/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {onSchedule} from "firebase-functions/v2/scheduler";
 import {boundsForRadius} from "./geo.js";
 import {
   MAX_NOTIFY_RADIUS_KM,
@@ -491,7 +492,7 @@ export const joinMatch = onCall(
 
       const totalSlots = Number(match.totalSlots ?? 0);
       const confirmedCount = Number(match.confirmedCount ?? 0);
-      if (totalSlots < 2 || totalSlots > 40) {
+      if (totalSlots < 1 || totalSlots > 50) {
         throw new HttpsError("failed-precondition", "Match slot range is invalid.");
       }
 
@@ -1185,6 +1186,115 @@ export const onParticipantChanged = onDocumentWritten(
       body,
       matchId,
     });
+  },
+);
+
+// ---------------------------------------------------------------------------
+// generateRecurringMatches — Scheduled function (1x por dia)
+//
+// O cliente só grava a preferência de repetição (`recurrence`); nada cria a
+// próxima ocorrência sozinho. Aqui, para cada série (`seriesId`), olha a
+// ocorrência mais recente da série — independente do status — e só gera a
+// próxima se essa mais recente ainda estiver 'OPEN'. Se ela foi cancelada, a
+// série para ali: cancelar a última ocorrência é como cancelar a recorrência
+// inteira, não só aquela data.
+//
+// Gera no máximo uma ocorrência nova por série a cada execução, quando a
+// próxima data cai dentro de ~1 mês — mantém sempre pelo menos uma ocorrência
+// futura visível com essa antecedência, sem nunca criar mais de uma de vez.
+// ---------------------------------------------------------------------------
+
+const RECURRENCE_VALUES = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"];
+const RECURRENCE_LEAD_TIME_SECONDS = 30 * 24 * 60 * 60; // ~1 mês de antecedência
+
+function nextOccurrenceSeconds(startsAtSeconds: number, recurrence: string): number {
+  const date = new Date(startsAtSeconds * 1000);
+  switch (recurrence) {
+    case "DAILY":
+      date.setUTCDate(date.getUTCDate() + 1);
+      break;
+    case "WEEKLY":
+      date.setUTCDate(date.getUTCDate() + 7);
+      break;
+    case "MONTHLY":
+      date.setUTCMonth(date.getUTCMonth() + 1);
+      break;
+    case "YEARLY":
+      date.setUTCFullYear(date.getUTCFullYear() + 1);
+      break;
+    default:
+      return startsAtSeconds;
+  }
+  return Math.floor(date.getTime() / 1000);
+}
+
+export const generateRecurringMatches = onSchedule(
+  {schedule: "every 24 hours", region: REGION, timeZone: "America/Sao_Paulo"},
+  async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const leadThresholdSeconds = nowSeconds + RECURRENCE_LEAD_TIME_SECONDS;
+
+    const snapshot = await db
+      .collection("matches")
+      .where("recurrence", "in", RECURRENCE_VALUES)
+      .get();
+
+    // Última ocorrência de cada série por data, não por status — uma ocorrência
+    // cancelada precisa continuar sendo "a mais recente" para travar a série.
+    const latestBySeries = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const seriesId = typeof data.seriesId === "string" ? data.seriesId : doc.id;
+      const startsAtSeconds = readEpochSeconds(data.startsAtSeconds) ?? 0;
+      const current = latestBySeries.get(seriesId);
+      const currentStartsAtSeconds = current ? (readEpochSeconds(current.data().startsAtSeconds) ?? 0) : -1;
+      if (startsAtSeconds > currentStartsAtSeconds) {
+        latestBySeries.set(seriesId, doc);
+      }
+    }
+
+    const writes: Promise<unknown>[] = [];
+    for (const doc of latestBySeries.values()) {
+      const data = doc.data();
+      if (data.status !== "OPEN") continue;
+
+      const recurrence = data.recurrence;
+      const startsAtSeconds = readEpochSeconds(data.startsAtSeconds);
+      const organizerId = typeof data.organizerId === "string" ? data.organizerId : null;
+      if (typeof recurrence !== "string" || startsAtSeconds === null || !organizerId) continue;
+
+      const nextStartsAtSeconds = nextOccurrenceSeconds(startsAtSeconds, recurrence);
+      if (nextStartsAtSeconds > leadThresholdSeconds) continue;
+
+      const seriesId = typeof data.seriesId === "string" ? data.seriesId : doc.id;
+
+      const nextMatch = {
+        sport: data.sport,
+        venueName: data.venueName,
+        neighborhood: data.neighborhood,
+        city: data.city,
+        address: data.address,
+        lat: data.lat,
+        lng: data.lng,
+        geohash: data.geohash,
+        startsAtSeconds: nextStartsAtSeconds,
+        durationMin: data.durationMin,
+        recurrence,
+        seriesId,
+        confirmedCount: 1,
+        totalSlots: data.totalSlots,
+        priceCents: data.priceCents,
+        status: "OPEN",
+        organizerName: data.organizerName,
+        organizerId,
+        organizerRating: data.organizerRating,
+        participants: [organizerId],
+      };
+
+      writes.push(db.collection("matches").add(nextMatch));
+    }
+
+    await Promise.all(writes);
   },
 );
 

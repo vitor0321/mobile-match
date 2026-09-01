@@ -26,11 +26,12 @@ public fun CedarTheme(
 ) {
     ProvideCedarTokens(darkTheme = darkTheme) {
         MaterialTheme(
-            colorScheme = if (darkTheme) {
-                cedarDarkColorScheme(brand)
-            } else {
-                cedarLightColorScheme(brand)
-            },
+            colorScheme =
+                if (darkTheme) {
+                    cedarDarkColorScheme(brand)
+                } else {
+                    cedarLightColorScheme(brand)
+                },
             typography = cedarTypography(fontFamily),
             content = content,
         )
@@ -38,9 +39,10 @@ public fun CedarTheme(
 }
 
 @Composable
-public fun cedarFontFamily(): FontFamily = FontFamily(
-    Font(Res.font.inter_regular, FontWeight.Normal),
-    Font(Res.font.inter_medium, FontWeight.Medium),
-    Font(Res.font.inter_semibold, FontWeight.SemiBold),
-    Font(Res.font.inter_bold, FontWeight.Bold),
-)
+public fun cedarFontFamily(): FontFamily =
+    FontFamily(
+        Font(Res.font.inter_regular, FontWeight.Normal),
+        Font(Res.font.inter_medium, FontWeight.Medium),
+        Font(Res.font.inter_semibold, FontWeight.SemiBold),
+        Font(Res.font.inter_bold, FontWeight.Bold),
+    )

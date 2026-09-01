@@ -23,7 +23,6 @@ import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.tokens.CedarTokens
 
 internal class SignUpStep : Screen {
-
     override val key: String get() = "sign-up"
 
     @Composable
@@ -62,8 +61,9 @@ internal fun SignUpScreen(
     val strings = LocalIdentityStrings.current.signUp
     val enabled = !state.isLoading
 
-    val passwordsDiverge = state.confirmPassword.isNotEmpty() &&
-        state.password != state.confirmPassword
+    val passwordsDiverge =
+        state.confirmPassword.isNotEmpty() &&
+            state.password != state.confirmPassword
 
     AuthScaffold(
         title = strings.title,
@@ -78,10 +78,11 @@ internal fun SignUpScreen(
             label = { Text(strings.emailLabel) },
             singleLine = true,
             shape = CedarTokens.radius.smShape,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next,
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next,
+                ),
             enabled = enabled,
         )
 
@@ -93,10 +94,11 @@ internal fun SignUpScreen(
             modifier = Modifier.fillMaxWidth(),
             label = { Text(strings.passwordLabel) },
             supportingText = strings.passwordHelper,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Next,
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next,
+                ),
             enabled = enabled,
         )
 
@@ -109,10 +111,11 @@ internal fun SignUpScreen(
             label = { Text(strings.confirmPasswordLabel) },
             supportingText = strings.passwordMismatchError.takeIf { passwordsDiverge },
             isError = passwordsDiverge,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done,
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
             enabled = enabled,
         )
 

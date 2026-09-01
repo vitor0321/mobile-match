@@ -22,7 +22,6 @@ import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.rememberLottieAnimatable
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
-import kotlinx.coroutines.delay
 
 @Composable
 internal fun SplashScreen(
@@ -49,16 +48,18 @@ internal fun SplashScreen(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CedarTokens.colors.splashBackground),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(CedarTokens.colors.splashBackground),
         contentAlignment = Alignment.Center,
     ) {
         Image(
-            painter = rememberLottiePainter(
-                composition = composition,
-                progress = { animatable.progress },
-            ),
+            painter =
+                rememberLottiePainter(
+                    composition = composition,
+                    progress = { animatable.progress },
+                ),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),

@@ -4,7 +4,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
-public enum class MainTab(val index: Int) {
+public enum class MainTab(
+    val index: Int,
+) {
     Home(0),
     Search(1),
     Create(2),

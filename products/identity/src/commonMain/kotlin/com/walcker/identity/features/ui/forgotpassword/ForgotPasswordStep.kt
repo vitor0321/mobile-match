@@ -22,7 +22,6 @@ import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.tokens.CedarTokens
 
 internal class ForgotPasswordStep : Screen {
-
     override val key: String get() = "forgot-password"
 
     @Composable
@@ -70,10 +69,11 @@ internal fun ForgotPasswordScreen(
                 singleLine = true,
                 shape = CedarTokens.radius.smShape,
                 isError = state.error != null,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Done,
-                ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Done,
+                    ),
                 enabled = enabled,
             )
 

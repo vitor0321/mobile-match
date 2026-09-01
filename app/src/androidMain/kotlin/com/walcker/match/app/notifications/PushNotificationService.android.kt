@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 internal class AndroidPushNotificationService(
     private val context: Context,
 ) : PushNotificationService {
-
     private val _deviceToken = MutableSharedFlow<String?>(replay = 1)
     override val deviceToken: Flow<String?> = _deviceToken.asSharedFlow()
 
@@ -32,24 +31,24 @@ internal class AndroidPushNotificationService(
         }
     }
 
-    override suspend fun requestNotificationPermission(): Result<Boolean> = runCatching {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            return@runCatching true
-        }
+    override suspend fun requestNotificationPermission(): Result<Boolean> =
+        runCatching {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                return@runCatching true
+            }
 
-        val permission = Manifest.permission.POST_NOTIFICATIONS
-        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-            return@runCatching true
-        }
+            val permission = Manifest.permission.POST_NOTIFICATIONS
+            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                return@runCatching true
+            }
 
-        return@runCatching false
-    }
+            return@runCatching false
+        }
 }
 
 internal var tokenUpdateCallback: ((String) -> Unit)? = null
 
 internal class FirebasePushNotificationService : FirebaseMessagingService() {
-
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         tokenUpdateCallback?.invoke(token)

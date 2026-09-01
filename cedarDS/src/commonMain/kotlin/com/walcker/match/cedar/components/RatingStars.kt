@@ -31,21 +31,23 @@ public fun RatingStars(
     val safeRating = rating.coerceIn(0f, maxStars.toFloat())
 
     Row(
-        modifier = if (contentDescription != null) {
-            modifier.clearAndSetSemantics { this.contentDescription = contentDescription }
-        } else {
-            modifier
-        },
+        modifier =
+            if (contentDescription != null) {
+                modifier.clearAndSetSemantics { this.contentDescription = contentDescription }
+            } else {
+                modifier
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         repeat(maxStars) { index ->
             val remainder = safeRating - index
-            val (icon, tint) = when {
-                remainder >= FULL_STAR_THRESHOLD -> Icons.Filled.Star to filledTint
-                remainder >= HALF_STAR_THRESHOLD -> Icons.Filled.StarHalf to filledTint
-                else -> Icons.Outlined.StarOutline to emptyTint
-            }
+            val (icon, tint) =
+                when {
+                    remainder >= FULL_STAR_THRESHOLD -> Icons.Filled.Star to filledTint
+                    remainder >= HALF_STAR_THRESHOLD -> Icons.Filled.StarHalf to filledTint
+                    else -> Icons.Outlined.StarOutline to emptyTint
+                }
 
             Icon(
                 imageVector = icon,

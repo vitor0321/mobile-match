@@ -8,4 +8,3 @@ internal data class ProductOffering(
     val description: String,
     val priceLabel: String,
 )
-

@@ -5,7 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class GeoHashTest {
-
     @Test
     fun `encodeGeoHashSãoPaulo`() {
         val coords = Coordinates(lat = -23.5505, lng = -46.6333)

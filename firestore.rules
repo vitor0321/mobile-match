@@ -165,7 +165,7 @@ service cloud.firestore {
       return [
         'sport', 'venueName', 'address', 'neighborhood', 'city',
         'lat', 'lng', 'geohash', 'startsAtSeconds', 'durationMin',
-        'totalSlots', 'priceCents', 'status'
+        'totalSlots', 'priceCents', 'status', 'recurrence', 'seriesId'
       ];
     }
 
@@ -183,10 +183,12 @@ service cloud.firestore {
         && isText(data.geohash, 12)
         && data.startsAtSeconds is int
         && data.durationMin is int && data.durationMin >= 15 && data.durationMin <= 480
-        && data.totalSlots is int && data.totalSlots >= 2 && data.totalSlots <= 40
+        && data.totalSlots is int && data.totalSlots >= 1 && data.totalSlots <= 50
         && data.confirmedCount is int && data.confirmedCount >= 0 && data.confirmedCount <= data.totalSlots
         && data.priceCents is int && data.priceCents >= 0 && data.priceCents <= 100000
         && data.status is string
+        && (!('recurrence' in data) || isText(data.recurrence, 20))
+        && (!('seriesId' in data) || isText(data.seriesId, 30))
         && isText(data.organizerName, 80)
         && data.organizerRating is number
         && data.participants is list && data.participants.size() <= data.totalSlots;

@@ -12,6 +12,7 @@ internal data class ProfileSubscriptionState(
 
 internal interface ProfileAccountUseCase {
     fun observeSubscription(): Flow<ProfileSubscriptionState>
+
     suspend fun restorePurchases(): Result<Boolean>
 }
 
@@ -19,12 +20,13 @@ internal class ProfileAccountUseCaseImpl(
     private val proStateHolder: ProStateHolder,
     private val billingRepository: BillingRepository,
 ) : ProfileAccountUseCase {
-    override fun observeSubscription(): Flow<ProfileSubscriptionState> = proStateHolder.isPro.map { isPro ->
-        ProfileSubscriptionState(
-            isPro = isPro,
-            managementUrl = if (isPro) billingRepository.managementUrl().getOrNull() else null,
-        )
-    }
+    override fun observeSubscription(): Flow<ProfileSubscriptionState> =
+        proStateHolder.isPro.map { isPro ->
+            ProfileSubscriptionState(
+                isPro = isPro,
+                managementUrl = if (isPro) billingRepository.managementUrl().getOrNull() else null,
+            )
+        }
 
     override suspend fun restorePurchases(): Result<Boolean> = billingRepository.restore()
 }

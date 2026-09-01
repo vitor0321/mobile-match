@@ -17,7 +17,10 @@ internal actual fun formatEpochMillisToDayKey(epochMillis: Long): String {
     return formatter.stringFromDate(NSDate.dateWithTimeIntervalSince1970(epochMillis / 1000.0))
 }
 
-internal actual fun daysBetween(startDayKey: String, endDayKey: String): Int {
+internal actual fun daysBetween(
+    startDayKey: String,
+    endDayKey: String,
+): Int {
     val formatter = NSDateFormatter()
     formatter.dateFormat = "yyyy-MM-dd"
     val date1 = formatter.dateFromString(startDayKey) ?: return 0

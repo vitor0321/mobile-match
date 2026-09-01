@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
+exports.generateRecurringMatches = exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
 exports.requireEmptyPayload = requireEmptyPayload;
 exports.shouldCancelOnOrganizerDeletion = shouldCancelOnOrganizerDeletion;
 const app_1 = require("firebase-admin/app");
@@ -43,6 +43,7 @@ const functionsV1 = __importStar(require("firebase-functions/v1"));
 const messaging_1 = require("firebase-admin/messaging");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const https_1 = require("firebase-functions/v2/https");
+const scheduler_1 = require("firebase-functions/v2/scheduler");
 const geo_js_1 = require("./geo.js");
 const notifications_js_1 = require("./notifications.js");
 const verification_js_1 = require("./verification.js");
@@ -371,7 +372,7 @@ exports.joinMatch = (0, https_1.onCall)({ region: REGION }, async (request) => {
         }
         const totalSlots = Number(match.totalSlots ?? 0);
         const confirmedCount = Number(match.confirmedCount ?? 0);
-        if (totalSlots < 2 || totalSlots > 40) {
+        if (totalSlots < 1 || totalSlots > 50) {
             throw new https_1.HttpsError("failed-precondition", "Match slot range is invalid.");
         }
         const participants = Array.isArray(match.participants)
@@ -867,6 +868,102 @@ exports.onParticipantChanged = (0, firestore_2.onDocumentWritten)({ region: REGI
         body,
         matchId,
     });
+});
+// ---------------------------------------------------------------------------
+// generateRecurringMatches — Scheduled function (1x por dia)
+//
+// O cliente só grava a preferência de repetição (`recurrence`); nada cria a
+// próxima ocorrência sozinho. Aqui, para cada série (`seriesId`), olha a
+// ocorrência mais recente da série — independente do status — e só gera a
+// próxima se essa mais recente ainda estiver 'OPEN'. Se ela foi cancelada, a
+// série para ali: cancelar a última ocorrência é como cancelar a recorrência
+// inteira, não só aquela data.
+//
+// Gera no máximo uma ocorrência nova por série a cada execução, quando a
+// próxima data cai dentro de ~1 mês — mantém sempre pelo menos uma ocorrência
+// futura visível com essa antecedência, sem nunca criar mais de uma de vez.
+// ---------------------------------------------------------------------------
+const RECURRENCE_VALUES = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"];
+const RECURRENCE_LEAD_TIME_SECONDS = 30 * 24 * 60 * 60; // ~1 mês de antecedência
+function nextOccurrenceSeconds(startsAtSeconds, recurrence) {
+    const date = new Date(startsAtSeconds * 1000);
+    switch (recurrence) {
+        case "DAILY":
+            date.setUTCDate(date.getUTCDate() + 1);
+            break;
+        case "WEEKLY":
+            date.setUTCDate(date.getUTCDate() + 7);
+            break;
+        case "MONTHLY":
+            date.setUTCMonth(date.getUTCMonth() + 1);
+            break;
+        case "YEARLY":
+            date.setUTCFullYear(date.getUTCFullYear() + 1);
+            break;
+        default:
+            return startsAtSeconds;
+    }
+    return Math.floor(date.getTime() / 1000);
+}
+exports.generateRecurringMatches = (0, scheduler_1.onSchedule)({ schedule: "every 24 hours", region: REGION, timeZone: "America/Sao_Paulo" }, async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const leadThresholdSeconds = nowSeconds + RECURRENCE_LEAD_TIME_SECONDS;
+    const snapshot = await db
+        .collection("matches")
+        .where("recurrence", "in", RECURRENCE_VALUES)
+        .get();
+    // Última ocorrência de cada série por data, não por status — uma ocorrência
+    // cancelada precisa continuar sendo "a mais recente" para travar a série.
+    const latestBySeries = new Map();
+    for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const seriesId = typeof data.seriesId === "string" ? data.seriesId : doc.id;
+        const startsAtSeconds = readEpochSeconds(data.startsAtSeconds) ?? 0;
+        const current = latestBySeries.get(seriesId);
+        const currentStartsAtSeconds = current ? (readEpochSeconds(current.data().startsAtSeconds) ?? 0) : -1;
+        if (startsAtSeconds > currentStartsAtSeconds) {
+            latestBySeries.set(seriesId, doc);
+        }
+    }
+    const writes = [];
+    for (const doc of latestBySeries.values()) {
+        const data = doc.data();
+        if (data.status !== "OPEN")
+            continue;
+        const recurrence = data.recurrence;
+        const startsAtSeconds = readEpochSeconds(data.startsAtSeconds);
+        const organizerId = typeof data.organizerId === "string" ? data.organizerId : null;
+        if (typeof recurrence !== "string" || startsAtSeconds === null || !organizerId)
+            continue;
+        const nextStartsAtSeconds = nextOccurrenceSeconds(startsAtSeconds, recurrence);
+        if (nextStartsAtSeconds > leadThresholdSeconds)
+            continue;
+        const seriesId = typeof data.seriesId === "string" ? data.seriesId : doc.id;
+        const nextMatch = {
+            sport: data.sport,
+            venueName: data.venueName,
+            neighborhood: data.neighborhood,
+            city: data.city,
+            address: data.address,
+            lat: data.lat,
+            lng: data.lng,
+            geohash: data.geohash,
+            startsAtSeconds: nextStartsAtSeconds,
+            durationMin: data.durationMin,
+            recurrence,
+            seriesId,
+            confirmedCount: 1,
+            totalSlots: data.totalSlots,
+            priceCents: data.priceCents,
+            status: "OPEN",
+            organizerName: data.organizerName,
+            organizerId,
+            organizerRating: data.organizerRating,
+            participants: [organizerId],
+        };
+        writes.push(db.collection("matches").add(nextMatch));
+    }
+    await Promise.all(writes);
 });
 /**
  * Jogadores dentro do raio máximo, lidos por faixa de geohash.

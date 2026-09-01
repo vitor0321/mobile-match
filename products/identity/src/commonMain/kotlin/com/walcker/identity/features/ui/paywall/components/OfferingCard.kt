@@ -50,14 +50,14 @@ internal fun OfferingCard(
         color = background,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .selectable(
-                    selected = isSelected,
-                    role = Role.RadioButton,
-                    onClick = onClick,
-                )
-                .padding(CedarTokens.spacing.md),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = isSelected,
+                        role = Role.RadioButton,
+                        onClick = onClick,
+                    ).padding(CedarTokens.spacing.md),
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
         ) {
             Row(
@@ -88,17 +88,17 @@ internal fun OfferingCard(
                 color = titleColor,
             )
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = CedarTokens.spacing.xxs)
-                    .background(
-                        color = accent.copy(alpha = HINT_BACKGROUND_ALPHA),
-                        shape = CedarTokens.radius.smShape,
-                    )
-                    .padding(
-                        horizontal = CedarTokens.spacing.sm,
-                        vertical = CedarTokens.spacing.xs,
-                    ),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = CedarTokens.spacing.xxs)
+                        .background(
+                            color = accent.copy(alpha = HINT_BACKGROUND_ALPHA),
+                            shape = CedarTokens.radius.smShape,
+                        ).padding(
+                            horizontal = CedarTokens.spacing.sm,
+                            vertical = CedarTokens.spacing.xs,
+                        ),
             ) {
                 Text(
                     text = if (isSelected) selectedLabel else selectHint,
@@ -117,17 +117,19 @@ private fun SelectionIndicator(
     fillColor: Color,
 ) {
     Box(
-        modifier = Modifier
-            .size(IndicatorSize)
-            .border(width = IndicatorBorderWidth, color = borderColor, shape = CircleShape)
-            .background(color = fillColor, shape = CircleShape),
+        modifier =
+            Modifier
+                .size(IndicatorSize)
+                .border(width = IndicatorBorderWidth, color = borderColor, shape = CircleShape)
+                .background(color = fillColor, shape = CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (isSelected) {
             Box(
-                modifier = Modifier
-                    .size(IndicatorDotSize)
-                    .background(color = borderColor, shape = CircleShape),
+                modifier =
+                    Modifier
+                        .size(IndicatorDotSize)
+                        .background(color = borderColor, shape = CircleShape),
             )
         }
     }

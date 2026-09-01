@@ -12,44 +12,49 @@ internal data class GameListStrings(
     val playersAndSlots: (confirmed: Int, total: Int, openSlots: Int, slotWord: String) -> String,
     val slotsBadge: (openSlots: Int) -> String,
     val showMapAction: String,
+    val showListAction: String,
 )
 
-internal val gameListStringsEn = GameListStrings(
-    title = "Open slots",
-    subtitle = "Find matches near you",
-    allSportsChip = "All",
-    showMapAction = "Show map",
-    radiusLabel = { km -> "Radius: $km km" },
-    emptyMessage = "No open slots in your area right now.",
-    loadErrorMessage = "Could not load matches.",
-    loadingLabel = "Loading matches…",
-    perPlayer = { price -> "$price per player" },
-    playersAndSlots = { c, t, _, _ -> "$c/$t players" },
-    slotsBadge = { open ->
-        when (open) {
-            0 -> "Full"
-            1 -> "1 slot"
-            else -> "$open slots"
-        }
-    },
-)
+internal val gameListStringsEn =
+    GameListStrings(
+        title = "Open slots",
+        subtitle = "Find matches near you",
+        allSportsChip = "All",
+        showMapAction = "Show map",
+        showListAction = "Show list",
+        radiusLabel = { km -> "Radius: $km km" },
+        emptyMessage = "No open slots in your area right now.",
+        loadErrorMessage = "Could not load matches.",
+        loadingLabel = "Loading matches…",
+        perPlayer = { price -> "$price per player" },
+        playersAndSlots = { c, t, _, _ -> "$c/$t players" },
+        slotsBadge = { open ->
+            when (open) {
+                0 -> "Full"
+                1 -> "1 slot"
+                else -> "$open slots"
+            }
+        },
+    )
 
-internal val gameListStringsPt = GameListStrings(
-    title = "Vagas abertas",
-    subtitle = "Encontre partidas perto de você",
-    allSportsChip = "Todos",
-    showMapAction = "Ver no mapa",
-    radiusLabel = { km -> "Raio: $km km" },
-    emptyMessage = "Nenhuma vaga aberta na sua região agora.",
-    loadErrorMessage = "Não foi possível carregar as partidas.",
-    loadingLabel = "Carregando partidas…",
-    perPlayer = { price -> "$price por jogador" },
-    playersAndSlots = { c, t, open, word -> "$c/$t jogadores · $open $word" },
-    slotsBadge = { open ->
-        when (open) {
-            0 -> "Lotado"
-            1 -> "1 vaga"
-            else -> "$open vagas"
-        }
-    },
-)
+internal val gameListStringsPt =
+    GameListStrings(
+        title = "Vagas abertas",
+        subtitle = "Encontre partidas perto de você",
+        allSportsChip = "Todos",
+        showMapAction = "Ver no mapa",
+        showListAction = "Ver em lista",
+        radiusLabel = { km -> "Raio: $km km" },
+        emptyMessage = "Nenhuma vaga aberta na sua região agora.",
+        loadErrorMessage = "Não foi possível carregar as partidas.",
+        loadingLabel = "Carregando partidas…",
+        perPlayer = { price -> "$price por jogador" },
+        playersAndSlots = { c, t, open, word -> "$c/$t jogadores · $open $word" },
+        slotsBadge = { open ->
+            when (open) {
+                0 -> "Lotado"
+                1 -> "1 vaga"
+                else -> "$open vagas"
+            }
+        },
+    )

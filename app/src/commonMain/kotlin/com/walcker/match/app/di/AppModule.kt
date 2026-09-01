@@ -11,13 +11,14 @@ import org.koin.dsl.KoinAppDeclaration
 internal fun initKoin(
     isDebug: Boolean = false,
     config: KoinAppDeclaration? = null,
-): KoinApplication = startKoin {
-    config?.invoke(this)
-    modules(
-        coreModules +
-            identityModule +
-            firestoreModule +
-            gamesModule +
-            notificationsModule,
-    )
-}
+): KoinApplication =
+    startKoin {
+        config?.invoke(this)
+        modules(
+            coreModules +
+                identityModule +
+                firestoreModule +
+                gamesModule +
+                notificationsModule,
+        )
+    }

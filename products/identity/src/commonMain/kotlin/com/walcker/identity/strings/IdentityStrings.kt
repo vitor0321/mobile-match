@@ -8,4 +8,3 @@ internal data class IdentityStrings(
     val paywall: PaywallStrings,
     val forgotPassword: ForgotPasswordStrings,
 )
-

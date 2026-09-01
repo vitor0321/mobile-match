@@ -30,9 +30,10 @@ internal fun EmptyPaywallState(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = colors.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { liveRegion = LiveRegionMode.Polite },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { liveRegion = LiveRegionMode.Polite },
         )
         CedarPrimaryButton(
             text = retryLabel,

@@ -94,23 +94,25 @@ private fun DistributionRow(
         )
 
         Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(6.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(50),
-                ),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(6.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(50),
+                    ),
         ) {
             if (fraction > 0f) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth(fraction)
-                        .height(6.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(50),
-                        ),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(fraction)
+                            .height(6.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(50),
+                            ),
                 )
             }
         }

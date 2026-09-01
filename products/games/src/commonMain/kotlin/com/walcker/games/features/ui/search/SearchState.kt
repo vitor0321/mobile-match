@@ -1,7 +1,7 @@
 package com.walcker.games.features.ui.search
 
-import com.walcker.games.features.domain.model.Game
-import com.walcker.games.features.domain.model.Sport
+import com.walcker.games.features.domain.shared.model.Game
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.strings.GameListStrings
 import com.walcker.games.strings.PtBrGamesStrings
 import com.walcker.games.strings.SearchStrings

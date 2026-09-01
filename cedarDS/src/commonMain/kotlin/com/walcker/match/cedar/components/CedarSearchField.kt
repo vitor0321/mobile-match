@@ -62,36 +62,40 @@ public fun CedarSearchField(
                 modifier = Modifier.size(IconSize),
             )
         },
-        trailingIcon = if (value.isNotEmpty()) {
-            {
-                IconButton(onClick = { onValueChange("") }) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = clearContentDescription,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(IconSize),
-                    )
+        trailingIcon =
+            if (value.isNotEmpty()) {
+                {
+                    IconButton(onClick = { onValueChange("") }) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = clearContentDescription,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(IconSize),
+                        )
+                    }
                 }
-            }
-        } else {
-            null
-        },
-        keyboardOptions = KeyboardOptions(
-            imeAction = if (onSearch != null) ImeAction.Search else ImeAction.Default,
-        ),
+            } else {
+                null
+            },
+        keyboardOptions =
+            KeyboardOptions(
+                imeAction = if (onSearch != null) ImeAction.Search else ImeAction.Default,
+            ),
         keyboardActions = KeyboardActions(onSearch = { onSearch?.invoke() }),
         shape = CedarTokens.radius.lgShape,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            disabledContainerColor = MaterialTheme.colorScheme.surface,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent,
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = FieldHeight),
+        colors =
+            TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+            ),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = FieldHeight),
     )
 }
 
@@ -104,15 +108,15 @@ public fun CedarSearchEntryPoint(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-        modifier = modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = FieldHeight)
-            .background(
-                color = MaterialTheme.colorScheme.surface,
-                shape = CedarTokens.radius.lgShape,
-            )
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = CedarTokens.spacing.md),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = FieldHeight)
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = CedarTokens.radius.lgShape,
+                ).clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = CedarTokens.spacing.md),
     ) {
         Icon(
             imageVector = Icons.Filled.Search,

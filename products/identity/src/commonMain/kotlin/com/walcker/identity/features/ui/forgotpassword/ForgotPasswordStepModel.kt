@@ -14,7 +14,6 @@ internal class ForgotPasswordStepModel(
     private val navigatorHolder: NavigatorHolder,
     private val stringsHolder: IdentityStringsHolder,
 ) : StateScreenModel<ForgotPasswordState>(ForgotPasswordState()) {
-
     fun onEvent(event: ForgotPasswordInternalRoute) {
         when (event) {
             ForgotPasswordInternalRoute.OnBackClicked -> navigateBack()
@@ -41,19 +40,21 @@ internal class ForgotPasswordStepModel(
         }
         mutableState.value = mutableState.value.copy(isLoading = true, error = null, isSuccess = false, email = email)
         screenModelScope.launch {
-            signUseCase.sendPasswordResetEmail(email = email)
+            signUseCase
+                .sendPasswordResetEmail(email = email)
                 .onSuccess {
                     mutableState.value = mutableState.value.copy(isLoading = false, isSuccess = true)
-                }
-                .onFailure { error ->
-                    mutableState.value = mutableState.value.copy(
-                        isLoading = false,
-                        error = when (error) {
-                            IdentityError.Cancelled -> null
-                            is IdentityError -> error.passwordResetMessage(strings)
-                            else -> strings.sendEmailError
-                        },
-                    )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            error =
+                                when (error) {
+                                    IdentityError.Cancelled -> null
+                                    is IdentityError -> error.passwordResetMessage(strings)
+                                    else -> strings.sendEmailError
+                                },
+                        )
                 }
         }
     }

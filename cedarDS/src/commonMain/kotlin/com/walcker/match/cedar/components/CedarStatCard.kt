@@ -36,11 +36,12 @@ public fun CedarStatCard(
         shape = CedarTokens.radius.mdShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
-        modifier = if (description != null) {
-            modifier.clearAndSetSemantics { contentDescription = description }
-        } else {
-            modifier
-        },
+        modifier =
+            if (description != null) {
+                modifier.clearAndSetSemantics { contentDescription = description }
+            } else {
+                modifier
+            },
     ) {
         Column(
             modifier = Modifier.padding(CedarTokens.spacing.md),
@@ -49,11 +50,12 @@ public fun CedarStatCard(
             Text(
                 text = stat.value,
                 style = MaterialTheme.typography.headlineSmall,
-                color = if (stat.highlighted) {
-                    CedarTokens.colors.availableText
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+                color =
+                    if (stat.highlighted) {
+                        CedarTokens.colors.availableText
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

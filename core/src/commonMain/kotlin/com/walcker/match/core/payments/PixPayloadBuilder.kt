@@ -34,7 +34,10 @@ private fun formatAmount(cents: Int): String {
     return "$reais.${centavos.toString().padStart(2, '0')}"
 }
 
-private fun tlv(id: String, value: String): String {
+private fun tlv(
+    id: String,
+    value: String,
+): String {
     val len = value.length.toString().padStart(2, '0')
     return "$id$len$value"
 }
@@ -44,21 +47,27 @@ internal fun crc16(payload: String): String {
     for (ch in payload) {
         crc = crc xor (ch.code shl 8)
         repeat(8) {
-            crc = if (crc and 0x8000 != 0) ((crc shl 1) xor 0x1021) and 0xFFFF
-            else (crc shl 1) and 0xFFFF
+            crc =
+                if (crc and 0x8000 != 0) {
+                    ((crc shl 1) xor 0x1021) and 0xFFFF
+                } else {
+                    (crc shl 1) and 0xFFFF
+                }
         }
     }
     return crc.toString(16).uppercase().padStart(4, '0')
 }
 
-internal fun sanitize(text: String, max: Int): String {
-    return text
+internal fun sanitize(
+    text: String,
+    max: Int,
+): String =
+    text
         .normalizeToNFD()
         .replace(Regex("[\\p{InCombiningDiacriticalMarks}]"), "")
         .replace(Regex("[^A-Za-z0-9 ]"), "")
         .trim()
         .take(max)
         .uppercase()
-}
 
 internal expect fun String.normalizeToNFD(): String

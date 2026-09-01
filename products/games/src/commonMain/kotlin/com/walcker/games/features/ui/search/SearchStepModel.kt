@@ -2,7 +2,8 @@ package com.walcker.games.features.ui.search
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import com.walcker.games.features.domain.repository.GameRepository
+import com.walcker.games.features.domain.shared.model.isDiscoverable
+import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.match.core.analytics.AnalyticsEvent
@@ -19,41 +20,41 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.collections.emptyList
-import kotlin.collections.filter
+
+private const val MILLIS_PER_SECOND = 1000L
 
 internal class SearchStepModel(
     private val repository: GameRepository,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
 ) : ScreenModel {
-
     init {
         analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.SEARCH))
     }
 
     private val gamesStrings get() = stringsHolder.resolveStringsOrDefault()
 
-    private val _state = MutableStateFlow(
-        SearchState(
-            strings = gamesStrings.search,
-            cardStrings = gamesStrings.gameList,
-        ),
-    )
+    private val _state =
+        MutableStateFlow(
+            SearchState(
+                strings = gamesStrings.search,
+                cardStrings = gamesStrings.gameList,
+            ),
+        )
     val state: StateFlow<SearchState> = _state.asStateFlow()
 
     private val _effects = Channel<SearchEffect>(Channel.BUFFERED)
     val effects: Flow<SearchEffect> = _effects.receiveAsFlow()
 
-    private var allMatches: List<com.walcker.games.features.domain.model.Game> = emptyList()
+    private var allMatches: List<com.walcker.games.features.domain.shared.model.Game> = emptyList()
 
     init {
-        repository.observeMatches()
+        repository
+            .observeMatches()
             .onEach { games ->
                 allMatches = games
                 applyQuery(_state.value.query)
-            }
-            .launchIn(screenModelScope)
+            }.launchIn(screenModelScope)
     }
 
     fun onEvent(event: SearchEvents) {
@@ -94,42 +95,55 @@ internal class SearchStepModel(
         val trimmedQuery = state.query.trim().lowercase()
         val filters = state.filters
 
-        val filtered = allMatches.filter { game ->
-            val matchesText = if (trimmedQuery.isBlank()) {
-                true
-            } else {
-                game.venueName.lowercase().contains(trimmedQuery) ||
-                    game.neighborhood.lowercase().contains(trimmedQuery) ||
-                    game.city.lowercase().contains(trimmedQuery) ||
-                    game.sport.label.lowercase().contains(trimmedQuery)
-            }
+        val nowSeconds =
+            kotlin.time.Clock.System
+                .now()
+                .toEpochMilliseconds() / MILLIS_PER_SECOND
+        val filtered =
+            allMatches.filter { game ->
+                if (!game.isDiscoverable(nowSeconds)) return@filter false
 
-            val gameStartMs = game.startsAtSeconds * 1000
-            val matchesDateRange = if (filters.startDateMs != null && gameStartMs < filters.startDateMs) {
-                false
-            } else if (filters.endDateMs != null && gameStartMs > filters.endDateMs) {
-                false
-            } else {
-                true
-            }
+                val matchesText =
+                    if (trimmedQuery.isBlank()) {
+                        true
+                    } else {
+                        game.venueName.lowercase().contains(trimmedQuery) ||
+                            game.neighborhood.lowercase().contains(trimmedQuery) ||
+                            game.city.lowercase().contains(trimmedQuery) ||
+                            game.sport.label
+                                .lowercase()
+                                .contains(trimmedQuery)
+                    }
 
-            val matchesSport = if (filters.sports.isEmpty()) {
-                true
-            } else {
-                game.sport in filters.sports
-            }
+                val gameStartMs = game.startsAtSeconds * 1000
+                val matchesDateRange =
+                    if (filters.startDateMs != null && gameStartMs < filters.startDateMs) {
+                        false
+                    } else if (filters.endDateMs != null && gameStartMs > filters.endDateMs) {
+                        false
+                    } else {
+                        true
+                    }
 
-            val gamePrice = game.priceCents / 100f
-            val matchesPrice = if (filters.minPrice != null && gamePrice < filters.minPrice) {
-                false
-            } else if (filters.maxPrice != null && gamePrice > filters.maxPrice) {
-                false
-            } else {
-                true
-            }
+                val matchesSport =
+                    if (filters.sports.isEmpty()) {
+                        true
+                    } else {
+                        game.sport in filters.sports
+                    }
 
-            matchesText && matchesDateRange && matchesSport && matchesPrice
-        }
+                val gamePrice = game.priceCents / 100f
+                val matchesPrice =
+                    if (filters.minPrice != null && gamePrice < filters.minPrice) {
+                        false
+                    } else if (filters.maxPrice != null && gamePrice > filters.maxPrice) {
+                        false
+                    } else {
+                        true
+                    }
+
+                matchesText && matchesDateRange && matchesSport && matchesPrice
+            }
 
         _state.update {
             it.copy(

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
+import com.walcker.games.features.ui.shared.matchDetail.MatchDetailBottomSheet
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.app.strings.AppShellStrings
 import com.walcker.match.app.strings.rememberAppShellStrings
@@ -27,10 +28,10 @@ import com.walcker.match.core.navigation.NavigatorHolder
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.GamesDestination
-import com.walcker.match.navigator.HomeViewCoordinator
 import com.walcker.match.navigator.IdentityDestination
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.MainTab
+import com.walcker.match.navigator.MatchDetailCoordinator
 import com.walcker.match.navigator.TabCoordinator
 import org.koin.compose.koinInject
 
@@ -41,13 +42,14 @@ internal fun MatchScaffold() {
 
 private fun MatchBottomBarTab.toMainTab(): MainTab = MainTab.entries[ordinal]
 
-private fun AppShellStrings.labelFor(tab: MatchBottomBarTab): String = when (tab) {
-    MatchBottomBarTab.Home -> homeTab
-    MatchBottomBarTab.Search -> searchTab
-    MatchBottomBarTab.Create -> createTab
-    MatchBottomBarTab.Activity -> activityTab
-    MatchBottomBarTab.Profile -> profileTab
-}
+private fun AppShellStrings.labelFor(tab: MatchBottomBarTab): String =
+    when (tab) {
+        MatchBottomBarTab.Home -> homeTab
+        MatchBottomBarTab.Search -> searchTab
+        MatchBottomBarTab.Create -> createTab
+        MatchBottomBarTab.Activity -> activityTab
+        MatchBottomBarTab.Profile -> profileTab
+    }
 
 @Composable
 private fun AttachedNavigator(
@@ -72,14 +74,12 @@ private fun AuthenticatedShell() {
     val tabCoordinator = koinInject<TabCoordinator>()
     val deepLinkCoordinator = koinInject<DeepLinkCoordinator>()
     val loginCoordinator = koinInject<LoginCoordinator>()
-    val homeViewCoordinator = koinInject<HomeViewCoordinator>()
+    val matchDetailCoordinator = koinInject<MatchDetailCoordinator>()
     val navigatorHolder = koinInject<NavigatorHolder>()
     val sessionHolder = koinInject<SessionHolder>()
     val strings = rememberAppShellStrings()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(MainTab.Home) }
-    val (detailScreen, setDetailScreen) = remember { mutableStateOf<Screen?>(null) }
     val (showLogin, setShowLogin) = remember { mutableStateOf(false) }
-    val showMap by homeViewCoordinator.showMap.collectAsState()
 
     val isAuthenticated: Boolean? by remember(sessionHolder) {
         sessionHolder.isAuthenticated
@@ -93,7 +93,7 @@ private fun AuthenticatedShell() {
         deepLinkCoordinator.links.collect { link ->
             when (link) {
                 is DeepLink.OpenMatch -> {
-                    setDetailScreen(gamesDestination.matchDetail(link.matchId))
+                    matchDetailCoordinator.open(link.matchId)
                 }
             }
         }
@@ -110,37 +110,26 @@ private fun AuthenticatedShell() {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
             ) {
-                if (detailScreen == null) {
-                    val tabScreen = when (selectedTab) {
-                        MainTab.Home ->
-                            if (showMap) gamesDestination.map() else gamesDestination.gameList()
-
+                val tabScreen =
+                    when (selectedTab) {
+                        MainTab.Home -> gamesDestination.gameList()
                         MainTab.Search -> gamesDestination.search()
                         MainTab.Create -> gamesDestination.create()
                         MainTab.MyMatches -> gamesDestination.myMatches()
                         MainTab.PlayerProfile -> gamesDestination.playerProfile()
                     }
-                    key(selectedTab, showMap) {
-                        AttachedNavigator(
-                            screen = tabScreen,
-                            navigatorHolder = navigatorHolder,
-                            attachEnabled = !showLogin,
-                        )
-                    }
-                } else {
-                    key(detailScreen) {
-                        AttachedNavigator(
-                            screen = detailScreen,
-                            navigatorHolder = navigatorHolder,
-                            attachEnabled = !showLogin,
-                            onBackPressed = { setDetailScreen(null); true },
-                        )
-                    }
+                key(selectedTab) {
+                    AttachedNavigator(
+                        screen = tabScreen,
+                        navigatorHolder = navigatorHolder,
+                        attachEnabled = !showLogin,
+                    )
                 }
             }
 
@@ -154,17 +143,23 @@ private fun AuthenticatedShell() {
 
         if (showLogin) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CedarTokens.colors.canvas),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(CedarTokens.colors.canvas),
             ) {
                 AttachedNavigator(
                     screen = identityDestination.login(),
                     navigatorHolder = navigatorHolder,
                     attachEnabled = true,
-                    onBackPressed = { setShowLogin(false); true },
+                    onBackPressed = {
+                        setShowLogin(false)
+                        true
+                    },
                 )
             }
         }
+
+        MatchDetailBottomSheet()
     }
 }

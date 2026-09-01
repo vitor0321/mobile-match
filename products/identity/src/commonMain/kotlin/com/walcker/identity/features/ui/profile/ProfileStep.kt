@@ -46,7 +46,6 @@ import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.strings.Locales
 
 internal class ProfileStep : Screen {
-
     override val key: String get() = "profile-settings"
 
     @Composable
@@ -112,20 +111,22 @@ internal fun ProfileScreen(
         containerColor = CedarTokens.colors.canvas,
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = CedarTokens.spacing.lg,
-                    vertical = CedarTokens.spacing.md,
-                ),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.lg),
         ) {
             AccountHeader(
-                displayName = state.userSession?.displayName
-                    ?: state.userSession?.email
-                    ?: strings.fallbackAccountName,
+                displayName =
+                    state.userSession?.displayName
+                        ?: state.userSession?.email
+                        ?: strings.fallbackAccountName,
                 email = state.userSession?.email,
             )
 
@@ -174,17 +175,19 @@ internal fun ProfileScreen(
             TextButton(
                 onClick = onDeleteAccount,
                 enabled = !isBusy,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
+                colors =
+                    ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = if (state.isDeletingAccount) {
-                        strings.deleteAccountLoadingButton
-                    } else {
-                        strings.deleteAccountButton
-                    },
+                    text =
+                        if (state.isDeletingAccount) {
+                            strings.deleteAccountLoadingButton
+                        } else {
+                            strings.deleteAccountButton
+                        },
                 )
             }
         }
@@ -246,11 +249,12 @@ private fun PlanCard(
             Text(
                 text = if (isPro) strings.proStatusLabel else strings.freeStatusLabel,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (isPro) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+                color =
+                    if (isPro) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
             )
             Text(
                 text = if (isPro) strings.proStatusDescription else strings.freeStatusDescription,
@@ -344,10 +348,11 @@ private fun DeleteAccountDialog(
             Button(
                 onClick = onConfirm,
                 enabled = !isDeleting,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
             ) {
                 Text(strings.deleteAccountConfirmationButton)
             }
@@ -360,7 +365,8 @@ private fun DeleteAccountDialog(
     )
 }
 
-private fun ProfileStrings.labelForLanguage(tag: String): String = when (tag) {
-    Locales.EN -> languageEnglish
-    else -> languagePortuguese
-}
+private fun ProfileStrings.labelForLanguage(tag: String): String =
+    when (tag) {
+        Locales.EN -> languageEnglish
+        else -> languagePortuguese
+    }

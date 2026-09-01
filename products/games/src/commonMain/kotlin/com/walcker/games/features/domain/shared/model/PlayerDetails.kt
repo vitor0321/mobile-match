@@ -1,0 +1,14 @@
+package com.walcker.games.features.domain.shared.model
+
+internal data class PlayerDetails(
+    val userId: String,
+    val displayName: String,
+    val photoUrl: String?,
+    val averageRating: Float,
+    val totalRatings: Int,
+    val favoriteSports: List<Sport>,
+    val city: String?,
+    val neighborhood: String?,
+    val memberSinceMs: Long,
+    val dimensionAverages: Map<RatingDimension, DimensionAverage> = emptyMap(),
+)

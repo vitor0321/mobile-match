@@ -5,7 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class AnalyticsEventTest {
-
     @Test
     fun `os nomes do funil sao os esperados`() {
         assertEquals("match_list_viewed", AnalyticsEvent.MatchListViewed(MatchListSource.HOME).name)
@@ -22,15 +21,16 @@ class AnalyticsEventTest {
 
     @Test
     fun `nenhum nome estoura o limite do Firebase`() {
-        val events = listOf(
-            AnalyticsEvent.MatchListViewed(MatchListSource.HOME),
-            AnalyticsEvent.MatchViewed("FUTSAL", true),
-            AnalyticsEvent.MatchJoinAttempted("FUTSAL"),
-            AnalyticsEvent.MatchJoinResult("FUTSAL", JoinOutcome.WAITLIST),
-            AnalyticsEvent.MatchLeft("FUTSAL"),
-            AnalyticsEvent.MatchCreated("FUTSAL"),
-            AnalyticsEvent.PlayerRated(5),
-        )
+        val events =
+            listOf(
+                AnalyticsEvent.MatchListViewed(MatchListSource.HOME),
+                AnalyticsEvent.MatchViewed("FUTSAL", true),
+                AnalyticsEvent.MatchJoinAttempted("FUTSAL"),
+                AnalyticsEvent.MatchJoinResult("FUTSAL", JoinOutcome.WAITLIST),
+                AnalyticsEvent.MatchLeft("FUTSAL"),
+                AnalyticsEvent.MatchCreated("FUTSAL"),
+                AnalyticsEvent.PlayerRated(5),
+            )
 
         events.forEach { event ->
             assertTrue(event.name.length <= 40, "nome longo demais: ${event.name}")
@@ -46,11 +46,12 @@ class AnalyticsEventTest {
 
     @Test
     fun `nenhum evento carrega id`() {
-        val events = listOf(
-            AnalyticsEvent.MatchViewed("FUTSAL", true),
-            AnalyticsEvent.MatchJoinResult("FUTSAL", JoinOutcome.CONFIRMED),
-            AnalyticsEvent.PlayerRated(3),
-        )
+        val events =
+            listOf(
+                AnalyticsEvent.MatchViewed("FUTSAL", true),
+                AnalyticsEvent.MatchJoinResult("FUTSAL", JoinOutcome.CONFIRMED),
+                AnalyticsEvent.PlayerRated(3),
+            )
 
         events.forEach { event ->
             assertTrue(

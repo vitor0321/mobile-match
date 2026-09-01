@@ -19,71 +19,80 @@ import kotlin.coroutines.resume
 internal actual fun createLocationProvider(): LocationProvider = IosLocationProvider()
 
 private class IosLocationProvider : LocationProvider {
-    private val locationManager = CLLocationManager().apply {
-        desiredAccuracy = kCLLocationAccuracyBest
-    }
-
-    override suspend fun requestPermission(): Boolean = suspendCancellableCoroutine { cont ->
-        val status = locationManager.authorizationStatus
-        if (status == kCLAuthorizationStatusAuthorizedWhenInUse || status == kCLAuthorizationStatusAuthorizedAlways) {
-            cont.resume(true)
-            return@suspendCancellableCoroutine
-        }
-        if (status == kCLAuthorizationStatusDenied) {
-            cont.resume(false)
-            return@suspendCancellableCoroutine
+    private val locationManager =
+        CLLocationManager().apply {
+            desiredAccuracy = kCLLocationAccuracyBest
         }
 
-        val delegate = object : NSObject(), CLLocationManagerDelegateProtocol {
-            override fun locationManagerDidChangeAuthorization(manager: CLLocationManager) {
-                val newStatus = manager.authorizationStatus
-                if (newStatus != kCLAuthorizationStatusNotDetermined) {
-                    manager.delegate = null
-                    cont.resume(
-                        newStatus == kCLAuthorizationStatusAuthorizedWhenInUse ||
-                            newStatus == kCLAuthorizationStatusAuthorizedAlways,
-                    )
-                }
+    override suspend fun requestPermission(): Boolean =
+        suspendCancellableCoroutine { cont ->
+            val status = locationManager.authorizationStatus
+            if (status == kCLAuthorizationStatusAuthorizedWhenInUse || status == kCLAuthorizationStatusAuthorizedAlways) {
+                cont.resume(true)
+                return@suspendCancellableCoroutine
             }
+            if (status == kCLAuthorizationStatusDenied) {
+                cont.resume(false)
+                return@suspendCancellableCoroutine
+            }
+
+            val delegate =
+                object : NSObject(), CLLocationManagerDelegateProtocol {
+                    override fun locationManagerDidChangeAuthorization(manager: CLLocationManager) {
+                        val newStatus = manager.authorizationStatus
+                        if (newStatus != kCLAuthorizationStatusNotDetermined) {
+                            manager.delegate = null
+                            cont.resume(
+                                newStatus == kCLAuthorizationStatusAuthorizedWhenInUse ||
+                                    newStatus == kCLAuthorizationStatusAuthorizedAlways,
+                            )
+                        }
+                    }
+                }
+            locationManager.delegate = delegate
+            locationManager.requestWhenInUseAuthorization()
         }
-        locationManager.delegate = delegate
-        locationManager.requestWhenInUseAuthorization()
-    }
 
     @OptIn(ExperimentalForeignApi::class)
-    override suspend fun currentLocation(): Result<Coordinates> = suspendCancellableCoroutine { cont ->
-        val status = locationManager.authorizationStatus
-        if (status == kCLAuthorizationStatusDenied) {
-            cont.resume(Result.failure(LocationError.PermissionDenied))
-            return@suspendCancellableCoroutine
-        }
+    override suspend fun currentLocation(): Result<Coordinates> =
+        suspendCancellableCoroutine { cont ->
+            val status = locationManager.authorizationStatus
+            if (status == kCLAuthorizationStatusDenied) {
+                cont.resume(Result.failure(LocationError.PermissionDenied))
+                return@suspendCancellableCoroutine
+            }
 
-        val delegate = object : NSObject(), CLLocationManagerDelegateProtocol {
-            @Suppress("CONFLICTING_OVERLOADS")
-            override fun locationManager(
-                manager: CLLocationManager,
-                didUpdateLocations: List<*>,
-            ) {
-                val location = didUpdateLocations.lastOrNull() as? CLLocation
-                if (location != null) {
-                    manager.stopUpdatingLocation()
-                    manager.delegate = null
-                    val coords = Coordinates(
-                        lat = location.coordinate.useContents { latitude },
-                        lng = location.coordinate.useContents { longitude },
-                    )
-                    cont.resume(Result.success(coords))
+            val delegate =
+                object : NSObject(), CLLocationManagerDelegateProtocol {
+                    @Suppress("CONFLICTING_OVERLOADS")
+                    override fun locationManager(
+                        manager: CLLocationManager,
+                        didUpdateLocations: List<*>,
+                    ) {
+                        val location = didUpdateLocations.lastOrNull() as? CLLocation
+                        if (location != null) {
+                            manager.stopUpdatingLocation()
+                            manager.delegate = null
+                            val coords =
+                                Coordinates(
+                                    lat = location.coordinate.useContents { latitude },
+                                    lng = location.coordinate.useContents { longitude },
+                                )
+                            cont.resume(Result.success(coords))
+                        }
+                    }
+
+                    @Suppress("CONFLICTING_OVERLOADS")
+                    override fun locationManager(
+                        manager: CLLocationManager,
+                        didFailWithError: NSError,
+                    ) {
+                        manager.stopUpdatingLocation()
+                        manager.delegate = null
+                        cont.resume(Result.failure(LocationError.Unavailable))
+                    }
                 }
-            }
-
-            @Suppress("CONFLICTING_OVERLOADS")
-            override fun locationManager(manager: CLLocationManager, didFailWithError: NSError) {
-                manager.stopUpdatingLocation()
-                manager.delegate = null
-                cont.resume(Result.failure(LocationError.Unavailable))
-            }
+            locationManager.delegate = delegate
+            locationManager.startUpdatingLocation()
         }
-        locationManager.delegate = delegate
-        locationManager.startUpdatingLocation()
-    }
 }

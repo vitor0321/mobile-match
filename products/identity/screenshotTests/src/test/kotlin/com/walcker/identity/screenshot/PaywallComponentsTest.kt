@@ -15,27 +15,28 @@ import org.junit.Rule
 import org.junit.Test
 
 class PaywallComponentsTest {
-
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    private val monthlyOffering = ProductOffering(
-        id = "default:\$rc_monthly",
-        offeringId = "default",
-        packageId = "\$rc_monthly",
-        title = "Plano mensal",
-        description = "Apoie o Match e tenha acesso antecipado ao que vem.",
-        priceLabel = "R\$ 14,90",
-    )
+    private val monthlyOffering =
+        ProductOffering(
+            id = "default:\$rc_monthly",
+            offeringId = "default",
+            packageId = "\$rc_monthly",
+            title = "Plano mensal",
+            description = "Apoie o Match e tenha acesso antecipado ao que vem.",
+            priceLabel = "R\$ 14,90",
+        )
 
-    private val annualOffering = ProductOffering(
-        id = "default:\$rc_annual",
-        offeringId = "default",
-        packageId = "\$rc_annual",
-        title = "Plano anual",
-        description = "Melhor custo-benefício para usar o Match todos os dias.",
-        priceLabel = "R\$ 119,90",
-    )
+    private val annualOffering =
+        ProductOffering(
+            id = "default:\$rc_annual",
+            offeringId = "default",
+            packageId = "\$rc_annual",
+            title = "Plano anual",
+            description = "Melhor custo-benefício para usar o Match todos os dias.",
+            priceLabel = "R\$ 119,90",
+        )
 
     @Test
     fun offeringCard_selected_lightMode() {
@@ -195,4 +196,3 @@ class PaywallComponentsTest {
         }
     }
 }
-

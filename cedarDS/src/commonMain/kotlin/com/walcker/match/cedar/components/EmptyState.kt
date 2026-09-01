@@ -28,10 +28,11 @@ public fun EmptyState(
 ) {
     Column(
         modifier = modifier.padding(CedarTokens.spacing.xl),
-        verticalArrangement = Arrangement.spacedBy(
-            space = CedarTokens.spacing.sm,
-            alignment = Alignment.CenterVertically,
-        ),
+        verticalArrangement =
+            Arrangement.spacedBy(
+                space = CedarTokens.spacing.sm,
+                alignment = Alignment.CenterVertically,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (icon != null) {

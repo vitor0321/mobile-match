@@ -3,7 +3,6 @@ package com.walcker.match.cedar.tokens
 import androidx.compose.ui.graphics.Color
 
 internal object CedarPalette {
-
     val Ink900: Color = Color(0xFF091729)
 
     val Ink700: Color = Color(0xFF3D4A5C)

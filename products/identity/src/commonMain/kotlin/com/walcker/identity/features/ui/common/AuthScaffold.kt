@@ -3,6 +3,7 @@ package com.walcker.identity.features.ui.common
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -42,15 +43,17 @@ internal fun AuthScaffold(
         containerColor = CedarTokens.colors.canvas,
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = CedarTokens.spacing.lg,
-                    vertical = CedarTokens.spacing.md,
-                ),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding)
+                    .padding(padding)
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
             content = content,
         )
@@ -66,13 +69,15 @@ internal fun AuthFormMessage(
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
-        color = if (isError) {
-            MaterialTheme.colorScheme.error
-        } else {
-            MaterialTheme.colorScheme.primary
-        },
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics { liveRegion = LiveRegionMode.Polite },
+        color =
+            if (isError) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics { liveRegion = LiveRegionMode.Polite },
     )
 }

@@ -6,6 +6,6 @@ internal sealed interface PaywallInternalEvents {
     ) : PaywallInternalEvents
 
     data object Dismiss : PaywallInternalEvents
+
     data object RequireLogin : PaywallInternalEvents
 }
-

@@ -1,9 +1,10 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-fun Any.findDeclaredMethodRecursively(methodName: String) = generateSequence(javaClass) { it.superclass }
-    .flatMap { it.declaredMethods.asSequence() }
-    .firstOrNull { it.name == methodName }
+fun Any.findDeclaredMethodRecursively(methodName: String) =
+    generateSequence(javaClass) { it.superclass }
+        .flatMap { it.declaredMethods.asSequence() }
+        .firstOrNull { it.name == methodName }
 
 plugins {
     alias(libs.plugins.androidLibrary)
@@ -22,8 +23,14 @@ android {
     }
 
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+        targetSdk =
+            libs.versions.android.targetSdk
+                .get()
+                .toInt()
     }
 
     kotlin {
@@ -44,19 +51,21 @@ tasks.withType<KotlinCompile>().configureEach {
 
         dependsOn(
             ":products:identity:compile${variant}KotlinAndroid",
-            ":products:identity:bundleLibCompileToJar${variant}",
+            ":products:identity:bundleLibCompileToJar$variant",
         )
 
-        val friendArtifacts = identityProject.files(
-            identityProject.layout.buildDirectory.dir("tmp/kotlin-classes/$variantLower"),
-            identityProject.layout.buildDirectory.file("intermediates/compile_library_classes_jar/$variantLower/bundleLibCompileToJar${variant}/classes.jar"),
-            identityProject.layout.buildDirectory.file("intermediates/aar_main_jar/$variantLower/syncLib${variant}Jars/classes.jar"),
-        )
+        val friendArtifacts =
+            identityProject.files(
+                identityProject.layout.buildDirectory.dir("tmp/kotlin-classes/$variantLower"),
+                identityProject.layout.buildDirectory.file("intermediates/compile_library_classes_jar/$variantLower/bundleLibCompileToJar$variant/classes.jar"),
+                identityProject.layout.buildDirectory.file("intermediates/aar_main_jar/$variantLower/syncLib${variant}Jars/classes.jar"),
+            )
 
         @Suppress("UNCHECKED_CAST")
-        val friendPaths = javaClass.methods
-            .firstOrNull { it.name == "getFriendPaths" }
-            ?.invoke(this) as? ConfigurableFileCollection
+        val friendPaths =
+            javaClass.methods
+                .firstOrNull { it.name == "getFriendPaths" }
+                ?.invoke(this) as? ConfigurableFileCollection
 
         friendPaths?.from(friendArtifacts)
     }

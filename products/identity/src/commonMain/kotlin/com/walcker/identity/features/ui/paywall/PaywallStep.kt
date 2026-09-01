@@ -51,7 +51,6 @@ private const val PRIVACY_POLICY_URL = "https://vitor0321.github.io/match-privac
 private val LoadingIndicatorSize = 32.dp
 
 internal class PaywallStep : Screen {
-
     override val key: String get() = "paywall"
 
     @Composable
@@ -148,14 +147,15 @@ internal fun PaywallScreen(
         containerColor = CedarTokens.colors.canvas,
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(scrollState)
-                .padding(
-                    horizontal = CedarTokens.spacing.lg,
-                    vertical = CedarTokens.spacing.md,
-                ),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(scrollState)
+                    .padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
         ) {
             Text(
@@ -172,9 +172,10 @@ internal fun PaywallScreen(
             when {
                 state.isLoading -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = CedarTokens.spacing.xxl),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = CedarTokens.spacing.xxl),
                         contentAlignment = Alignment.Center,
                     ) {
                         CedarLoadingIndicator(modifier = Modifier.size(LoadingIndicatorSize))
@@ -197,9 +198,10 @@ internal fun PaywallScreen(
 
                 else -> {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectableGroup(),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .selectableGroup(),
                         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {
                         state.offerings.forEach { offering ->
@@ -221,9 +223,10 @@ internal fun PaywallScreen(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.error,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { liveRegion = LiveRegionMode.Polite },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
 

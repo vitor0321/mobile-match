@@ -1,15 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.internal.types.error.ErrorModuleDescriptor.platform
 import java.util.Properties
-import kotlin.let
-import kotlin.text.isBlank
-import kotlin.text.isNotBlank
-import kotlin.text.toInt
 
-val localProps = Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) load(f.inputStream())
-}
+val localProps =
+    Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.exists()) load(f.inputStream())
+    }
 
 val releaseKeyAlias = localProps.getProperty("release.keyAlias")
 val releaseKeyPassword = localProps.getProperty("release.keyPassword")
@@ -17,9 +13,10 @@ val releaseStoreFile = localProps.getProperty("release.storeFile")
 val releaseStorePassword = localProps.getProperty("release.storePassword")
 val revenueCatAndroidKey = localProps.getProperty("REVENUECAT_ANDROID_KEY", "")
 
-val googleMapsApiKey: String = localProps.getProperty("GOOGLE_MAPS_API_KEY")
-    ?: providers.environmentVariable("GOOGLE_MAPS_API_KEY").orNull
-    ?: ""
+val googleMapsApiKey: String =
+    localProps.getProperty("GOOGLE_MAPS_API_KEY")
+        ?: providers.environmentVariable("GOOGLE_MAPS_API_KEY").orNull
+        ?: ""
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -39,7 +36,7 @@ kotlin {
 
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "App"
@@ -95,7 +92,10 @@ compose.resources {
 
 android {
     namespace = "com.walcker.match.app"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.android.compileSdk
+            .get()
+            .toInt()
 
     signingConfigs {
         if (
@@ -119,10 +119,21 @@ android {
 
     defaultConfig {
         applicationId = "com.walcker.match.app"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = libs.versions.android.version.code.get().toInt()
-        versionName = libs.versions.android.version.name.get()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+        targetSdk =
+            libs.versions.android.targetSdk
+                .get()
+                .toInt()
+        versionCode =
+            libs.versions.android.version.code
+                .get()
+                .toInt()
+        versionName =
+            libs.versions.android.version.name
+                .get()
         manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
 
         buildConfigField("String", "REVENUECAT_ANDROID_KEY", "\"$revenueCatAndroidKey\"")
@@ -151,7 +162,7 @@ android {
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             resValue("string", "app_name", "Join Play")
             buildConfigField("Boolean", "IS_DEBUG", "false")

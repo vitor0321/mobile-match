@@ -3,7 +3,6 @@ package com.walcker.match.firestore
 import kotlinx.coroutines.flow.Flow
 
 public interface FirestoreClient {
-
     public fun document(path: String): FirestoreDocumentReference
 
     public fun collection(path: String): FirestoreCollectionReference
@@ -12,7 +11,10 @@ public interface FirestoreClient {
 
     public suspend fun <T> runTransaction(block: suspend (FirestoreTransaction) -> T): Result<T>
 
-    public suspend fun callFunction(name: String, data: Map<String, Any?>): Result<Map<String, Any?>>
+    public suspend fun callFunction(
+        name: String,
+        data: Map<String, Any?>,
+    ): Result<Map<String, Any?>>
 }
 
 public interface FirestoreDocumentReference {
@@ -44,12 +46,25 @@ public interface FirestoreCollectionReference {
 }
 
 public interface FirestoreQueryBuilder {
-    public fun where(field: String, operator: String, value: Any?): FirestoreQueryBuilder
-    public fun orderBy(field: String, direction: String = "asc"): FirestoreQueryBuilder
+    public fun where(
+        field: String,
+        operator: String,
+        value: Any?,
+    ): FirestoreQueryBuilder
+
+    public fun orderBy(
+        field: String,
+        direction: String = "asc",
+    ): FirestoreQueryBuilder
+
     public fun limit(count: Int): FirestoreQueryBuilder
+
     public fun startAt(vararg values: Any?): FirestoreQueryBuilder
+
     public fun endAt(vararg values: Any?): FirestoreQueryBuilder
+
     public fun startAfter(vararg values: Any?): FirestoreQueryBuilder
+
     public fun endBefore(vararg values: Any?): FirestoreQueryBuilder
 
     public suspend fun get(): Result<List<DocumentSnapshot>>
@@ -64,16 +79,20 @@ public data class DocumentSnapshot(
     public val exists: Boolean,
     public val metadata: SnapshotMetadata = SnapshotMetadata(),
 ) {
-    public inline fun <reified T> get(field: String): T? {
-        return data[field] as? T
-    }
+    public inline fun <reified T> get(field: String): T? = data[field] as? T
 
     public fun getString(field: String): String? = get(field)
+
     public fun getDouble(field: String): Double? = get(field)
+
     public fun getLong(field: String): Long? = get(field)
+
     public fun getBoolean(field: String): Boolean? = get(field)
+
     public fun getMap(field: String): Map<String, Any?>? = get(field)
+
     public fun getList(field: String): List<Any?>? = get(field)
+
     public fun getTimestamp(field: String): Long? = normalizeTimestampMillis(data[field])
 }
 
@@ -85,9 +104,16 @@ public data class SnapshotMetadata(
 public interface FirestoreTransaction {
     public suspend fun get(path: String): Result<DocumentSnapshot?>
 
-    public suspend fun set(path: String, data: Map<String, Any?>): Result<Unit>
+    public suspend fun set(
+        path: String,
+        data: Map<String, Any?>,
+    ): Result<Unit>
 
-    public suspend fun update(path: String, data: Map<String, Any?>): Result<Unit>
+    public suspend fun update(
+        path: String,
+        data: Map<String, Any?>,
+    ): Result<Unit>
+
     public suspend fun delete(path: String): Result<Unit>
 }
 

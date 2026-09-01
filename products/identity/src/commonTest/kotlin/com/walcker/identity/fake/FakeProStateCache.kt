@@ -11,14 +11,20 @@ internal class FakeProStateCache(
 
     override suspend fun read(uid: String): Boolean = proStates[uid] ?: false
 
-    override suspend fun save(uid: String, isPro: Boolean) {
+    override suspend fun save(
+        uid: String,
+        isPro: Boolean,
+    ) {
         proStates[uid] = isPro
         savedValues += uid to isPro
     }
 
     override suspend fun readRegistrationDate(uid: String): String? = registrationDates[uid]
 
-    override suspend fun saveRegistrationDate(uid: String, dateStr: String) {
+    override suspend fun saveRegistrationDate(
+        uid: String,
+        dateStr: String,
+    ) {
         registrationDates[uid] = dateStr
     }
 

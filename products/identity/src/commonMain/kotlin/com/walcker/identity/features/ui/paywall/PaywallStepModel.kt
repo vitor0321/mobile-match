@@ -44,7 +44,8 @@ internal class PaywallStepModel(
     }
 
     private suspend fun refreshManagementUrl() {
-        billingRepository.managementUrl()
+        billingRepository
+            .managementUrl()
             .onSuccess { url ->
                 mutableState.value = mutableState.value.copy(managementUrl = url)
             }
@@ -65,72 +66,80 @@ internal class PaywallStepModel(
     }
 
     private suspend fun loadOfferings() {
-        mutableState.value = mutableState.value.copy(
-            isLoading = true,
-            error = null,
-            errorMessage = null,
-        )
-        billingRepository.listOfferings()
+        mutableState.value =
+            mutableState.value.copy(
+                isLoading = true,
+                error = null,
+                errorMessage = null,
+            )
+        billingRepository
+            .listOfferings()
             .onSuccess { offerings ->
-                val selectedOfferingId = mutableState.value.selectedOfferingId
-                    ?.takeIf { selected -> offerings.any { it.id == selected } }
-                    ?: offerings.firstOrNull()?.id
+                val selectedOfferingId =
+                    mutableState.value.selectedOfferingId
+                        ?.takeIf { selected -> offerings.any { it.id == selected } }
+                        ?: offerings.firstOrNull()?.id
                 val selectedOffering = offerings.firstOrNull { it.id == selectedOfferingId }
-                mutableState.value = mutableState.value.copy(
-                    isLoading = false,
-                    offerings = offerings,
-                    selectedOfferingId = selectedOfferingId,
-                    selectedOffering = selectedOffering,
-                    selectedOfferingPeriod = selectedOffering?.resolveOfferingPeriod(),
-                    errorMessage = null,
-                )
-            }
-            .onFailure { error ->
+                mutableState.value =
+                    mutableState.value.copy(
+                        isLoading = false,
+                        offerings = offerings,
+                        selectedOfferingId = selectedOfferingId,
+                        selectedOffering = selectedOffering,
+                        selectedOfferingPeriod = selectedOffering?.resolveOfferingPeriod(),
+                        errorMessage = null,
+                    )
+            }.onFailure { error ->
                 val resolvedError = resolveError(error)
-                mutableState.value = mutableState.value.copy(
-                    isLoading = false,
-                    offerings = mutableState.value.offerings,
-                    error = resolvedError,
-                    errorMessage = resolveErrorMessage(resolvedError),
-                )
+                mutableState.value =
+                    mutableState.value.copy(
+                        isLoading = false,
+                        offerings = mutableState.value.offerings,
+                        error = resolvedError,
+                        errorMessage = resolveErrorMessage(resolvedError),
+                    )
             }
     }
 
     private fun selectOffering(offeringId: String) {
         val selectedOffering = mutableState.value.offerings.firstOrNull { it.id == offeringId }
-        mutableState.value = mutableState.value.copy(
-            selectedOfferingId = offeringId,
-            selectedOffering = selectedOffering,
-            selectedOfferingPeriod = selectedOffering?.resolveOfferingPeriod(),
-            error = null,
-            errorMessage = null,
-        )
+        mutableState.value =
+            mutableState.value.copy(
+                selectedOfferingId = offeringId,
+                selectedOffering = selectedOffering,
+                selectedOfferingPeriod = selectedOffering?.resolveOfferingPeriod(),
+                error = null,
+                errorMessage = null,
+            )
     }
 
     private fun purchaseSelectedOffering() {
         screenModelScope.launch {
             if (!ensureAuthenticated()) return@launch
             val offering = selectedOffering() ?: return@launch
-            mutableState.value = mutableState.value.copy(
-                purchaseInProgress = offering.packageId,
-                error = null,
-                errorMessage = null,
-            )
-            billingRepository.purchase(offering.packageId)
+            mutableState.value =
+                mutableState.value.copy(
+                    purchaseInProgress = offering.packageId,
+                    error = null,
+                    errorMessage = null,
+                )
+            billingRepository
+                .purchase(offering.packageId)
                 .onSuccess {
-                    mutableState.value = mutableState.value.copy(
-                        purchaseInProgress = null,
-                        errorMessage = null,
-                    )
+                    mutableState.value =
+                        mutableState.value.copy(
+                            purchaseInProgress = null,
+                            errorMessage = null,
+                        )
                     eventChannel.send(PaywallInternalEvents.Dismiss)
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     val resolvedError = resolveError(error)
-                    mutableState.value = mutableState.value.copy(
-                        purchaseInProgress = null,
-                        error = resolvedError,
-                        errorMessage = resolveErrorMessage(resolvedError),
-                    )
+                    mutableState.value =
+                        mutableState.value.copy(
+                            purchaseInProgress = null,
+                            error = resolvedError,
+                            errorMessage = resolveErrorMessage(resolvedError),
+                        )
                 }
         }
     }
@@ -138,31 +147,35 @@ internal class PaywallStepModel(
     private fun restorePurchases() {
         screenModelScope.launch {
             if (!ensureAuthenticated()) return@launch
-            mutableState.value = mutableState.value.copy(
-                isRestoring = true,
-                error = null,
-                errorMessage = null,
-            )
-            billingRepository.restore()
+            mutableState.value =
+                mutableState.value.copy(
+                    isRestoring = true,
+                    error = null,
+                    errorMessage = null,
+                )
+            billingRepository
+                .restore()
                 .onSuccess { hasProAccess ->
-                    mutableState.value = mutableState.value.copy(
-                        isRestoring = false,
-                        errorMessage = null,
-                    )
-                    val message = if (hasProAccess) {
-                        stringsHolder.strings.paywall.restoreSuccessMessage
-                    } else {
-                        stringsHolder.strings.paywall.restoreNoPurchasesMessage
-                    }
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isRestoring = false,
+                            errorMessage = null,
+                        )
+                    val message =
+                        if (hasProAccess) {
+                            stringsHolder.strings.paywall.restoreSuccessMessage
+                        } else {
+                            stringsHolder.strings.paywall.restoreNoPurchasesMessage
+                        }
                     eventChannel.send(PaywallInternalEvents.ShowSnackbar(message))
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     val resolvedError = resolveError(error)
-                    mutableState.value = mutableState.value.copy(
-                        isRestoring = false,
-                        error = resolvedError,
-                        errorMessage = resolveErrorMessage(resolvedError),
-                    )
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isRestoring = false,
+                            error = resolvedError,
+                            errorMessage = resolveErrorMessage(resolvedError),
+                        )
                 }
         }
     }
@@ -173,9 +186,7 @@ internal class PaywallStepModel(
         return false
     }
 
-    private fun selectedOffering(): ProductOffering? {
-        return mutableState.value.selectedOffering
-    }
+    private fun selectedOffering(): ProductOffering? = mutableState.value.selectedOffering
 
     private fun ProductOffering.resolveOfferingPeriod(): PaywallOfferingPeriod? {
         val normalizedTitle = title.lowercase()
@@ -197,8 +208,8 @@ internal class PaywallStepModel(
         }
     }
 
-    private fun resolveError(error: Throwable): PaywallError {
-        return when (error) {
+    private fun resolveError(error: Throwable): PaywallError =
+        when (error) {
             PurchaseError.UserCancelled -> PaywallError.PurchaseCancelled
             PurchaseError.Network -> PaywallError.Network
             PurchaseError.ProductUnavailable -> PaywallError.ProductUnavailable
@@ -206,7 +217,6 @@ internal class PaywallStepModel(
             is PurchaseError.Unknown -> PaywallError.Generic(stringsHolder.strings.paywall.genericError)
             else -> PaywallError.Generic(stringsHolder.strings.paywall.genericError)
         }
-    }
 
     private fun resolveErrorMessage(error: PaywallError): String {
         val strings = stringsHolder.strings.paywall
@@ -226,4 +236,3 @@ internal class PaywallStepModel(
         }
     }
 }
-

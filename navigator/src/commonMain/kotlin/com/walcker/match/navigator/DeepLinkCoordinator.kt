@@ -5,8 +5,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
 public sealed class DeepLink {
-    public data class OpenMatch(val matchId: String) : DeepLink()
-
+    public data class OpenMatch(
+        val matchId: String,
+    ) : DeepLink()
 }
 
 public class DeepLinkCoordinator {

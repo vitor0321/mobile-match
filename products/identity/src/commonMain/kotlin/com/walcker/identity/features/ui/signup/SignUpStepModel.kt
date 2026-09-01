@@ -69,20 +69,22 @@ internal class SignUpStepModel(
         }
         mutableState.value = mutableState.value.copy(isLoading = true, error = null, email = email)
         screenModelScope.launch {
-            signUseCase.signUp(email = email, password = password)
+            signUseCase
+                .signUp(email = email, password = password)
                 .onSuccess {
                     mutableState.value = mutableState.value.copy(isLoading = false)
                     navigateBack()
-                }
-                .onFailure { error ->
-                    mutableState.value = mutableState.value.copy(
-                        isLoading = false,
-                        error = when (error) {
-                            IdentityError.Cancelled -> null
-                            is IdentityError -> error.signUpMessage(strings)
-                            else -> strings.signUpError
-                        },
-                    )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            error =
+                                when (error) {
+                                    IdentityError.Cancelled -> null
+                                    is IdentityError -> error.signUpMessage(strings)
+                                    else -> strings.signUpError
+                                },
+                        )
                 }
         }
     }

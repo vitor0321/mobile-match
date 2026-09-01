@@ -4,7 +4,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class NumberFormatTest {
-
     @Test
     fun `formatDecimal keeps one decimal by default`() {
         assertEquals("4,8", formatDecimal(4.8f))

@@ -16,29 +16,31 @@ internal data class AppShellStrings(
     val showListAction: String,
 )
 
-internal val AppShellStringsPt = AppShellStrings(
-    appTitle = "Join Play",
-    homeTab = "Início",
-    searchTab = "Buscar",
-    createTab = "Criar",
-    activityTab = "Atividade",
-    profileTab = "Perfil",
-    notificationsAction = "Notificações",
-    showMapAction = "Ver no mapa",
-    showListAction = "Ver em lista",
-)
+internal val AppShellStringsPt =
+    AppShellStrings(
+        appTitle = "Join Play",
+        homeTab = "Início",
+        searchTab = "Buscar",
+        createTab = "Criar",
+        activityTab = "Atividade",
+        profileTab = "Perfil",
+        notificationsAction = "Notificações",
+        showMapAction = "Ver no mapa",
+        showListAction = "Ver em lista",
+    )
 
-internal val AppShellStringsEn = AppShellStrings(
-    appTitle = "Join Play",
-    homeTab = "Home",
-    searchTab = "Search",
-    createTab = "Create",
-    activityTab = "Activity",
-    profileTab = "Profile",
-    notificationsAction = "Notifications",
-    showMapAction = "Show map",
-    showListAction = "Show list",
-)
+internal val AppShellStringsEn =
+    AppShellStrings(
+        appTitle = "Join Play",
+        homeTab = "Home",
+        searchTab = "Search",
+        createTab = "Create",
+        activityTab = "Activity",
+        profileTab = "Profile",
+        notificationsAction = "Notifications",
+        showMapAction = "Show map",
+        showListAction = "Show list",
+    )
 
 @Composable
 internal fun rememberAppShellStrings(): AppShellStrings =

@@ -9,7 +9,10 @@ import kotlin.math.sqrt
 
 private const val EARTH_RADIUS_KM = 6371.0
 
-public fun distanceKm(a: Coordinates, b: Coordinates): Double {
+public fun distanceKm(
+    a: Coordinates,
+    b: Coordinates,
+): Double {
     val dLat = (b.lat - a.lat).toRadians()
     val dLng = (b.lng - a.lng).toRadians()
     val lat1 = a.lat.toRadians()
@@ -33,4 +36,5 @@ public fun formatDistance(km: Double): String {
 }
 
 private fun Double.toRadians(): Double = this * PI / 180.0
+
 private fun Double.pow2(): Double = this * this

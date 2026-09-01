@@ -5,7 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DistanceTest {
-
     @Test
     fun `haversine symmetry`() {
         val a = Coordinates(lat = -23.5505, lng = -46.6333)

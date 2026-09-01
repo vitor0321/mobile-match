@@ -28,7 +28,10 @@ internal class FakeAuthRepository(
     var signOutCallCount: Int = 0
     var lastSendPasswordResetEmailInput: String? = null
 
-    override suspend fun signIn(email: String, password: String): Result<UserSession> {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession> {
         lastSignInInput = email to password
         return signInResult
     }
@@ -43,7 +46,10 @@ internal class FakeAuthRepository(
         return signInWithAppleResult
     }
 
-    override suspend fun signUp(email: String, password: String): Result<UserSession> {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+    ): Result<UserSession> {
         lastSignUpInput = email to password
         return signUpResult
     }

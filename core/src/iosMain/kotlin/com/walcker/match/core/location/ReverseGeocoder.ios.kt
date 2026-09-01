@@ -13,7 +13,10 @@ internal actual fun createReverseGeocoder(): ReverseGeocoder = IosReverseGeocode
 private class IosReverseGeocoder : ReverseGeocoder {
     private val geocoder = CLGeocoder()
 
-    override suspend fun reverseGeocode(lat: Double, lng: Double): GeocodedAddress? =
+    override suspend fun reverseGeocode(
+        lat: Double,
+        lng: Double,
+    ): GeocodedAddress? =
         suspendCancellableCoroutine { continuation ->
             val location = CLLocation(latitude = lat, longitude = lng)
             geocoder.reverseGeocodeLocation(location) { placemarks, _ ->
@@ -22,10 +25,11 @@ private class IosReverseGeocoder : ReverseGeocoder {
                     continuation.resume(null)
                     return@reverseGeocodeLocation
                 }
-                val street = listOfNotNull(
-                    placemark.thoroughfare,
-                    placemark.subThoroughfare,
-                ).joinToString(" ")
+                val street =
+                    listOfNotNull(
+                        placemark.thoroughfare,
+                        placemark.subThoroughfare,
+                    ).joinToString(" ")
                 continuation.resume(
                     GeocodedAddress(
                         address = street,

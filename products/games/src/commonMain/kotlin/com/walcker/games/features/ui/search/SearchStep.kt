@@ -5,13 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,27 +28,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
-import com.walcker.games.features.domain.model.Sport
-import com.walcker.games.features.ui.matchdetail.MatchDetailStep
-import com.walcker.games.strings.SearchStrings
-import com.walcker.match.cedar.components.CedarFilterRow
-import com.walcker.match.cedar.components.CedarFilterSection
-import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.games.features.ui.search.component.SearchFiltersPanel
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.CedarSearchField
-import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.MatchCard
-import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
+import com.walcker.match.navigator.MatchDetailCoordinator
+import org.koin.compose.koinInject
 
 internal class SearchStep : Screen {
-
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val matchDetailCoordinator = koinInject<MatchDetailCoordinator>()
         val stepModel = koinScreenModel<SearchStepModel>()
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -64,7 +52,7 @@ internal class SearchStep : Screen {
                         snackbarHostState.showSnackbar(effect.message)
 
                     is SearchEffect.NavigateToMatchDetail ->
-                        navigator.push(MatchDetailStep(effect.matchId))
+                        matchDetailCoordinator.open(effect.matchId)
                 }
             }
         }
@@ -99,13 +87,14 @@ internal fun SearchContent(
                 selectedSports = state.filters.sports,
                 onSportToggled = { sport ->
                     val current = state.filters.sports
-                    val next = if (sport == null) {
-                        emptySet()
-                    } else if (sport in current) {
-                        current - sport
-                    } else {
-                        current + sport
-                    }
+                    val next =
+                        if (sport == null) {
+                            emptySet()
+                        } else if (sport in current) {
+                            current - sport
+                        } else {
+                            current + sport
+                        }
                     onEvent(SearchEvents.SportFilterChanged(next))
                 },
                 onResetFilters = { onEvent(SearchEvents.ResetFilters) },
@@ -120,15 +109,17 @@ internal fun SearchContent(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             Column(
-                modifier = Modifier.padding(
-                    horizontal = CedarTokens.spacing.lg,
-                    vertical = CedarTokens.spacing.md,
-                ),
+                modifier =
+                    Modifier.padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
                 verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
             ) {
                 CedarScreenTitle(title = strings.title, subtitle = strings.subtitle)
@@ -176,17 +167,19 @@ internal fun SearchContent(
                         text = strings.resultsCount(state.results.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(
-                            horizontal = CedarTokens.spacing.lg,
-                            vertical = CedarTokens.spacing.xs,
-                        ),
+                        modifier =
+                            Modifier.padding(
+                                horizontal = CedarTokens.spacing.lg,
+                                vertical = CedarTokens.spacing.xs,
+                            ),
                     )
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            horizontal = CedarTokens.spacing.lg,
-                            vertical = CedarTokens.spacing.xs,
-                        ),
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = CedarTokens.spacing.lg,
+                                vertical = CedarTokens.spacing.xs,
+                            ),
                         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {
                         items(items = state.results, key = { it.id }) { game ->
@@ -204,76 +197,5 @@ internal fun SearchContent(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SearchFiltersPanel(
-    strings: SearchStrings,
-    selectedSports: Set<Sport>,
-    onSportToggled: (Sport?) -> Unit,
-    onResetFilters: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(
-                horizontal = CedarTokens.spacing.lg,
-                vertical = CedarTokens.spacing.md,
-            ),
-        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.lg),
-    ) {
-        Text(
-            text = strings.filtersTitle,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        CedarFilterSection(label = strings.filterSport) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs)) {
-                item {
-                    SportChip(
-                        label = strings.allSports,
-                        selected = selectedSports.isEmpty(),
-                        onClick = { onSportToggled(null) },
-                    )
-                }
-                items(items = Sport.entries) { sport ->
-                    SportChip(
-                        label = sport.label,
-                        selected = sport in selectedSports,
-                        onClick = { onSportToggled(sport) },
-                    )
-                }
-            }
-        }
-
-        CedarFilterRow(
-            label = strings.filterDate,
-            value = null,
-            placeholder = strings.comingSoon,
-            onClick = {},
-            enabled = false,
-        )
-
-        CedarFilterRow(
-            label = strings.filterPrice,
-            value = null,
-            placeholder = strings.comingSoon,
-            onClick = {},
-            enabled = false,
-        )
-
-        CedarPrimaryButton(
-            text = strings.applyFilters,
-            onClick = onDismiss,
-        )
-        CedarTextButton(
-            text = strings.clearFilters,
-            onClick = onResetFilters,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }

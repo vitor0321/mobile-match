@@ -44,13 +44,14 @@ public fun CedarSuccessScreen(
     summary: (@Composable () -> Unit)? = null,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(
-                horizontal = CedarTokens.spacing.lg,
-                vertical = CedarTokens.spacing.xxl,
-            ),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.xxl,
+                ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
     ) {
@@ -74,10 +75,11 @@ public fun CedarSuccessScreen(
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
-            modifier = Modifier.semantics {
-                heading()
-                liveRegion = LiveRegionMode.Assertive
-            },
+            modifier =
+                Modifier.semantics {
+                    heading()
+                    liveRegion = LiveRegionMode.Assertive
+                },
         )
         Text(
             text = subtitle,
@@ -91,9 +93,10 @@ public fun CedarSuccessScreen(
                 shape = CedarTokens.radius.lgShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = CedarTokens.spacing.md),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = CedarTokens.spacing.md),
             ) {
                 Column(
                     modifier = Modifier.padding(CedarTokens.spacing.lg),
