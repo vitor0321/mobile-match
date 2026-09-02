@@ -1,7 +1,7 @@
 [versions]
 agp = "8.11.2"
 coreSplashscreen = "1.0.1"
-paparazzi = "2.0.0-alpha04"
+paparazzi = "2.0.0-alpha05"
 android-compileSdk = "36"
 android-version-code = "2680"
 android-version-name = "26.8.0"

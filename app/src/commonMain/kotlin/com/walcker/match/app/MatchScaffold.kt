@@ -40,9 +40,9 @@ internal fun MatchScaffold() {
     AuthenticatedShell()
 }
 
-private fun MatchBottomBarTab.toMainTab(): MainTab = MainTab.entries[ordinal]
+internal fun MatchBottomBarTab.toMainTab(): MainTab = MainTab.entries[ordinal]
 
-private fun AppShellStrings.labelFor(tab: MatchBottomBarTab): String =
+internal fun AppShellStrings.labelFor(tab: MatchBottomBarTab): String =
     when (tab) {
         MatchBottomBarTab.Home -> homeTab
         MatchBottomBarTab.Search -> searchTab

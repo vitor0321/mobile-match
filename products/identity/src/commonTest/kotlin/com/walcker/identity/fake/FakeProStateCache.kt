@@ -8,6 +8,8 @@ internal class FakeProStateCache(
     private val proStates = mutableMapOf<String, Boolean>().apply { put(DEFAULT_UID, initialIsPro) }
     private val registrationDates = mutableMapOf<String, String>()
     val savedValues = mutableListOf<Pair<String, Boolean>>()
+    val clearedUids = mutableListOf<String>()
+    var clearResult: Result<Unit> = Result.success(Unit)
 
     override suspend fun read(uid: String): Boolean = proStates[uid] ?: false
 
@@ -29,6 +31,8 @@ internal class FakeProStateCache(
     }
 
     override suspend fun clear(uid: String) {
+        clearedUids += uid
+        clearResult.getOrThrow()
         proStates.remove(uid)
         registrationDates.remove(uid)
     }

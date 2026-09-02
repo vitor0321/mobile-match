@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinMultiplatform)
+    id("org.jetbrains.kotlin.native.cocoapods")
 }
 
 kotlin {
@@ -13,6 +14,21 @@ kotlin {
     }
     iosArm64()
     iosSimulatorArm64()
+
+    cocoapods {
+        version = "1.0.0"
+        summary = "Match firestore client"
+        homepage = "https://github.com/walcker/mobile-match"
+        ios.deploymentTarget = "18.2"
+        podfile = project.file("../iosApp/Podfile")
+        pod("FirebaseFirestoreInternal")
+        pod("FirebaseFunctions")
+
+        framework {
+            baseName = "Firestore"
+            isStatic = true
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -29,6 +45,10 @@ kotlin {
             implementation("com.google.firebase:firebase-firestore-ktx")
             implementation("com.google.firebase:firebase-functions-ktx")
             implementation(libs.kotlinx.coroutines.play.services)
+        }
+        androidUnitTest.dependencies {
+            implementation(libs.junit)
+            implementation(libs.kotlin.testJunit)
         }
         iosMain.dependencies {
         }

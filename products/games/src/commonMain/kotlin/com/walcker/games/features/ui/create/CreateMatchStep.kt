@@ -40,6 +40,7 @@ import com.walcker.games.features.ui.create.component.RecurrencePicker
 import com.walcker.games.features.ui.create.component.SportPicker
 import com.walcker.games.features.ui.create.locationPicker.LocationPickerStep
 import com.walcker.games.features.ui.shared.common.LoginRequiredBottomSheet
+import com.walcker.games.strings.CreateMatchStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarFilterRow
@@ -56,7 +57,6 @@ internal class CreateMatchStep(
 ) : Screen {
     override val key: String get() = "create-match-${matchId ?: "new"}"
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -84,230 +84,27 @@ internal class CreateMatchStep(
             }
         }
 
-        val enabled = !state.isSubmitting
-
-        if (state.isLoading) {
-            Scaffold(containerColor = CedarTokens.colors.canvas) { padding ->
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CedarLoading(contentDescription = strings.editTitle)
-                }
-            }
-            return
-        }
-
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            topBar = {
-                CedarTopBar(
-                    title = if (state.isEditMode) strings.editTitle else strings.title,
-                    subtitle = if (state.isEditMode) strings.editSubtitle else strings.subtitle,
-                    onBack =
-                        if (state.isEditMode) {
-                            { navigator.pop() }
-                        } else {
-                            null
+        CreateMatchContent(
+            state = state,
+            onEvent = stepModel::onEvent,
+            strings = strings,
+            onBack = { navigator.pop() },
+            onLocationPick = { lat, lng ->
+                navigator.push(
+                    LocationPickerStep(
+                        initialLat = lat,
+                        initialLng = lng,
+                        onConfirm = { newLat, newLng ->
+                            stepModel.onEvent(
+                                CreateMatchEvents.LocationSelected(newLat, newLng),
+                            )
                         },
-                    backContentDescription = strings.backContentDescription,
+                    ),
                 )
             },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
-            LazyColumn(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .consumeWindowInsets(padding)
-                        .padding(padding)
-                        .imePadding(),
-                contentPadding = PaddingValues(vertical = CedarTokens.spacing.md),
-                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
-            ) {
-                item(key = "match-name") {
-                    FormTextField(
-                        value = state.venueName,
-                        onValueChange = {
-                            stepModel.onEvent(CreateMatchEvents.VenueNameChanged(it))
-                        },
-                        label = strings.matchNameLabel,
-                        placeholder = strings.matchNamePlaceholder,
-                        error = state.venueNameError,
-                        enabled = enabled,
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
+            snackbarHostState = snackbarHostState,
+        )
 
-                item(key = "sport") {
-                    Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs)) {
-                        Text(
-                            text = strings.sportLabel,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                        )
-                        SportPicker(
-                            selected = state.selectedSport,
-                            enabled = enabled,
-                            onSelect = { stepModel.onEvent(CreateMatchEvents.SportSelected(it)) },
-                        )
-                    }
-                }
-
-                item(key = "location") {
-                    val summary =
-                        listOf(state.address, state.neighborhood, state.city)
-                            .filter { it.isNotBlank() }
-                            .joinToString(", ")
-                    CedarFilterRow(
-                        label = strings.locationLabel,
-                        value = summary.takeIf { it.isNotBlank() },
-                        placeholder =
-                            if (state.isResolvingLocation) {
-                                strings.resolvingLocation
-                            } else {
-                                strings.chooseLocationLabel
-                            },
-                        onClick = {
-                            val lat = state.lat
-                            val lng = state.lng
-                            if (lat != null && lng != null) {
-                                navigator.push(
-                                    LocationPickerStep(
-                                        initialLat = lat,
-                                        initialLng = lng,
-                                        onConfirm = { newLat, newLng ->
-                                            stepModel.onEvent(
-                                                CreateMatchEvents.LocationSelected(newLat, newLng),
-                                            )
-                                        },
-                                    ),
-                                )
-                            }
-                        },
-                        enabled = enabled,
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
-
-                item(key = "section-when") {
-                    CedarSectionHeader(
-                        title = strings.sectionWhen,
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
-
-                item(key = "date-time") {
-                    DateTimeSection(
-                        selectedDateMillis = state.selectedDate,
-                        selectedTime = state.selectedTime,
-                        dateError = state.dateError,
-                        timeError = state.timeError,
-                        strings = strings,
-                        enabled = enabled,
-                        onDateSelected = { stepModel.onEvent(CreateMatchEvents.DateSelected(it)) },
-                        onTimeSelected = { hour, minute ->
-                            stepModel.onEvent(CreateMatchEvents.TimeSelected(hour, minute))
-                        },
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
-
-                item(key = "duration") {
-                    DurationPicker(
-                        selectedDurationMin = state.durationMin,
-                        strings = strings,
-                        enabled = enabled,
-                        onDurationSelected = {
-                            stepModel.onEvent(CreateMatchEvents.DurationSelected(it))
-                        },
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
-
-                item(key = "section-details") {
-                    CedarSectionHeader(
-                        title = strings.sectionDetails,
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
-
-                item(key = "players") {
-                    PlayersSlider(
-                        totalPlayers = state.totalPlayers,
-                        strings = strings,
-                        enabled = enabled,
-                        onPlayersChanged = {
-                            stepModel.onEvent(CreateMatchEvents.PlayersChanged(it))
-                        },
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
-
-                item(key = "recurrence") {
-                    Column(
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
-                    ) {
-                        RecurrencePicker(
-                            selected = state.recurrence,
-                            strings = strings,
-                            enabled = enabled,
-                            onRecurrenceSelected = {
-                                stepModel.onEvent(CreateMatchEvents.RecurrenceSelected(it))
-                            },
-                        )
-                        if (state.recurrence != RecurrenceOption.NONE) {
-                            Text(
-                                text = strings.recurrenceAutoCreateNotice,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                item(key = "price") {
-                    FormTextField(
-                        value = state.pricePerPlayer,
-                        onValueChange = { stepModel.onEvent(CreateMatchEvents.PriceChanged(it)) },
-                        label = strings.priceLabel,
-                        placeholder = strings.pricePlaceholder,
-                        error = state.priceError,
-                        helper = strings.priceHelper,
-                        enabled = enabled,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
-                    )
-                }
-
-                item(key = "submit") {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = CedarTokens.spacing.lg, vertical = CedarTokens.spacing.xs),
-                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        CedarPrimaryButton(
-                            text = if (state.isEditMode) strings.saveChanges else strings.submit,
-                            onClick = { stepModel.onEvent(CreateMatchEvents.Submit) },
-                            enabled = state.isFormValid,
-                            loading = state.isSubmitting,
-                        )
-                        if (!state.isFormValid) {
-                            Text(
-                                text = strings.validationError,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
-        }
         LoginRequiredBottomSheet(
             isVisible = showLoginSheet,
             strings = loginRequired,
@@ -317,5 +114,228 @@ internal class CreateMatchStep(
             },
             onDismiss = { showLoginSheet = false },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CreateMatchContent(
+    state: CreateMatchState,
+    onEvent: (CreateMatchEvents) -> Unit,
+    strings: CreateMatchStrings,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
+    onLocationPick: (lat: Double, lng: Double) -> Unit = { _, _ -> },
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val enabled = !state.isSubmitting
+
+    if (state.isLoading) {
+        Scaffold(modifier = modifier, containerColor = CedarTokens.colors.canvas) { padding ->
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CedarLoading(contentDescription = strings.editTitle)
+            }
+        }
+        return
+    }
+
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        topBar = {
+            CedarTopBar(
+                title = if (state.isEditMode) strings.editTitle else strings.title,
+                subtitle = if (state.isEditMode) strings.editSubtitle else strings.subtitle,
+                onBack = if (state.isEditMode) onBack else null,
+                backContentDescription = strings.backContentDescription,
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        LazyColumn(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding)
+                    .padding(padding)
+                    .imePadding(),
+            contentPadding = PaddingValues(vertical = CedarTokens.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
+        ) {
+            item(key = "match-name") {
+                FormTextField(
+                    value = state.venueName,
+                    onValueChange = {
+                        onEvent(CreateMatchEvents.VenueNameChanged(it))
+                    },
+                    label = strings.matchNameLabel,
+                    placeholder = strings.matchNamePlaceholder,
+                    error = state.venueNameError,
+                    enabled = enabled,
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "sport") {
+                Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs)) {
+                    Text(
+                        text = strings.sportLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                    )
+                    SportPicker(
+                        selected = state.selectedSport,
+                        enabled = enabled,
+                        onSelect = { onEvent(CreateMatchEvents.SportSelected(it)) },
+                    )
+                }
+            }
+
+            item(key = "location") {
+                val summary =
+                    listOf(state.address, state.neighborhood, state.city)
+                        .filter { it.isNotBlank() }
+                        .joinToString(", ")
+                CedarFilterRow(
+                    label = strings.locationLabel,
+                    value = summary.takeIf { it.isNotBlank() },
+                    placeholder =
+                        if (state.isResolvingLocation) {
+                            strings.resolvingLocation
+                        } else {
+                            strings.chooseLocationLabel
+                        },
+                    onClick = {
+                        val lat = state.lat
+                        val lng = state.lng
+                        if (lat != null && lng != null) {
+                            onLocationPick(lat, lng)
+                        }
+                    },
+                    enabled = enabled,
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "section-when") {
+                CedarSectionHeader(
+                    title = strings.sectionWhen,
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "date-time") {
+                DateTimeSection(
+                    selectedDateMillis = state.selectedDate,
+                    selectedTime = state.selectedTime,
+                    dateError = state.dateError,
+                    timeError = state.timeError,
+                    strings = strings,
+                    enabled = enabled,
+                    onDateSelected = { onEvent(CreateMatchEvents.DateSelected(it)) },
+                    onTimeSelected = { hour, minute ->
+                        onEvent(CreateMatchEvents.TimeSelected(hour, minute))
+                    },
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "duration") {
+                DurationPicker(
+                    selectedDurationMin = state.durationMin,
+                    strings = strings,
+                    enabled = enabled,
+                    onDurationSelected = {
+                        onEvent(CreateMatchEvents.DurationSelected(it))
+                    },
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "section-details") {
+                CedarSectionHeader(
+                    title = strings.sectionDetails,
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "players") {
+                PlayersSlider(
+                    totalPlayers = state.totalPlayers,
+                    strings = strings,
+                    enabled = enabled,
+                    onPlayersChanged = {
+                        onEvent(CreateMatchEvents.PlayersChanged(it))
+                    },
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "recurrence") {
+                Column(
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                ) {
+                    RecurrencePicker(
+                        selected = state.recurrence,
+                        strings = strings,
+                        enabled = enabled,
+                        onRecurrenceSelected = {
+                            onEvent(CreateMatchEvents.RecurrenceSelected(it))
+                        },
+                    )
+                    if (state.recurrence != RecurrenceOption.NONE) {
+                        Text(
+                            text = strings.recurrenceAutoCreateNotice,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            item(key = "price") {
+                FormTextField(
+                    value = state.pricePerPlayer,
+                    onValueChange = { onEvent(CreateMatchEvents.PriceChanged(it)) },
+                    label = strings.priceLabel,
+                    placeholder = strings.pricePlaceholder,
+                    error = state.priceError,
+                    helper = strings.priceHelper,
+                    enabled = enabled,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
+                )
+            }
+
+            item(key = "submit") {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = CedarTokens.spacing.lg, vertical = CedarTokens.spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    CedarPrimaryButton(
+                        text = if (state.isEditMode) strings.saveChanges else strings.submit,
+                        onClick = { onEvent(CreateMatchEvents.Submit) },
+                        enabled = state.isFormValid,
+                        loading = state.isSubmitting,
+                    )
+                    if (!state.isFormValid) {
+                        Text(
+                            text = strings.validationError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
     }
 }

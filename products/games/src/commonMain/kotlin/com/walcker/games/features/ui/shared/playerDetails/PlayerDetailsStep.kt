@@ -129,7 +129,7 @@ internal data class PlayerDetailsStep(
 }
 
 @Composable
-private fun PlayerDetailsContent(
+internal fun PlayerDetailsContent(
     state: PlayerDetailsState,
     player: PlayerDetails,
     strings: PlayerDetailsStrings,

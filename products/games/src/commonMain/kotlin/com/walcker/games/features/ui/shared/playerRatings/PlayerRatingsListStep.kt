@@ -32,6 +32,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.shared.playerDetails.component.RatingCard
 import com.walcker.games.features.ui.shared.playerRatings.component.SortRow
+import com.walcker.games.strings.PlayerRatingsStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarLoading
@@ -61,7 +62,6 @@ internal data class PlayerRatingsListStep(
         val state by stepModel.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         val strings = rememberGamesStrings().strings.playerRatings
-        val listState = rememberLazyListState()
 
         LaunchedEffect(stepModel) {
             stepModel.effects.collect { effect ->
@@ -72,119 +72,140 @@ internal data class PlayerRatingsListStep(
             }
         }
 
-        val shouldLoadMore by remember {
-            derivedStateOf {
-                val lastVisible =
-                    listState.layoutInfo.visibleItemsInfo
-                        .lastOrNull()
-                        ?.index ?: -1
-                val total = listState.layoutInfo.totalItemsCount
-                total > 0 && lastVisible >= total - PREFETCH_DISTANCE
+        PlayerRatingsContent(
+            state = state,
+            onEvent = stepModel::onEvent,
+            strings = strings,
+            onBack = navigator::pop,
+            snackbarHostState = snackbarHostState,
+        )
+    }
+}
+
+@Composable
+internal fun PlayerRatingsContent(
+    state: PlayerRatingsState,
+    onEvent: (PlayerRatingsEvents) -> Unit,
+    strings: PlayerRatingsStrings,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisible =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: -1
+            val total = listState.layoutInfo.totalItemsCount
+            total > 0 && lastVisible >= total - PREFETCH_DISTANCE
+        }
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { shouldLoadMore }.collect { reachedEnd ->
+            if (reachedEnd) {
+                onEvent(PlayerRatingsEvents.LoadNextPage)
             }
         }
+    }
 
-        LaunchedEffect(listState, stepModel) {
-            snapshotFlow { shouldLoadMore }.collect { reachedEnd ->
-                if (reachedEnd) {
-                    stepModel.onEvent(PlayerRatingsEvents.LoadNextPage)
-                }
-            }
-        }
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        topBar = {
+            CedarTopBar(
+                title = state.playerName.ifBlank { strings.title },
+                onBack = onBack,
+                backContentDescription = strings.back,
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        ) {
+            SortRow(
+                selected = state.sort,
+                strings = strings,
+                onSortSelected = { onEvent(PlayerRatingsEvents.SortChanged(it)) },
+            )
 
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            topBar = {
-                CedarTopBar(
-                    title = state.playerName.ifBlank { strings.title },
-                    onBack = navigator::pop,
-                    backContentDescription = strings.back,
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-            ) {
-                SortRow(
-                    selected = state.sort,
-                    strings = strings,
-                    onSortSelected = { stepModel.onEvent(PlayerRatingsEvents.SortChanged(it)) },
-                )
+            when {
+                state.isLoadingFirstPage ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CedarLoading(contentDescription = strings.loadingLabel)
+                    }
 
-                when {
-                    state.isLoadingFirstPage ->
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CedarLoading(contentDescription = strings.loadingLabel)
+                state.ratings.isEmpty() && state.errorMessage != null ->
+                    EmptyState(
+                        message = state.errorMessage ?: strings.errorLoading,
+                        actionLabel = strings.retry,
+                        onAction = { onEvent(PlayerRatingsEvents.Retry) },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                state.isEmpty ->
+                    EmptyState(
+                        message = strings.empty,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                else ->
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = CedarTokens.spacing.lg,
+                                vertical = CedarTokens.spacing.md,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+                    ) {
+                        items(state.ratings, key = { it.id }) { rating ->
+                            RatingCard(
+                                rating = rating,
+                                ratingLabel = strings.ratingValue(rating.rating.toFloat()),
+                                ratingAccessibilityLabel =
+                                    strings.ratingAccessibility(
+                                        rating.rating.toFloat(),
+                                    ),
+                            )
                         }
 
-                    state.ratings.isEmpty() && state.errorMessage != null ->
-                        EmptyState(
-                            message = state.errorMessage ?: strings.errorLoading,
-                            actionLabel = strings.retry,
-                            onAction = { stepModel.onEvent(PlayerRatingsEvents.Retry) },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-
-                    state.isEmpty ->
-                        EmptyState(
-                            message = strings.empty,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-
-                    else ->
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding =
-                                PaddingValues(
-                                    horizontal = CedarTokens.spacing.lg,
-                                    vertical = CedarTokens.spacing.md,
-                                ),
-                            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-                        ) {
-                            items(state.ratings, key = { it.id }) { rating ->
-                                RatingCard(
-                                    rating = rating,
-                                    ratingLabel = strings.ratingValue(rating.rating.toFloat()),
-                                    ratingAccessibilityLabel =
-                                        strings.ratingAccessibility(
-                                            rating.rating.toFloat(),
-                                        ),
-                                )
-                            }
-
-                            if (state.isLoadingNextPage) {
-                                item(key = "next-page-loading") {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(NextPageRowHeight),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(NextPageSpinnerSize),
-                                        )
-                                    }
-                                }
-                            } else if (state.hasMore) {
-                                item(key = "next-page-button") {
-                                    CedarSecondaryButton(
-                                        text = strings.loadMore,
-                                        onClick = {
-                                            stepModel.onEvent(PlayerRatingsEvents.LoadNextPage)
-                                        },
+                        if (state.isLoadingNextPage) {
+                            item(key = "next-page-loading") {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(NextPageRowHeight),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(NextPageSpinnerSize),
                                     )
                                 }
                             }
+                        } else if (state.hasMore) {
+                            item(key = "next-page-button") {
+                                CedarSecondaryButton(
+                                    text = strings.loadMore,
+                                    onClick = {
+                                        onEvent(PlayerRatingsEvents.LoadNextPage)
+                                    },
+                                )
+                            }
                         }
-                }
+                    }
             }
         }
     }

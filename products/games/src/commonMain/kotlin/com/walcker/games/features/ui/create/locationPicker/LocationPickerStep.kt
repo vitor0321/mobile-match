@@ -17,6 +17,7 @@ import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.create.component.LocationSummary
+import com.walcker.games.strings.CreateMatchStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarPrimaryButton
@@ -41,44 +42,16 @@ internal class LocationPickerStep(
         val state by stepModel.state.collectAsState()
         val strings = rememberGamesStrings().strings.createMatch
 
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            topBar = {
-                CedarTopBar(
-                    title = strings.locationLabel,
-                    subtitle = strings.pickLocationHint,
-                )
+        LocationPickerContent(
+            state = state,
+            strings = strings,
+            onAddressQueryChanged = stepModel::onAddressQueryChanged,
+            onAddressSearchSubmit = stepModel::onAddressSearchSubmit,
+            onConfirm = { lat, lng ->
+                onConfirm(lat, lng)
+                navigator.pop()
             },
-        ) { padding ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-            ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = CedarTokens.spacing.lg, vertical = CedarTokens.spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
-                ) {
-                    CedarSearchField(
-                        value = state.addressQuery,
-                        onValueChange = { stepModel.onAddressQueryChanged(it) },
-                        placeholder = strings.searchAddressPlaceholder,
-                        onSearch = { stepModel.onAddressSearchSubmit() },
-                        enabled = !state.isSearching,
-                    )
-                    if (state.searchError) {
-                        Text(
-                            text = strings.addressNotFound,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-
+            mapBody = { bodyModifier ->
                 LocationPickerMap(
                     initialLat = state.lat,
                     initialLng = state.lng,
@@ -86,36 +59,88 @@ internal class LocationPickerStep(
                     onLocationSettled = { picked ->
                         stepModel.onLocationChanged(picked.lat, picked.lng)
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                    modifier = bodyModifier,
                 )
+            },
+        )
+    }
+}
 
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(CedarTokens.spacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-                ) {
-                    LocationSummary(
-                        strings = strings,
-                        address = state.address,
-                        neighborhood = state.neighborhood,
-                        city = state.city,
-                        isResolvingLocation = state.isResolvingLocation,
-                    )
-                    CedarPrimaryButton(
-                        text = strings.confirmLocationLabel,
-                        onClick = {
-                            onConfirm(state.lat, state.lng)
-                            navigator.pop()
-                        },
-                        enabled = true,
-                        modifier = Modifier.fillMaxWidth(),
+@Composable
+internal fun LocationPickerContent(
+    state: LocationPickerState,
+    strings: CreateMatchStrings,
+    modifier: Modifier = Modifier,
+    onAddressQueryChanged: (String) -> Unit = {},
+    onAddressSearchSubmit: () -> Unit = {},
+    onConfirm: (lat: Double, lng: Double) -> Unit = { _, _ -> },
+    mapBody: @Composable (Modifier) -> Unit = {},
+) {
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        topBar = {
+            CedarTopBar(
+                title = strings.locationLabel,
+                subtitle = strings.pickLocationHint,
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = CedarTokens.spacing.lg, vertical = CedarTokens.spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+            ) {
+                CedarSearchField(
+                    value = state.addressQuery,
+                    onValueChange = onAddressQueryChanged,
+                    placeholder = strings.searchAddressPlaceholder,
+                    onSearch = onAddressSearchSubmit,
+                    enabled = !state.isSearching,
+                )
+                if (state.searchError) {
+                    Text(
+                        text = strings.addressNotFound,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
+            }
+
+            mapBody(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            )
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(CedarTokens.spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+            ) {
+                LocationSummary(
+                    strings = strings,
+                    address = state.address,
+                    neighborhood = state.neighborhood,
+                    city = state.city,
+                    isResolvingLocation = state.isResolvingLocation,
+                )
+                CedarPrimaryButton(
+                    text = strings.confirmLocationLabel,
+                    onClick = { onConfirm(state.lat, state.lng) },
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }

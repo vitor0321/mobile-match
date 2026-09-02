@@ -29,6 +29,7 @@ import com.walcker.games.features.ui.playerProfile.component.AvailabilityCard
 import com.walcker.games.features.ui.playerProfile.component.ProfileHeader
 import com.walcker.games.features.ui.playerProfile.component.RatingItemCard
 import com.walcker.games.features.ui.shared.common.LoginRequiredBottomSheet
+import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
@@ -76,142 +77,13 @@ internal class PlayerProfileStep : Screen {
             }
         }
 
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
-            if (state.isLoading) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CedarLoading(contentDescription = strings.loadingLabel)
-                }
-                return@Scaffold
-            }
-
-            if (state.userName == null) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                ) {
-                    CedarScreenTitle(title = strings.title)
-                    Box(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        EmptyState(
-                            message = strings.visitorMessage,
-                            supportingText = strings.visitorSupportingText,
-                            actionLabel = strings.visitorCta,
-                            onAction = { loginCoordinator.requestLogin() },
-                        )
-                    }
-                }
-                return@Scaffold
-            }
-
-            LazyColumn(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
-                contentPadding =
-                    PaddingValues(
-                        horizontal = CedarTokens.spacing.lg,
-                        vertical = CedarTokens.spacing.md,
-                    ),
-            ) {
-                item {
-                    CedarScreenTitle(title = strings.title)
-                }
-
-                item {
-                    ProfileHeader(
-                        name = state.userName,
-                        email = state.userEmail,
-                    )
-                }
-
-                item {
-                    AvailabilityCard(
-                        isAvailable = state.isAvailable,
-                        isUpdating = state.isUpdatingAvailability,
-                        strings = strings,
-                        onCheckedChange = { checked ->
-                            model.onEvent(PlayerProfileEvent.AvailabilityChanged(checked))
-                        },
-                    )
-                }
-
-                item {
-                    CedarStatRow(
-                        stats =
-                            persistentListOf(
-                                CedarStat(
-                                    value = state.matchesOrganized.toString(),
-                                    label = strings.statsOrganized,
-                                ),
-                                CedarStat(
-                                    value = state.matchesParticipated.toString(),
-                                    label = strings.statsParticipated,
-                                ),
-                                CedarStat(
-                                    value =
-                                        if (state.totalRatings > 0) {
-                                            formatDecimal(value = state.averageRating, decimals = 1)
-                                        } else {
-                                            strings.noRatingYet
-                                        },
-                                    label = strings.statsRating,
-                                    highlighted = state.totalRatings > 0,
-                                ),
-                            ),
-                    )
-                }
-
-                if (state.totalRatings > 0) {
-                    item {
-                        CedarSectionHeader(
-                            title = strings.ratingsReceived,
-                            subtitle = strings.ratingsCount(state.totalRatings),
-                        )
-                    }
-                    items(items = state.ratings, key = { it.id }) { rating ->
-                        RatingItemCard(rating = rating, strings = strings)
-                    }
-                }
-
-                item {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(top = CedarTokens.spacing.md),
-                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
-                    ) {
-                        Text(
-                            text = strings.settings,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        CedarSecondaryButton(
-                            text = strings.logout,
-                            onClick = { model.onEvent(PlayerProfileEvent.LogoutRequested) },
-                        )
-                    }
-                }
-            }
-        }
+        PlayerProfileContent(
+            state = state,
+            onEvent = model::onEvent,
+            strings = strings,
+            onLoginRequested = { loginCoordinator.requestLogin() },
+            snackbarHostState = snackbarHostState,
+        )
 
         LoginRequiredBottomSheet(
             isVisible = showLoginSheet,
@@ -222,5 +94,153 @@ internal class PlayerProfileStep : Screen {
             },
             onDismiss = { showLoginSheet = false },
         )
+    }
+}
+
+@Composable
+internal fun PlayerProfileContent(
+    state: PlayerProfileState,
+    onEvent: (PlayerProfileEvent) -> Unit,
+    strings: PlayerProfileStrings,
+    modifier: Modifier = Modifier,
+    onLoginRequested: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        if (state.isLoading) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CedarLoading(contentDescription = strings.loadingLabel)
+            }
+            return@Scaffold
+        }
+
+        if (state.userName == null) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+            ) {
+                CedarScreenTitle(title = strings.title)
+                Box(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    EmptyState(
+                        message = strings.visitorMessage,
+                        supportingText = strings.visitorSupportingText,
+                        actionLabel = strings.visitorCta,
+                        onAction = onLoginRequested,
+                    )
+                }
+            }
+            return@Scaffold
+        }
+
+        LazyColumn(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
+            contentPadding =
+                PaddingValues(
+                    horizontal = CedarTokens.spacing.lg,
+                    vertical = CedarTokens.spacing.md,
+                ),
+        ) {
+            item {
+                CedarScreenTitle(title = strings.title)
+            }
+
+            item {
+                ProfileHeader(
+                    name = state.userName,
+                    email = state.userEmail,
+                )
+            }
+
+            item {
+                AvailabilityCard(
+                    isAvailable = state.isAvailable,
+                    isUpdating = state.isUpdatingAvailability,
+                    strings = strings,
+                    onCheckedChange = { checked ->
+                        onEvent(PlayerProfileEvent.AvailabilityChanged(checked))
+                    },
+                )
+            }
+
+            item {
+                CedarStatRow(
+                    stats =
+                        persistentListOf(
+                            CedarStat(
+                                value = state.matchesOrganized.toString(),
+                                label = strings.statsOrganized,
+                            ),
+                            CedarStat(
+                                value = state.matchesParticipated.toString(),
+                                label = strings.statsParticipated,
+                            ),
+                            CedarStat(
+                                value =
+                                    if (state.totalRatings > 0) {
+                                        formatDecimal(value = state.averageRating, decimals = 1)
+                                    } else {
+                                        strings.noRatingYet
+                                    },
+                                label = strings.statsRating,
+                                highlighted = state.totalRatings > 0,
+                            ),
+                        ),
+                )
+            }
+
+            if (state.totalRatings > 0) {
+                item {
+                    CedarSectionHeader(
+                        title = strings.ratingsReceived,
+                        subtitle = strings.ratingsCount(state.totalRatings),
+                    )
+                }
+                items(items = state.ratings, key = { it.id }) { rating ->
+                    RatingItemCard(rating = rating, strings = strings)
+                }
+            }
+
+            item {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = CedarTokens.spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+                ) {
+                    Text(
+                        text = strings.settings,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    CedarSecondaryButton(
+                        text = strings.logout,
+                        onClick = { onEvent(PlayerProfileEvent.LogoutRequested) },
+                    )
+                }
+            }
+        }
     }
 }

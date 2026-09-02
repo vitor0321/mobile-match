@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-internal class IosPushNotificationService : PushNotificationService {
+public class IosPushNotificationService : PushNotificationService {
     private val _deviceToken = MutableSharedFlow<String?>(replay = 1)
     override val deviceToken: Flow<String?> = _deviceToken.asSharedFlow()
 

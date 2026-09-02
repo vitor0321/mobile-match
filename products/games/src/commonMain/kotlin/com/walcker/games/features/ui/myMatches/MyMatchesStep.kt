@@ -26,6 +26,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.ui.myMatches.component.MyMatchCard
+import com.walcker.games.strings.MyMatchesStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
@@ -36,7 +37,6 @@ import com.walcker.match.navigator.TabCoordinator
 import org.koin.compose.koinInject
 
 internal class MyMatchesStep : Screen {
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val tabCoordinator = koinInject<TabCoordinator>()
@@ -52,97 +52,117 @@ internal class MyMatchesStep : Screen {
             }
         }
 
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
-            Column(
+        MyMatchesContent(
+            state = state,
+            onEvent = model::onEvent,
+            strings = strings,
+            onExploreMatches = { tabCoordinator.requestTab(MainTab.Search) },
+            snackbarHostState = snackbarHostState,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun MyMatchesContent(
+    state: MyMatchesState,
+    onEvent: (MyMatchesEvent) -> Unit,
+    strings: MyMatchesStrings,
+    modifier: Modifier = Modifier,
+    onExploreMatches: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        ) {
+            CedarScreenTitle(
+                title = strings.title,
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-            ) {
-                CedarScreenTitle(
-                    title = strings.title,
-                    modifier =
-                        Modifier.padding(
+                    Modifier.padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
+            )
+
+            val isActiveTab = state.activeTab == MyMatchesTab.ACTIVE
+            PrimaryTabRow(selectedTabIndex = if (isActiveTab) 0 else 1) {
+                Tab(
+                    selected = isActiveTab,
+                    onClick = { onEvent(MyMatchesEvent.TabSelected(MyMatchesTab.ACTIVE)) },
+                    text = { Text(strings.activeTab) },
+                )
+                Tab(
+                    selected = !isActiveTab,
+                    onClick = { onEvent(MyMatchesEvent.TabSelected(MyMatchesTab.PAST)) },
+                    text = { Text(strings.pastTab) },
+                )
+            }
+
+            if (state.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CedarLoading(contentDescription = strings.loadingLabel)
+                }
+                return@Scaffold
+            }
+
+            val matches = if (isActiveTab) state.active else state.past
+            if (matches.isEmpty()) {
+                EmptyState(
+                    message = if (isActiveTab) strings.emptyActive else strings.emptyPast,
+                    supportingText = if (isActiveTab) strings.emptyActiveSubtitle else null,
+                    actionLabel = if (isActiveTab) strings.emptyActiveAction else null,
+                    onAction =
+                        if (isActiveTab) {
+                            onExploreMatches
+                        } else {
+                            null
+                        },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding =
+                        PaddingValues(
                             horizontal = CedarTokens.spacing.lg,
                             vertical = CedarTokens.spacing.md,
                         ),
-                )
-
-                val isActiveTab = state.activeTab == MyMatchesTab.ACTIVE
-                PrimaryTabRow(selectedTabIndex = if (isActiveTab) 0 else 1) {
-                    Tab(
-                        selected = isActiveTab,
-                        onClick = { model.onEvent(MyMatchesEvent.TabSelected(MyMatchesTab.ACTIVE)) },
-                        text = { Text(strings.activeTab) },
-                    )
-                    Tab(
-                        selected = !isActiveTab,
-                        onClick = { model.onEvent(MyMatchesEvent.TabSelected(MyMatchesTab.PAST)) },
-                        text = { Text(strings.pastTab) },
-                    )
-                }
-
-                if (state.isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CedarLoading(contentDescription = strings.loadingLabel)
-                    }
-                    return@Scaffold
-                }
-
-                val matches = if (isActiveTab) state.active else state.past
-                if (matches.isEmpty()) {
-                    EmptyState(
-                        message = if (isActiveTab) strings.emptyActive else strings.emptyPast,
-                        supportingText = if (isActiveTab) strings.emptyActiveSubtitle else null,
-                        actionLabel = if (isActiveTab) strings.emptyActiveAction else null,
-                        onAction =
-                            if (isActiveTab) {
-                                { tabCoordinator.requestTab(MainTab.Search) }
-                            } else {
-                                null
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+                ) {
+                    items(matches, key = { it.game.id }) { myMatch ->
+                        MyMatchCard(
+                            myMatch = myMatch,
+                            organizerBadge = strings.organizerBadge,
+                            participantBadge = strings.participantBadge,
+                            cancelActionLabel = strings.cancelAction,
+                            leaveActionLabel = strings.leaveAction,
+                            statusCancelledLabel = strings.statusCancelled,
+                            statusFinishedLabel = strings.statusFinished,
+                            playersLabel =
+                                strings.playersCount(
+                                    myMatch.game.confirmedPlayers,
+                                    myMatch.game.totalPlayers,
+                                ),
+                            isPast = !isActiveTab,
+                            onActionClick = {
+                                if (myMatch.role == MatchRole.ORGANIZER) {
+                                    onEvent(MyMatchesEvent.CancelRequested(myMatch.game.id))
+                                } else {
+                                    onEvent(MyMatchesEvent.LeaveRequested(myMatch.game.id))
+                                }
                             },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding =
-                            PaddingValues(
-                                horizontal = CedarTokens.spacing.lg,
-                                vertical = CedarTokens.spacing.md,
-                            ),
-                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-                    ) {
-                        items(matches, key = { it.game.id }) { myMatch ->
-                            MyMatchCard(
-                                myMatch = myMatch,
-                                organizerBadge = strings.organizerBadge,
-                                participantBadge = strings.participantBadge,
-                                cancelActionLabel = strings.cancelAction,
-                                leaveActionLabel = strings.leaveAction,
-                                statusCancelledLabel = strings.statusCancelled,
-                                statusFinishedLabel = strings.statusFinished,
-                                playersLabel =
-                                    strings.playersCount(
-                                        myMatch.game.confirmedPlayers,
-                                        myMatch.game.totalPlayers,
-                                    ),
-                                isPast = !isActiveTab,
-                                onActionClick = {
-                                    if (myMatch.role == MatchRole.ORGANIZER) {
-                                        model.onEvent(MyMatchesEvent.CancelRequested(myMatch.game.id))
-                                    } else {
-                                        model.onEvent(MyMatchesEvent.LeaveRequested(myMatch.game.id))
-                                    }
-                                },
-                            )
-                        }
+                        )
                     }
                 }
             }

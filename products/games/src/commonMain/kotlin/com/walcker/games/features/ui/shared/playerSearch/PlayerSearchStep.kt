@@ -34,6 +34,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsStep
 import com.walcker.games.features.ui.shared.playerSearch.component.PlayerFiltersPanel
 import com.walcker.games.features.ui.shared.playerSearch.component.PlayerSearchResultCard
+import com.walcker.games.strings.PlayerSearchStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
@@ -42,7 +43,6 @@ import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.tokens.CedarTokens
 
 internal class PlayerSearchStep : Screen {
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -62,134 +62,152 @@ internal class PlayerSearchStep : Screen {
             }
         }
 
-        if (state.showFiltersPanel) {
-            ModalBottomSheet(
-                onDismissRequest = { stepModel.onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
-                shape = CedarTokens.radius.sheet,
-                containerColor = MaterialTheme.colorScheme.surface,
-            ) {
-                PlayerFiltersPanel(
-                    filters = state.filters,
-                    strings = strings,
-                    onFiltersChanged = { filters ->
-                        stepModel.onEvent(PlayerSearchEvents.FiltersChanged(filters))
-                    },
-                    onResetFilters = { stepModel.onEvent(PlayerSearchEvents.ResetFilters) },
-                    onDismiss = { stepModel.onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
-                )
-            }
-        }
+        PlayerSearchContent(
+            state = state,
+            onEvent = stepModel::onEvent,
+            strings = strings,
+            snackbarHostState = snackbarHostState,
+        )
+    }
+}
 
-        Scaffold(
-            containerColor = CedarTokens.colors.canvas,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun PlayerSearchContent(
+    state: PlayerSearchState,
+    onEvent: (PlayerSearchEvents) -> Unit,
+    strings: PlayerSearchStrings,
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    if (state.showFiltersPanel) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
+            shape = CedarTokens.radius.sheet,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            PlayerFiltersPanel(
+                filters = state.filters,
+                strings = strings,
+                onFiltersChanged = { filters ->
+                    onEvent(PlayerSearchEvents.FiltersChanged(filters))
+                },
+                onResetFilters = { onEvent(PlayerSearchEvents.ResetFilters) },
+                onDismiss = { onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
+            )
+        }
+    }
+
+    Scaffold(
+        modifier = modifier,
+        containerColor = CedarTokens.colors.canvas,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        ) {
             Column(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                    Modifier.padding(
+                        horizontal = CedarTokens.spacing.lg,
+                        vertical = CedarTokens.spacing.md,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
             ) {
-                Column(
-                    modifier =
-                        Modifier.padding(
-                            horizontal = CedarTokens.spacing.lg,
-                            vertical = CedarTokens.spacing.md,
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
-                ) {
-                    CedarScreenTitle(title = strings.title, subtitle = strings.subtitle)
+                CedarScreenTitle(title = strings.title, subtitle = strings.subtitle)
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CedarSearchField(
+                        value = state.query,
+                        onValueChange = {
+                            onEvent(PlayerSearchEvents.QueryChanged(it))
+                        },
+                        placeholder = strings.placeholder,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = { onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
                     ) {
-                        CedarSearchField(
-                            value = state.query,
-                            onValueChange = {
-                                stepModel.onEvent(PlayerSearchEvents.QueryChanged(it))
-                            },
-                            placeholder = strings.placeholder,
-                            modifier = Modifier.weight(1f),
+                        Icon(
+                            imageVector = Icons.Filled.Tune,
+                            contentDescription = strings.filtersButton,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
-                        IconButton(
-                            onClick = { stepModel.onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Tune,
-                                contentDescription = strings.filtersButton,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
                     }
                 }
+            }
 
-                when {
-                    state.isLoading ->
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CedarLoading(contentDescription = strings.loadingLabel)
-                        }
+            when {
+                state.isLoading ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CedarLoading(contentDescription = strings.loadingLabel)
+                    }
 
-                    state.errorMessage != null ->
-                        EmptyState(
-                            message = state.errorMessage ?: strings.errorLoading,
-                            actionLabel = strings.retry,
-                            onAction = {
-                                stepModel.onEvent(PlayerSearchEvents.QueryChanged(state.query))
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                state.errorMessage != null ->
+                    EmptyState(
+                        message = state.errorMessage ?: strings.errorLoading,
+                        actionLabel = strings.retry,
+                        onAction = {
+                            onEvent(PlayerSearchEvents.QueryChanged(state.query))
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
-                    state.isIdle ->
-                        EmptyState(
-                            message = strings.emptySearchPrompt,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                state.isIdle ->
+                    EmptyState(
+                        message = strings.emptySearchPrompt,
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
-                    state.results.isEmpty() ->
-                        EmptyState(
-                            message = strings.emptyForQuery(state.query),
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                state.results.isEmpty() ->
+                    EmptyState(
+                        message = strings.emptyForQuery(state.query),
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
-                    else ->
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding =
-                                PaddingValues(
-                                    horizontal = CedarTokens.spacing.lg,
-                                    vertical = CedarTokens.spacing.xs,
-                                ),
-                            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-                        ) {
-                            if (state.reachedLimit) {
-                                item(key = "reached-limit") {
-                                    Text(
-                                        text = strings.reachedLimit,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-
-                            items(items = state.results, key = { it.userId }) { player ->
-                                PlayerSearchResultCard(
-                                    player = player,
-                                    ratingLabel = strings.ratingValue(player.averageRating),
-                                    ratingAccessibilityLabel =
-                                        strings.ratingAccessibility(
-                                            player.averageRating,
-                                        ),
-                                    onPlayerSelected = { userId ->
-                                        stepModel.onEvent(PlayerSearchEvents.SelectPlayer(userId))
-                                    },
+                else ->
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = CedarTokens.spacing.lg,
+                                vertical = CedarTokens.spacing.xs,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+                    ) {
+                        if (state.reachedLimit) {
+                            item(key = "reached-limit") {
+                                Text(
+                                    text = strings.reachedLimit,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
-                }
+
+                        items(items = state.results, key = { it.userId }) { player ->
+                            PlayerSearchResultCard(
+                                player = player,
+                                ratingLabel = strings.ratingValue(player.averageRating),
+                                ratingAccessibilityLabel =
+                                    strings.ratingAccessibility(
+                                        player.averageRating,
+                                    ),
+                                onPlayerSelected = { userId ->
+                                    onEvent(PlayerSearchEvents.SelectPlayer(userId))
+                                },
+                            )
+                        }
+                    }
             }
         }
     }

@@ -46,6 +46,7 @@ import com.walcker.games.features.ui.shared.matchDetail.component.StaticParticip
 import com.walcker.games.features.ui.shared.matchDetail.component.StatusBadge
 import com.walcker.games.features.ui.shared.ratings.RatingBottomSheet
 import com.walcker.games.features.ui.shared.reports.ReportBottomSheet
+import com.walcker.games.strings.GamesStrings
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.MatchDetailStrings
 import com.walcker.games.strings.ReportStrings
@@ -135,7 +136,6 @@ internal fun MatchDetailScreenContent(
 
     val state by stepModel.state.collectAsState()
     val strings = rememberGamesStrings().strings
-    val detail = strings.matchDetail
     val loginRequired = strings.loginRequired
     var showLoginSheet by remember { mutableStateOf(false) }
 
@@ -155,6 +155,34 @@ internal fun MatchDetailScreenContent(
         }
     }
 
+    MatchDetailContent(
+        state = state,
+        strings = strings,
+        onEvent = stepModel::onEvent,
+        onEditMatch = { onEditMatch(matchId) },
+    )
+
+    LoginRequiredBottomSheet(
+        isVisible = showLoginSheet,
+        strings = loginRequired,
+        onConfirm = {
+            loginCoordinator.requestLogin()
+            showLoginSheet = false
+        },
+        onDismiss = { showLoginSheet = false },
+    )
+}
+
+@Composable
+internal fun MatchDetailContent(
+    state: MatchDetailState,
+    strings: GamesStrings,
+    onEvent: (MatchDetailEvent) -> Unit,
+    modifier: Modifier = Modifier,
+    onEditMatch: () -> Unit = {},
+) {
+    val detail = strings.matchDetail
+
     val match = state.match
     val confirmed = state.participants?.confirmedCount ?: match?.confirmedPlayers ?: 0
     val total = state.participants?.totalSlots ?: match?.totalPlayers ?: 0
@@ -171,7 +199,7 @@ internal fun MatchDetailScreenContent(
 
     Column(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .background(CedarTokens.colors.canvas),
     ) {
@@ -190,7 +218,7 @@ internal fun MatchDetailScreenContent(
                     container = MaterialTheme.colorScheme.primaryContainer,
                     onContainer = MaterialTheme.colorScheme.onPrimaryContainer,
                     dismissContentDescription = detail.dismissContentDescription,
-                    onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissPromotion) },
+                    onDismiss = { onEvent(MatchDetailEvent.DismissPromotion) },
                 )
             }
             state.successMessage?.let { message ->
@@ -199,7 +227,7 @@ internal fun MatchDetailScreenContent(
                     container = CedarTokens.colors.availableContainer,
                     onContainer = CedarTokens.colors.availableText,
                     dismissContentDescription = detail.dismissContentDescription,
-                    onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissSuccess) },
+                    onDismiss = { onEvent(MatchDetailEvent.DismissSuccess) },
                 )
             }
             state.statusChangeMessage?.let { message ->
@@ -208,7 +236,7 @@ internal fun MatchDetailScreenContent(
                     container = MaterialTheme.colorScheme.secondaryContainer,
                     onContainer = MaterialTheme.colorScheme.onSecondaryContainer,
                     dismissContentDescription = detail.dismissContentDescription,
-                    onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissStatusChange) },
+                    onDismiss = { onEvent(MatchDetailEvent.DismissStatusChange) },
                 )
             }
             state.ratingErrorMessage?.let { message ->
@@ -217,7 +245,7 @@ internal fun MatchDetailScreenContent(
                     container = MaterialTheme.colorScheme.errorContainer,
                     onContainer = MaterialTheme.colorScheme.onErrorContainer,
                     dismissContentDescription = detail.dismissContentDescription,
-                    onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissRatingError) },
+                    onDismiss = { onEvent(MatchDetailEvent.DismissRatingError) },
                 )
             }
             state.reportErrorMessage?.let { message ->
@@ -226,7 +254,7 @@ internal fun MatchDetailScreenContent(
                     container = MaterialTheme.colorScheme.errorContainer,
                     onContainer = MaterialTheme.colorScheme.onErrorContainer,
                     dismissContentDescription = detail.dismissContentDescription,
-                    onDismiss = { stepModel.onEvent(MatchDetailEvent.DismissReportError) },
+                    onDismiss = { onEvent(MatchDetailEvent.DismissReportError) },
                 )
             }
 
@@ -237,12 +265,12 @@ internal fun MatchDetailScreenContent(
                     EmptyState(
                         message = state.errorMessage.orEmpty(),
                         actionLabel = detail.retry,
-                        onAction = { stepModel.onEvent(MatchDetailEvent.Retry) },
+                        onAction = { onEvent(MatchDetailEvent.Retry) },
                         modifier = Modifier.fillMaxWidth(),
                     )
 
                 match != null ->
-                    MatchDetailContent(
+                    MatchDetailBody(
                         match = match,
                         participants = state.participants,
                         detail = detail,
@@ -257,14 +285,14 @@ internal fun MatchDetailScreenContent(
                         currentUserId = state.currentUserId,
                         reportStrings = strings.reports,
                         onReportPlayer = { userId, displayName ->
-                            stepModel.onEvent(MatchDetailEvent.OpenReportSheet(userId, displayName))
+                            onEvent(MatchDetailEvent.OpenReportSheet(userId, displayName))
                         },
                         onRatePlayer = { userId, displayName ->
-                            stepModel.onEvent(MatchDetailEvent.OpenRatingSheet(userId, displayName))
+                            onEvent(MatchDetailEvent.OpenRatingSheet(userId, displayName))
                         },
-                        onLeaveMatch = { stepModel.onEvent(MatchDetailEvent.RequestLeaveMatch) },
-                        onCancelMatch = { stepModel.onEvent(MatchDetailEvent.RequestCancelMatch) },
-                        onEditMatch = { onEditMatch(matchId) },
+                        onLeaveMatch = { onEvent(MatchDetailEvent.RequestLeaveMatch) },
+                        onCancelMatch = { onEvent(MatchDetailEvent.RequestCancelMatch) },
+                        onEditMatch = onEditMatch,
                     )
 
                 else ->
@@ -287,7 +315,7 @@ internal fun MatchDetailScreenContent(
                 enabled = !isClosed && !state.isJoining,
                 isLoading = state.isJoining,
                 useAvailabilityTone = !isClosed && !isFull,
-                onClick = { stepModel.onEvent(MatchDetailEvent.JoinMatch) },
+                onClick = { onEvent(MatchDetailEvent.JoinMatch) },
             )
         }
     }
@@ -297,9 +325,9 @@ internal fun MatchDetailScreenContent(
         playerName = state.selectedPlayerForReport?.second ?: "",
         strings = strings.reports,
         isSubmitting = state.isSubmittingReport,
-        onDismiss = { stepModel.onEvent(MatchDetailEvent.CloseReportSheet) },
+        onDismiss = { onEvent(MatchDetailEvent.CloseReportSheet) },
         onSubmit = { reason, details ->
-            stepModel.onEvent(MatchDetailEvent.SubmitReport(reason, details))
+            onEvent(MatchDetailEvent.SubmitReport(reason, details))
         },
     )
 
@@ -307,9 +335,9 @@ internal fun MatchDetailScreenContent(
         isVisible = state.showRatingSheet,
         playerName = state.selectedPlayerForRating?.second ?: "",
         strings = strings.ratings,
-        onDismiss = { stepModel.onEvent(MatchDetailEvent.CloseRatingSheet) },
+        onDismiss = { onEvent(MatchDetailEvent.CloseRatingSheet) },
         onSubmit = { rating, comment, dimensions ->
-            stepModel.onEvent(MatchDetailEvent.SubmitRating(rating, comment, dimensions))
+            onEvent(MatchDetailEvent.SubmitRating(rating, comment, dimensions))
         },
         isLoading = state.isSubmittingRating,
     )
@@ -321,8 +349,8 @@ internal fun MatchDetailScreenContent(
             confirmLabel = detail.leaveDialogConfirm,
             dismissLabel = detail.dialogDismiss,
             isWorking = state.isLeavingMatch,
-            onConfirm = { stepModel.onEvent(MatchDetailEvent.ConfirmLeaveMatch) },
-            onDismiss = { stepModel.onEvent(MatchDetailEvent.CancelLeaveMatch) },
+            onConfirm = { onEvent(MatchDetailEvent.ConfirmLeaveMatch) },
+            onDismiss = { onEvent(MatchDetailEvent.CancelLeaveMatch) },
         )
     }
 
@@ -333,24 +361,14 @@ internal fun MatchDetailScreenContent(
             confirmLabel = detail.cancelDialogConfirm,
             dismissLabel = detail.dialogDismiss,
             isWorking = state.isCancellingMatch,
-            onConfirm = { stepModel.onEvent(MatchDetailEvent.ConfirmCancelMatch) },
-            onDismiss = { stepModel.onEvent(MatchDetailEvent.CancelCancelMatch) },
+            onConfirm = { onEvent(MatchDetailEvent.ConfirmCancelMatch) },
+            onDismiss = { onEvent(MatchDetailEvent.CancelCancelMatch) },
         )
     }
-
-    LoginRequiredBottomSheet(
-        isVisible = showLoginSheet,
-        strings = loginRequired,
-        onConfirm = {
-            loginCoordinator.requestLogin()
-            showLoginSheet = false
-        },
-        onDismiss = { showLoginSheet = false },
-    )
 }
 
 @Composable
-private fun MatchDetailContent(
+internal fun MatchDetailBody(
     match: Game,
     participants: ParticipantsSummary?,
     detail: MatchDetailStrings,

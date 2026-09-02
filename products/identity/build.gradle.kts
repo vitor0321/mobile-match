@@ -24,7 +24,6 @@ kotlin {
         ios.deploymentTarget = "18.2"
         podfile = project.file("../../iosApp/Podfile")
         pod("FirebaseAuth")
-        pod("FirebaseFunctions")
         pod("GoogleSignIn")
         pod("PurchasesHybridCommon") {
             version = "17.55.1"
@@ -42,6 +41,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.firestore)
             implementation(projects.navigator)
             implementation(projects.cedarDS)
 
