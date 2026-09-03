@@ -7,6 +7,7 @@ import com.walcker.games.features.domain.shared.model.CreateMatchRequest
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
+import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
 import com.walcker.identity.api.SessionHolder
@@ -25,14 +26,19 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
+private const val NEARBY_PAGE_SIZE = 30
+
 internal class FirestoreGameSource(
     private val firestore: FirestoreClient,
     private val sessionHolder: SessionHolder,
     private val locationProvider: LocationProvider,
 ) : GameSource {
-    override suspend fun openGames(radiusKm: Double): List<Game> {
+    override suspend fun openGames(
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): NearbyMatchesPage {
         val userLocation = resolveUserLocation()
-        return queryNearbyMatches(userLocation, radiusKm)
+        return queryNearbyMatches(userLocation, radiusKm, cursors)
     }
 
     private suspend fun resolveUserLocation(): Coordinates {
@@ -228,49 +234,73 @@ internal class FirestoreGameSource(
     private suspend fun queryNearbyMatches(
         center: Coordinates,
         radiusKm: Double,
-    ): List<Game> {
+        cursors: List<String?>?,
+    ): NearbyMatchesPage {
         val bounds = boundsForRadius(center, radiusKm)
+        val rangeCursors = cursors ?: List(bounds.size) { null }
 
-        val allMatches =
+        val rangePages =
             coroutineScope {
                 bounds
-                    .map { range ->
+                    .mapIndexed { index, range ->
                         async {
-                            queryRange(range.start, range.endInclusive)
+                            queryRangePage(
+                                startHash = range.start,
+                                endHash = range.endInclusive,
+                                cursor = rangeCursors.getOrNull(index),
+                            )
                         }
                     }.awaitAll()
-                    .flatten()
             }
 
         val nearbyMatches =
-            allMatches.filter { game ->
-                val gameLocation = Coordinates(lat = game.lat, lng = game.lng)
-                val distanceKm = distanceKm(center, gameLocation)
-                distanceKm <= radiusKm
-            }
+            rangePages
+                .flatMap { it.games }
+                .filter { game ->
+                    val gameLocation = Coordinates(lat = game.lat, lng = game.lng)
+                    distanceKm(center, gameLocation) <= radiusKm
+                }.sortedBy { game ->
+                    val gameLocation = Coordinates(lat = game.lat, lng = game.lng)
+                    distanceKm(center, gameLocation)
+                }
 
-        return nearbyMatches
-            .sortedBy { game ->
-                val gameLocation = Coordinates(lat = game.lat, lng = game.lng)
-                distanceKm(center, gameLocation)
-            }
+        return NearbyMatchesPage(
+            games = nearbyMatches,
+            rangeCursors = rangePages.map { it.nextCursor },
+        )
     }
 
-    private suspend fun queryRange(
+    private data class RangePage(
+        val games: List<Game>,
+        val nextCursor: String?,
+    )
+
+    private suspend fun queryRangePage(
         startHash: String,
         endHash: String,
-    ): List<Game> =
-        firestore
-            .collection("matches")
-            .query()
-            .where("status", "==", "OPEN")
-            .where("geohash", ">=", startHash)
-            .where("geohash", "<=", endHash)
-            .orderBy("geohash")
-            .get()
-            .getOrNull()
-            ?.mapNotNull { snapshot -> snapshot.toGame() }
-            ?: emptyList()
+        cursor: String?,
+    ): RangePage {
+        val query =
+            firestore
+                .collection("matches")
+                .query()
+                .where("status", "==", "OPEN")
+                .where("geohash", ">=", startHash)
+                .where("geohash", "<=", endHash)
+                .orderBy("geohash")
+        val paged = if (cursor != null) query.startAfter(cursor) else query
+
+        val games =
+            paged
+                .limit(NEARBY_PAGE_SIZE)
+                .get()
+                .getOrNull()
+                ?.mapNotNull { snapshot -> snapshot.toGame() }
+                ?: emptyList()
+
+        val nextCursor = if (games.size < NEARBY_PAGE_SIZE) null else games.last().geohash
+        return RangePage(games = games, nextCursor = nextCursor)
+    }
 
     override suspend fun getGameById(gameId: String): Game =
         firestore

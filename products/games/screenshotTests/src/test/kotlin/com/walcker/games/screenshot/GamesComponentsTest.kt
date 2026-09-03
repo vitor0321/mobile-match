@@ -16,6 +16,8 @@ import com.walcker.games.features.ui.shared.notifications.component.Notification
 import com.walcker.games.features.ui.shared.playerDetails.component.RatingCard
 import com.walcker.games.features.ui.shared.playerSearch.component.PlayerSearchResultCard
 import com.walcker.games.strings.PtBrGamesStrings
+import com.walcker.match.cedar.components.CedarAvailabilityButton
+import com.walcker.match.cedar.components.CedarPrimaryButton
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Rule
 import org.junit.Test
@@ -236,5 +238,17 @@ class GamesComponentsTest {
                 ratingSummary = null,
                 ratingsCountLabel = { n -> "$n avaliações" },
             )
+        }
+
+    @Test
+    fun primaryButton_loading_lightMode() =
+        snapshot {
+            CedarPrimaryButton(text = "Criar e publicar", onClick = {}, loading = true)
+        }
+
+    @Test
+    fun availabilityButton_loading_lightMode() =
+        snapshot {
+            CedarAvailabilityButton(text = "Estou disponível", onClick = {}, loading = true)
         }
 }

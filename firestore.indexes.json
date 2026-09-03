@@ -75,6 +75,20 @@
       ]
     },
     {
+      "collectionGroup": "participants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isConfirmed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "positionInWaitlist",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "ratings",
       "queryScope": "COLLECTION",
       "fields": [

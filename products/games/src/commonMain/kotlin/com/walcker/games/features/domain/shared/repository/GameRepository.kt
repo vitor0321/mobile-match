@@ -17,7 +17,11 @@ internal data class MyMatch(
 internal interface GameRepository {
     fun observeMatches(): Flow<List<Game>>
 
+    fun observeHasMoreMatches(): Flow<Boolean>
+
     suspend fun refresh(radiusKm: Double): Result<Unit>
+
+    suspend fun loadMoreMatches(radiusKm: Double): Result<Unit>
 
     suspend fun joinGame(gameId: String): Result<JoinMatchOutcome>
 

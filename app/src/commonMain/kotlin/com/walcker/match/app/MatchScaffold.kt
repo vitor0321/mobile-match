@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
@@ -28,6 +30,7 @@ import com.walcker.match.app.strings.AppShellStrings
 import com.walcker.match.app.strings.rememberAppShellStrings
 import com.walcker.match.cedar.components.MatchBottomBar
 import com.walcker.match.cedar.components.MatchBottomBarTab
+import com.walcker.match.cedar.dismissKeyboardOnTap
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.navigation.NavigatorHolder
 import com.walcker.match.navigator.DeepLink
@@ -85,6 +88,7 @@ private fun AuthenticatedShell() {
     val strings = rememberAppShellStrings()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(MainTab.Home) }
     val (showLogin, setShowLogin) = remember { mutableStateOf(false) }
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     val isAuthenticated: Boolean? by remember(sessionHolder) {
         sessionHolder.isAuthenticated
@@ -116,7 +120,7 @@ private fun AuthenticatedShell() {
         if (isAuthenticated == true) setShowLogin(false)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().dismissKeyboardOnTap()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier =
@@ -143,12 +147,14 @@ private fun AuthenticatedShell() {
                 }
             }
 
-            MatchBottomBar(
-                selectedTab = MatchBottomBarTab.entries[selectedTab.index],
-                onTabSelected = { tab -> setSelectedTab(tab.toMainTab()) },
-                label = { tab -> strings.labelFor(tab) },
-                showDot = { tab -> tab == MatchBottomBarTab.Activity },
-            )
+            if (!imeVisible) {
+                MatchBottomBar(
+                    selectedTab = MatchBottomBarTab.entries[selectedTab.index],
+                    onTabSelected = { tab -> setSelectedTab(tab.toMainTab()) },
+                    label = { tab -> strings.labelFor(tab) },
+                    showDot = { tab -> tab == MatchBottomBarTab.Activity },
+                )
+            }
         }
 
         if (showLogin) {

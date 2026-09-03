@@ -599,13 +599,6 @@ export const leaveMatch = onCall(
         throw new HttpsError("failed-precondition", `Cannot leave match in status ${status}.`);
       }
 
-      const participants: string[] = Array.isArray(match.participants)
-        ? match.participants.filter((x): x is string => typeof x === "string")
-        : [];
-      if (!participants.includes(uid)) {
-        throw new HttpsError("not-found", "You are not in this match.");
-      }
-
       // Organizer cannot leave — must cancel instead.
       if (match.organizerId === uid) {
         throw new HttpsError(
@@ -614,15 +607,27 @@ export const leaveMatch = onCall(
         );
       }
 
+      const participants: string[] = Array.isArray(match.participants)
+        ? match.participants.filter((x): x is string => typeof x === "string")
+        : [];
+      // Retry-safe: a segunda chamada de um cliente que já saiu (ex. resposta
+      // perdida por timeout de rede e o withRetry do client tenta de novo)
+      // não deve virar erro — o resultado desejado (estar fora da partida)
+      // já foi alcançado pela primeira chamada.
+      if (!participants.includes(uid)) {
+        return {matchId, status: "already_left" as const};
+      }
+
       const promotedUserId = await removeParticipant(txn, matchId, uid);
 
-      return {matchId, promotedUserId};
+      return {matchId, status: "left" as const, promotedUserId};
     });
   },
 );
 
 interface LeaveMatchResponse {
   matchId: string;
+  status: "left" | "already_left";
   /** UID of the user promoted from waitlist, if any. Undefined when no promotion happened. */
   promotedUserId?: string;
 }

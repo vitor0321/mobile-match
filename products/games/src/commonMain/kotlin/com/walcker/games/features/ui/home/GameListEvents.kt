@@ -16,6 +16,8 @@ internal sealed interface GameListEvents {
     data class SelectGame(
         val gameId: String,
     ) : GameListEvents
+
+    data object LoadMore : GameListEvents
 }
 
 internal sealed interface GameListEffect {

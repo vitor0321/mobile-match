@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -38,6 +37,7 @@ import com.walcker.games.strings.PlayerDetailsStrings
 import com.walcker.games.strings.RatingStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.RatingSummary
@@ -187,7 +187,7 @@ internal fun PlayerDetailsContent(
                                 .height(ReviewsLoadingHeight),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator()
+                        CedarLoading(contentDescription = strings.loadingLabel)
                     }
                 }
 

@@ -19,6 +19,12 @@ internal class InMemoryMatchCache {
             _matches.value = newMatches
         }
 
+    suspend fun appendAll(newMatches: List<Game>) =
+        mutex.withLock {
+            val existingIds = _matches.value.mapTo(mutableSetOf()) { it.id }
+            _matches.value = _matches.value + newMatches.filterNot { it.id in existingIds }
+        }
+
     suspend fun upsert(match: Game) =
         mutex.withLock {
             _matches.update { current ->

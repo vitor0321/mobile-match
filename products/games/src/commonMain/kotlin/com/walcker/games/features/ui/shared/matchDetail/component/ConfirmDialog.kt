@@ -1,13 +1,11 @@
 package com.walcker.games.features.ui.shared.matchDetail.component
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.tokens.CedarTokens
 
 private val DIALOG_SPINNER = 16.dp
@@ -30,10 +28,7 @@ internal fun ConfirmDialog(
         confirmButton = {
             TextButton(onClick = onConfirm, enabled = !isWorking) {
                 if (isWorking) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(DIALOG_SPINNER),
-                        strokeWidth = 2.dp,
-                    )
+                    CedarLoading(contentDescription = confirmLabel, size = DIALOG_SPINNER)
                 } else {
                     Text(confirmLabel)
                 }

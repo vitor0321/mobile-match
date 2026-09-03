@@ -3,6 +3,8 @@ package com.walcker.games.features.ui.home
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.data.home.preferences.GamesPreferences
+import com.walcker.games.features.domain.shared.model.Game
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.isDiscoverable
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.strings.GamesStringsHolder
@@ -68,6 +70,7 @@ internal class GameListStepModel(
                     _effects.send(GameListEffect.NavigateToMatchDetail(event.gameId))
                 }
             }
+            is GameListEvents.LoadMore -> loadMore()
         }
     }
 
@@ -76,25 +79,27 @@ internal class GameListStepModel(
             preferences.selectedSport,
             preferences.radiusKm,
             repository.observeMatches(),
-        ) { sport, radius, games ->
-            Triple(sport, radius, games)
-        }.onEach { (sport, radius, games) ->
+            repository.observeHasMoreMatches(),
+        ) { sport, radius, games, hasMore ->
+            GamesUpdate(sport, radius, games, hasMore)
+        }.onEach { update ->
             val nowSeconds =
                 kotlin.time.Clock.System
                     .now()
                     .toEpochMilliseconds() / MILLIS_PER_SECOND
             val filtered =
-                games
+                update.games
                     .filter { game ->
-                        (sport == null || game.sport == sport) && game.isDiscoverable(nowSeconds)
+                        (update.sport == null || game.sport == update.sport) && game.isDiscoverable(nowSeconds)
                     }.sortedBy { it.startsAtSeconds }
             _state.update {
                 it.copy(
                     strings = strings,
-                    selectedSport = sport,
-                    radiusKm = radius,
+                    selectedSport = update.sport,
+                    radiusKm = update.radius,
                     games = filtered.toImmutableList(),
                     preferencesLoaded = true,
+                    hasMore = update.hasMore,
                 )
             }
             homeViewCoordinator.markHomeDataReady()
@@ -120,4 +125,33 @@ internal class GameListStepModel(
                 }
         }
     }
+
+    private fun loadMore() {
+        val current = _state.value
+        if (current.isLoading || current.isLoadingMore || !current.hasMore) return
+
+        screenModelScope.launch {
+            _state.update { it.copy(isLoadingMore = true) }
+            val radiusKm = preferences.radiusKm.first()
+            repository
+                .loadMoreMatches(radiusKm)
+                .onSuccess {
+                    _state.update { it.copy(isLoadingMore = false) }
+                }.onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isLoadingMore = false,
+                            errorMessage = error.message ?: strings.loadErrorMessage,
+                        )
+                    }
+                }
+        }
+    }
+
+    private data class GamesUpdate(
+        val sport: Sport?,
+        val radius: Double,
+        val games: List<Game>,
+        val hasMore: Boolean,
+    )
 }

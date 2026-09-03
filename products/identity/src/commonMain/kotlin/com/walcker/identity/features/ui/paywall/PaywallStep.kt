@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
@@ -35,8 +34,8 @@ import com.walcker.identity.features.ui.paywall.components.PaywallLegalFooter
 import com.walcker.identity.features.ui.paywall.components.SubscriptionInfoSection
 import com.walcker.identity.strings.LocalIdentityStrings
 import com.walcker.identity.strings.WithIdentityStrings
-import com.walcker.match.cedar.CedarLoadingIndicator
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarTextButton
@@ -178,7 +177,10 @@ internal fun PaywallScreen(
                                 .padding(vertical = CedarTokens.spacing.xxl),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CedarLoadingIndicator(modifier = Modifier.size(LoadingIndicatorSize))
+                        CedarLoading(
+                            contentDescription = strings.loadingLabel,
+                            size = LoadingIndicatorSize,
+                        )
                     }
                     Text(
                         text = strings.loadingLabel,

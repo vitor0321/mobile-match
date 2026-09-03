@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -146,10 +144,9 @@ private fun ButtonContent(
     Crossfade(targetState = loading) { isLoading ->
         Box(contentAlignment = Alignment.Center) {
             if (isLoading) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
-                    color = LocalContentColor.current,
-                    modifier = Modifier.size(SpinnerSize),
+                CedarLoading(
+                    contentDescription = text,
+                    size = SpinnerSize,
                 )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {

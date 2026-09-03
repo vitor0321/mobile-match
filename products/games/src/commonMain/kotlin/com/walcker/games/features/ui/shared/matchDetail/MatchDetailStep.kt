@@ -2,6 +2,7 @@ package com.walcker.games.features.ui.shared.matchDetail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,6 +61,7 @@ import com.walcker.games.strings.ReportStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.CedarTextButton
@@ -71,6 +73,8 @@ import com.walcker.match.core.datetime.formatWhen
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.PromotionCoordinator
 import org.koin.compose.koinInject
+
+private val ActionLoadingSize = 28.dp
 
 internal class MatchDetailStep(
     val matchId: String,
@@ -590,33 +594,48 @@ internal fun MatchDetailBody(
                     fillWidth = false,
                     modifier = Modifier.weight(1f),
                 )
-                CedarSecondaryButton(
-                    text = detail.cancelMatch,
-                    onClick = onCancelMatch,
-                    enabled = !isClosed && !isCancellingMatch,
-                    loading = isCancellingMatch,
-                    fillWidth = false,
-                    modifier = Modifier.weight(1f),
-                )
+                if (isCancellingMatch) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        CedarLoading(contentDescription = detail.cancelMatch, size = ActionLoadingSize)
+                    }
+                } else {
+                    CedarSecondaryButton(
+                        text = detail.cancelMatch,
+                        onClick = onCancelMatch,
+                        enabled = !isClosed,
+                        fillWidth = false,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             } else if (isParticipant) {
-                CedarSecondaryButton(
-                    text = detail.leaveMatch,
-                    onClick = onLeaveMatch,
-                    enabled = !isClosed && !isLeavingMatch,
-                    loading = isLeavingMatch,
-                    fillWidth = false,
-                    modifier = Modifier.weight(1f),
-                )
+                if (isLeavingMatch) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        CedarLoading(contentDescription = detail.leaveMatch, size = ActionLoadingSize)
+                    }
+                } else {
+                    CedarSecondaryButton(
+                        text = detail.leaveMatch,
+                        onClick = onLeaveMatch,
+                        enabled = !isClosed,
+                        fillWidth = false,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
 
         if (isOrganizer && match.recurrence != RecurrenceOption.NONE) {
-            CedarTextButton(
-                text = detail.cancelMatchSeries,
-                onClick = onCancelMatchSeries,
-                enabled = !isCancellingSeries,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (isCancellingSeries) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CedarLoading(contentDescription = detail.cancelMatchSeries, size = ActionLoadingSize)
+                }
+            } else {
+                CedarTextButton(
+                    text = detail.cancelMatchSeries,
+                    onClick = onCancelMatchSeries,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }

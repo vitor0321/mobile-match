@@ -163,6 +163,9 @@ internal fun GameListContent(
                         strings = strings,
                         games = state.games,
                         onClick = { onEvent(GameListEvents.SelectGame(it)) },
+                        isLoadingMore = state.isLoadingMore,
+                        hasMore = state.hasMore,
+                        onLoadMore = { onEvent(GameListEvents.LoadMore) },
                     )
             }
         }

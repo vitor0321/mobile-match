@@ -74,6 +74,7 @@ internal class MyMatchesStepModel(
 
     private fun handleCancel(gameId: String) {
         screenModelScope.launch {
+            _state.update { it.copy(processingMatchId = gameId) }
             cancelMatch(gameId)
                 .onSuccess { refresh() }
                 .onFailure { error ->
@@ -82,11 +83,13 @@ internal class MyMatchesStepModel(
                             ?: stringsHolder.resolveStringsOrDefault().myMatches.cancelError
                     _state.update { it.copy(errorMessage = message) }
                 }
+            _state.update { it.copy(processingMatchId = null) }
         }
     }
 
     private fun handleLeave(gameId: String) {
         screenModelScope.launch {
+            _state.update { it.copy(processingMatchId = gameId) }
             leaveMatch(gameId)
                 .onSuccess { refresh() }
                 .onFailure { error ->
@@ -95,6 +98,7 @@ internal class MyMatchesStepModel(
                             ?: stringsHolder.resolveStringsOrDefault().myMatches.leaveError
                     _state.update { it.copy(errorMessage = message) }
                 }
+            _state.update { it.copy(processingMatchId = null) }
         }
     }
 

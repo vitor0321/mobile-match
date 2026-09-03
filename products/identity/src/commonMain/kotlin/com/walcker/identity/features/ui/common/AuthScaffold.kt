@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.walcker.match.cedar.CedarTopBar
+import com.walcker.match.cedar.dismissKeyboardOnTap
 import com.walcker.match.cedar.tokens.CedarTokens
 
 @Composable
@@ -49,6 +50,7 @@ internal fun AuthScaffold(
                     .consumeWindowInsets(padding)
                     .padding(padding)
                     .imePadding()
+                    .dismissKeyboardOnTap()
                     .verticalScroll(rememberScrollState())
                     .padding(
                         horizontal = CedarTokens.spacing.lg,

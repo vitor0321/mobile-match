@@ -5,11 +5,15 @@ import com.walcker.games.features.domain.shared.model.CreateMatchRequest
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
+import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import kotlinx.coroutines.flow.Flow
 
 internal interface GameSource {
-    suspend fun openGames(radiusKm: Double): List<Game>
+    suspend fun openGames(
+        radiusKm: Double,
+        cursors: List<String?>? = null,
+    ): NearbyMatchesPage
 
     suspend fun joinGame(gameId: String): JoinMatchOutcome
 

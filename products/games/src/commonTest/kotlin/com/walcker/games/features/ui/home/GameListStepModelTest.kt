@@ -140,4 +140,46 @@ class GameListStepModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun `hasMore reflects what the repository reports`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository)
+            advanceUntilIdle()
+
+            repository.emitHasMoreMatches(true)
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.hasMore)
+        }
+
+    @Test
+    fun `LoadMore asks the repository for the next page`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository)
+            advanceUntilIdle()
+            repository.emitHasMoreMatches(true)
+            advanceUntilIdle()
+
+            model.onEvent(GameListEvents.LoadMore)
+            advanceUntilIdle()
+
+            assertEquals(1, repository.loadMoreMatchesCalls.size)
+            assertTrue(!model.state.value.isLoadingMore)
+        }
+
+    @Test
+    fun `LoadMore is a no-op when there is nothing more to load`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository)
+            advanceUntilIdle()
+
+            model.onEvent(GameListEvents.LoadMore)
+            advanceUntilIdle()
+
+            assertTrue(repository.loadMoreMatchesCalls.isEmpty())
+        }
 }

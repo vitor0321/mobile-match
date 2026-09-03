@@ -15,20 +15,42 @@ import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.features.domain.shared.repository.MyMatch
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 internal class GameRepositoryImpl(
     private val source: GameSource,
     private val cache: InMemoryMatchCache,
 ) : GameRepository {
+    private var nearbyCursors: List<String?> = emptyList()
+    private val _hasMoreMatches = MutableStateFlow(false)
+
     override fun observeMatches(): Flow<List<Game>> = cache.matches
+
+    override fun observeHasMoreMatches(): Flow<Boolean> = _hasMoreMatches.asStateFlow()
 
     override suspend fun refresh(radiusKm: Double): Result<Unit> =
         runCatching {
             withRetry(shouldRetry = ::defaultShouldRetry) {
                 source.openGames(radiusKm)
             }
-        }.mapCatching { games ->
-            cache.replaceAll(games)
+        }.mapCatching { page ->
+            nearbyCursors = page.rangeCursors
+            _hasMoreMatches.value = page.hasMore
+            cache.replaceAll(page.games)
+        }.recoverCatching { error ->
+            throw error.toGamesError()
+        }
+
+    override suspend fun loadMoreMatches(radiusKm: Double): Result<Unit> =
+        runCatching {
+            withRetry(shouldRetry = ::defaultShouldRetry) {
+                source.openGames(radiusKm, cursors = nearbyCursors)
+            }
+        }.mapCatching { page ->
+            nearbyCursors = page.rangeCursors
+            _hasMoreMatches.value = page.hasMore
+            cache.appendAll(page.games)
         }.recoverCatching { error ->
             throw error.toGamesError()
         }

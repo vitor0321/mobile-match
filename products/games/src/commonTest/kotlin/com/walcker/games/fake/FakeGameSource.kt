@@ -6,12 +6,14 @@ import com.walcker.games.features.domain.shared.model.CreateMatchRequest
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
+import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 internal class FakeGameSource(
     var openGamesResult: () -> List<Game> = { listOf(game()) },
+    var openGamesRangeCursors: List<String?> = emptyList(),
     var joinGameResult: () -> JoinMatchOutcome = { JoinMatchOutcome.Confirmed(matchId = "match-1") },
     var leaveMatchResult: () -> LeaveMatchOutcome = { LeaveMatchOutcome(matchId = "match-1") },
     var cancelMatchResult: () -> CancelMatchOutcome = { CancelMatchOutcome.Cancelled(matchId = "match-1") },
@@ -22,6 +24,7 @@ internal class FakeGameSource(
 ) : GameSource {
     var openGamesCallCount: Int = 0
         private set
+    val openGamesCursorsCalls: MutableList<List<String?>?> = mutableListOf()
     var joinGameCallCount: Int = 0
         private set
     var createMatchCallCount: Int = 0
@@ -35,9 +38,13 @@ internal class FakeGameSource(
     var leaveMatchCallCount: Int = 0
         private set
 
-    override suspend fun openGames(radiusKm: Double): List<Game> {
+    override suspend fun openGames(
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): NearbyMatchesPage {
         openGamesCallCount++
-        return openGamesResult()
+        openGamesCursorsCalls += cursors
+        return NearbyMatchesPage(games = openGamesResult(), rangeCursors = openGamesRangeCursors)
     }
 
     override suspend fun joinGame(gameId: String): JoinMatchOutcome {

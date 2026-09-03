@@ -156,6 +156,7 @@ internal fun MyMatchesContent(
                                 ),
                             ratingsCountLabel = strings.ratingsCount,
                             isPast = !isActiveTab,
+                            isProcessing = state.processingMatchId == myMatch.game.id,
                             onActionClick = {
                                 if (myMatch.role == MatchRole.ORGANIZER) {
                                     onEvent(MyMatchesEvent.CancelRequested(myMatch.game.id))

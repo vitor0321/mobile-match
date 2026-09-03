@@ -455,18 +455,22 @@ exports.leaveMatch = (0, https_1.onCall)({ region: REGION }, async (request) => 
         if (status === "CANCELLED" || status === "FINISHED") {
             throw new https_1.HttpsError("failed-precondition", `Cannot leave match in status ${status}.`);
         }
-        const participants = Array.isArray(match.participants)
-            ? match.participants.filter((x) => typeof x === "string")
-            : [];
-        if (!participants.includes(uid)) {
-            throw new https_1.HttpsError("not-found", "You are not in this match.");
-        }
         // Organizer cannot leave — must cancel instead.
         if (match.organizerId === uid) {
             throw new https_1.HttpsError("failed-precondition", "Organizer must cancel the match, not leave it.");
         }
+        const participants = Array.isArray(match.participants)
+            ? match.participants.filter((x) => typeof x === "string")
+            : [];
+        // Retry-safe: a segunda chamada de um cliente que já saiu (ex. resposta
+        // perdida por timeout de rede e o withRetry do client tenta de novo)
+        // não deve virar erro — o resultado desejado (estar fora da partida)
+        // já foi alcançado pela primeira chamada.
+        if (!participants.includes(uid)) {
+            return { matchId, status: "already_left" };
+        }
         const promotedUserId = await removeParticipant(txn, matchId, uid);
-        return { matchId, promotedUserId };
+        return { matchId, status: "left", promotedUserId };
     });
 });
 // ---------------------------------------------------------------------------

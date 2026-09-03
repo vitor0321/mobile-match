@@ -23,12 +23,15 @@ internal class FakeGameRepository(
     var cancelMatchSeriesResult: Result<Unit> = Result.success(Unit),
     var leaveMatchResult: Result<LeaveMatchOutcome> = Result.success(LeaveMatchOutcome("match-1")),
     var getGameByIdResult: Result<Game> = Result.success(game()),
+    var loadMoreMatchesResult: Result<Unit> = Result.success(Unit),
 ) : GameRepository {
     private val matchesFlow = MutableStateFlow<List<Game>>(emptyList())
+    private val hasMoreMatchesFlow = MutableStateFlow(false)
     private val participantsFlow = MutableStateFlow<Result<ParticipantsSummary>?>(null)
     private val matchFlow = MutableStateFlow<Result<Game>?>(null)
 
     val refreshCalls: MutableList<Double> = mutableListOf()
+    val loadMoreMatchesCalls: MutableList<Double> = mutableListOf()
     val joinGameCalls: MutableList<String> = mutableListOf()
     val createMatchCalls: MutableList<CreateMatchRequest> = mutableListOf()
     val updateMatchCalls: MutableList<Pair<String, CreateMatchRequest>> = mutableListOf()
@@ -41,6 +44,10 @@ internal class FakeGameRepository(
         matchesFlow.value = games
     }
 
+    fun emitHasMoreMatches(hasMore: Boolean) {
+        hasMoreMatchesFlow.value = hasMore
+    }
+
     fun emitParticipants(result: Result<ParticipantsSummary>) {
         participantsFlow.value = result
     }
@@ -51,9 +58,16 @@ internal class FakeGameRepository(
 
     override fun observeMatches(): Flow<List<Game>> = matchesFlow.asStateFlow()
 
+    override fun observeHasMoreMatches(): Flow<Boolean> = hasMoreMatchesFlow.asStateFlow()
+
     override suspend fun refresh(radiusKm: Double): Result<Unit> {
         refreshCalls += radiusKm
         return refreshResult
+    }
+
+    override suspend fun loadMoreMatches(radiusKm: Double): Result<Unit> {
+        loadMoreMatchesCalls += radiusKm
+        return loadMoreMatchesResult
     }
 
     override suspend fun joinGame(gameId: String): Result<JoinMatchOutcome> {

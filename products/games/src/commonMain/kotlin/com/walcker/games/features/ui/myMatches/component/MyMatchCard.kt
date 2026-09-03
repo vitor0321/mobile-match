@@ -22,11 +22,14 @@ import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.repository.MyMatch
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarTag
 import com.walcker.match.cedar.components.CedarTagTone
 import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
+
+private val ActionLoadingSize = 28.dp
 
 @Composable
 internal fun MyMatchCard(
@@ -42,6 +45,7 @@ internal fun MyMatchCard(
     isPast: Boolean,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isProcessing: Boolean = false,
 ) {
     val game = myMatch.game
     val statusLabel =
@@ -131,27 +135,36 @@ internal fun MyMatchCard(
 
             if (statusLabel == null) {
                 val isOrganizer = myMatch.role == MatchRole.ORGANIZER
+                val actionLabel = if (isOrganizer) cancelActionLabel else leaveActionLabel
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = if (isOrganizer) Arrangement.End else Arrangement.Start,
                 ) {
-                    Text(
-                        text = if (isOrganizer) cancelActionLabel else leaveActionLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                        color =
-                            if (isOrganizer) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.75f)
-                            },
-                        modifier =
-                            Modifier
-                                .clip(CedarTokens.radius.smShape)
-                                .clickable(onClick = onActionClick, role = Role.Button)
-                                .defaultMinSize(minHeight = 48.dp)
-                                .wrapContentHeight(Alignment.CenterVertically)
-                                .padding(horizontal = CedarTokens.spacing.sm),
-                    )
+                    if (isProcessing) {
+                        CedarLoading(
+                            contentDescription = actionLabel,
+                            size = ActionLoadingSize,
+                            modifier = Modifier.padding(horizontal = CedarTokens.spacing.sm),
+                        )
+                    } else {
+                        Text(
+                            text = actionLabel,
+                            style = MaterialTheme.typography.labelLarge,
+                            color =
+                                if (isOrganizer) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.75f)
+                                },
+                            modifier =
+                                Modifier
+                                    .clip(CedarTokens.radius.smShape)
+                                    .clickable(onClick = onActionClick, role = Role.Button)
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .wrapContentHeight(Alignment.CenterVertically)
+                                    .padding(horizontal = CedarTokens.spacing.sm),
+                        )
+                    }
                 }
             }
         }

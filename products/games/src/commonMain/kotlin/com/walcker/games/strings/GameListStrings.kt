@@ -14,6 +14,7 @@ internal data class GameListStrings(
     val showMapAction: String,
     val showListAction: String,
     val ratingsCount: (Int) -> String,
+    val loadMore: String,
 )
 
 internal val gameListStringsEn =
@@ -37,6 +38,7 @@ internal val gameListStringsEn =
             }
         },
         ratingsCount = { n -> if (n == 1) "1 review" else "$n reviews" },
+        loadMore = "Load more",
     )
 
 internal val gameListStringsPt =
@@ -60,4 +62,5 @@ internal val gameListStringsPt =
             }
         },
         ratingsCount = { n -> if (n == 1) "1 avaliação" else "$n avaliações" },
+        loadMore = "Carregar mais",
     )

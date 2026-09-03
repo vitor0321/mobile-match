@@ -10,6 +10,7 @@ internal data class MyMatchesState(
     val active: List<MyMatch> = emptyList(),
     val past: List<MyMatch> = emptyList(),
     val errorMessage: String? = null,
+    val processingMatchId: String? = null,
 )
 
 internal sealed interface MyMatchesEvent {
