@@ -5,6 +5,7 @@ import com.walcker.games.features.data.shared.mapper.toDomain
 import com.walcker.games.features.data.shared.source.PlayerSource
 import com.walcker.games.features.domain.shared.error.GamesError
 import com.walcker.games.features.domain.shared.model.PlayerDetails
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.model.PlayerSearchResults
 import com.walcker.games.features.domain.shared.model.RatingSort
@@ -40,6 +41,13 @@ internal class PlayerRepositoryImpl(
             .onSuccess { player -> cache.putDetails(userId, player) }
             .recoverCatching { error -> throw mapToGamesError(error) }
     }
+
+    override suspend fun getPlayersRatingSummary(
+        userIds: List<String>,
+    ): Result<Map<String, PlayerRatingSummary>> =
+        source
+            .getPlayersRatingSummary(userIds)
+            .recoverCatching { error -> throw mapToGamesError(error) }
 
     override suspend fun getPlayerRatings(
         userId: String,

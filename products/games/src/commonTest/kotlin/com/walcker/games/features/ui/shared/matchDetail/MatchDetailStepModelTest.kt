@@ -3,6 +3,7 @@ package com.walcker.games.features.ui.shared.matchDetail
 import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
 import com.walcker.games.fake.FakeGameRepository
+import com.walcker.games.fake.FakePlayerRepository
 import com.walcker.games.fake.FakeRatingRepository
 import com.walcker.games.fake.FakeReportRepository
 import com.walcker.games.fake.FakeSessionHolder
@@ -19,12 +20,14 @@ import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
+import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.JoinGameUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCaseImpl
 import com.walcker.games.strings.GamesStringsHolder
@@ -67,6 +70,7 @@ class MatchDetailStepModelTest {
         gameRepository: FakeGameRepository = FakeGameRepository(),
         ratingRepository: FakeRatingRepository = FakeRatingRepository(),
         reportRepository: FakeReportRepository = FakeReportRepository(),
+        playerRepository: FakePlayerRepository = FakePlayerRepository(),
         sessionHolder: FakeSessionHolder = FakeSessionHolder(),
         promotionCoordinator: PromotionCoordinator = PromotionCoordinator(),
         analytics: FakeAnalyticsTracker = FakeAnalyticsTracker(),
@@ -79,8 +83,11 @@ class MatchDetailStepModelTest {
         joinGame = JoinGameUseCaseImpl(gameRepository),
         leaveMatch = LeaveMatchUseCaseImpl(gameRepository),
         cancelMatch = CancelMatchUseCaseImpl(gameRepository),
+        cancelMatchSeries = CancelMatchSeriesUseCaseImpl(gameRepository),
         submitRating = SubmitRatingUseCase(ratingRepository),
+        submitMatchRating = SubmitMatchRatingUseCase(ratingRepository),
         submitReport = SubmitReportUseCaseImpl(reportRepository),
+        playerRepository = playerRepository,
         sessionHolder = sessionHolder,
         promotionCoordinator = promotionCoordinator,
         stringsHolder = stringsHolder,

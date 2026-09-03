@@ -77,6 +77,13 @@ internal class GameRepositoryImpl(
             }
         }.recoverCatching { error -> throw error.toGamesError() }
 
+    override suspend fun cancelMatchSeries(matchId: String): Result<Unit> =
+        runCatching {
+            withRetry(shouldRetry = ::defaultShouldRetry) {
+                source.cancelMatchSeries(matchId)
+            }
+        }.recoverCatching { error -> throw error.toGamesError() }
+
     override suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome> =
         runCatching {
             withRetry(shouldRetry = ::defaultShouldRetry) {

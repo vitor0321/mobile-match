@@ -17,10 +17,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.Participant
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.strings.ReportStrings
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
+import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 
 @Composable
@@ -31,6 +34,8 @@ internal fun ParticipantRow(
     rateLabel: String,
     canRate: Boolean,
     canReport: Boolean,
+    ratingSummary: PlayerRatingSummary?,
+    ratingsCountLabel: (Int) -> String,
     reportStrings: ReportStrings,
     onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
@@ -64,6 +69,19 @@ internal fun ParticipantRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (ratingSummary != null && ratingSummary.ratingCount > 0) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RatingStars(rating = ratingSummary.rating, starSize = 12.dp)
+                    Text(
+                        text = ratingsCountLabel(ratingSummary.ratingCount),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             Text(
                 text = if (participant.hasPaid) "$statusLabel · $paidLabel" else statusLabel,
                 style = MaterialTheme.typography.labelSmall,

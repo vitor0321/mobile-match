@@ -24,6 +24,14 @@ internal class FakeRatingRepository(
         return submitResult
     }
 
+    override suspend fun submitMatchRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> {
+        submitCalls += "match:$matchId"
+        return submitResult
+    }
+
     override suspend fun getUserRatings(
         userId: String,
         limit: Int,

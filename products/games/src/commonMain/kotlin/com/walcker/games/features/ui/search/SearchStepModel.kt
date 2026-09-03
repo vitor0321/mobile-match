@@ -143,7 +143,7 @@ internal class SearchStepModel(
                     }
 
                 matchesText && matchesDateRange && matchesSport && matchesPrice
-            }
+            }.sortedBy { it.startsAtSeconds }
 
         _state.update {
             it.copy(

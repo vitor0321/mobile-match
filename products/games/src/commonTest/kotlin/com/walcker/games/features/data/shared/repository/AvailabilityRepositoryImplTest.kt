@@ -26,7 +26,7 @@ class AvailabilityRepositoryImplTest {
             val source = FakeAvailabilitySource()
             val repository = AvailabilityRepositoryImpl(source)
 
-            val result = repository.setAvailable("user-1", Availability(isAvailable = true))
+            val result = repository.setAvailable("user-1", isAvailable = true, availableUntilMs = null)
 
             assertTrue(result.isSuccess)
             assertEquals(1, source.setAvailableCallCount)

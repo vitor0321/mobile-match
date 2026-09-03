@@ -45,6 +45,7 @@ class GamesComponentsTest {
                 statusCancelledLabel = "Cancelada",
                 statusFinishedLabel = "Encerrada",
                 playersLabel = "6/10 jogadores",
+                ratingsCountLabel = { n -> "$n avaliações" },
                 isPast = false,
                 onActionClick = {},
             )
@@ -62,6 +63,7 @@ class GamesComponentsTest {
                 statusCancelledLabel = "Cancelada",
                 statusFinishedLabel = "Encerrada",
                 playersLabel = "6/10 jogadores",
+                ratingsCountLabel = { n -> "$n avaliações" },
                 isPast = false,
                 onActionClick = {},
             )
@@ -79,6 +81,7 @@ class GamesComponentsTest {
                 statusCancelledLabel = "Cancelada",
                 statusFinishedLabel = "Encerrada",
                 playersLabel = "10/10 jogadores",
+                ratingsCountLabel = { n -> "$n avaliações" },
                 isPast = true,
                 onActionClick = {},
             )
@@ -212,6 +215,8 @@ class GamesComponentsTest {
                 reportStrings = PtBrGamesStrings.reports,
                 onReportPlayer = { _, _ -> },
                 onRatePlayer = { _, _ -> },
+                ratingSummary = null,
+                ratingsCountLabel = { n -> "$n avaliações" },
             )
         }
 
@@ -228,6 +233,8 @@ class GamesComponentsTest {
                 reportStrings = PtBrGamesStrings.reports,
                 onReportPlayer = { _, _ -> },
                 onRatePlayer = { _, _ -> },
+                ratingSummary = null,
+                ratingsCountLabel = { n -> "$n avaliações" },
             )
         }
 }

@@ -18,24 +18,25 @@ import com.walcker.match.cedar.tokens.CedarTokens
 internal fun ProfileHeader(
     name: String?,
     email: String?,
+    fallbackName: String,
     modifier: Modifier = Modifier,
 ) {
-    if (name == null) return
+    val displayName = name ?: email ?: fallbackName
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PlayerAvatar(displayName = name, size = PlayerAvatarSize.Large)
+        PlayerAvatar(displayName = displayName, size = PlayerAvatarSize.Large)
         Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
             Text(
-                text = name,
+                text = displayName,
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (email != null) {
+            if (email != null && email != displayName) {
                 Text(
                     text = email,
                     style = MaterialTheme.typography.bodySmall,

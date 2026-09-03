@@ -7,17 +7,21 @@ import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
 import com.walcker.games.features.domain.shared.model.canBeRatedBy
+import com.walcker.games.features.domain.shared.repository.PlayerRepository
+import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.shared.usecase.JoinGameUseCase
 import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCase
+import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.ui.shared.notifications.getCurrentTimeMillis
@@ -53,6 +57,8 @@ internal data class MatchDetailState(
     val isCancellingMatch: Boolean = false,
     val showLeaveConfirmDialog: Boolean = false,
     val showCancelConfirmDialog: Boolean = false,
+    val isCancellingSeries: Boolean = false,
+    val showCancelSeriesConfirmDialog: Boolean = false,
     val statusChangeMessage: String? = null,
     val showRatingSheet: Boolean = false,
     val selectedPlayerForRating: Pair<String, String>? = null,
@@ -65,6 +71,9 @@ internal data class MatchDetailState(
     val currentUserId: String? = null,
     val canRate: Boolean = false,
     val isMatchOver: Boolean = false,
+    val showMatchRatingSheet: Boolean = false,
+    val isSubmittingMatchRating: Boolean = false,
+    val participantRatings: Map<String, PlayerRatingSummary> = emptyMap(),
 )
 
 internal sealed interface MatchDetailEvent {
@@ -75,6 +84,14 @@ internal sealed interface MatchDetailEvent {
     data object DismissPromotion : MatchDetailEvent
 
     data object JoinMatch : MatchDetailEvent
+
+    data object OpenMatchRatingSheet : MatchDetailEvent
+
+    data object CloseMatchRatingSheet : MatchDetailEvent
+
+    data class SubmitMatchRating(
+        val rating: Int,
+    ) : MatchDetailEvent
 
     data object DismissSuccess : MatchDetailEvent
 
@@ -91,6 +108,12 @@ internal sealed interface MatchDetailEvent {
     data object ConfirmCancelMatch : MatchDetailEvent
 
     data object CancelCancelMatch : MatchDetailEvent
+
+    data object RequestCancelSeries : MatchDetailEvent
+
+    data object ConfirmCancelSeries : MatchDetailEvent
+
+    data object CancelCancelSeries : MatchDetailEvent
 
     data class OpenRatingSheet(
         val userId: String,
@@ -140,8 +163,11 @@ internal class MatchDetailStepModel(
     private val joinGame: JoinGameUseCase,
     private val leaveMatch: LeaveMatchUseCase,
     private val cancelMatch: CancelMatchUseCase,
+    private val cancelMatchSeries: CancelMatchSeriesUseCase,
     private val submitRating: SubmitRatingUseCase,
+    private val submitMatchRating: SubmitMatchRatingUseCase,
     private val submitReport: SubmitReportUseCase,
+    private val playerRepository: PlayerRepository,
     private val sessionHolder: SessionHolder,
     private val promotionCoordinator: PromotionCoordinator,
     private val stringsHolder: GamesStringsHolder,
@@ -190,6 +216,13 @@ internal class MatchDetailStepModel(
                 _state.update { it.copy(justPromoted = false) }
             }
             MatchDetailEvent.JoinMatch -> joinMatchAction()
+            MatchDetailEvent.OpenMatchRatingSheet -> {
+                _state.update { it.copy(showMatchRatingSheet = true) }
+            }
+            MatchDetailEvent.CloseMatchRatingSheet -> {
+                _state.update { it.copy(showMatchRatingSheet = false) }
+            }
+            is MatchDetailEvent.SubmitMatchRating -> submitMatchRatingAction(event.rating)
             MatchDetailEvent.DismissSuccess -> {
                 _state.update { it.copy(successMessage = null, joinOutcome = null) }
             }
@@ -209,6 +242,13 @@ internal class MatchDetailStepModel(
             MatchDetailEvent.ConfirmCancelMatch -> cancelMatchAction()
             MatchDetailEvent.CancelCancelMatch -> {
                 _state.update { it.copy(showCancelConfirmDialog = false) }
+            }
+            MatchDetailEvent.RequestCancelSeries -> {
+                _state.update { it.copy(showCancelSeriesConfirmDialog = true) }
+            }
+            MatchDetailEvent.ConfirmCancelSeries -> cancelMatchSeriesAction()
+            MatchDetailEvent.CancelCancelSeries -> {
+                _state.update { it.copy(showCancelSeriesConfirmDialog = false) }
             }
             is MatchDetailEvent.OpenRatingSheet -> {
                 _state.update {
@@ -409,6 +449,36 @@ internal class MatchDetailStepModel(
         }
     }
 
+    private fun submitMatchRatingAction(rating: Int) {
+        val strings = stringsHolder.resolveStringsOrDefault().matchDetail
+        screenModelScope.launch {
+            _state.update { it.copy(isSubmittingMatchRating = true, errorMessage = null) }
+
+            submitMatchRating(matchId, rating)
+                .onSuccess { outcome ->
+                    val message =
+                        when (outcome) {
+                            is SubmitRatingOutcome.Recorded -> strings.matchRatingSubmitSuccess
+                            is SubmitRatingOutcome.AlreadyRated -> strings.matchRatingAlreadyRated
+                        }
+                    _state.update {
+                        it.copy(
+                            isSubmittingMatchRating = false,
+                            showMatchRatingSheet = false,
+                            successMessage = message,
+                        )
+                    }
+                }.onFailure {
+                    _state.update {
+                        it.copy(
+                            isSubmittingMatchRating = false,
+                            errorMessage = strings.matchRatingSubmitError,
+                        )
+                    }
+                }
+        }
+    }
+
     private fun leaveMatchAction() {
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
@@ -427,6 +497,32 @@ internal class MatchDetailStepModel(
                         it.copy(
                             isLeavingMatch = false,
                             errorMessage = strings.leaveError,
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun cancelMatchSeriesAction() {
+        val strings = stringsHolder.resolveStringsOrDefault().matchDetail
+        screenModelScope.launch {
+            _state.update {
+                it.copy(isCancellingSeries = true, showCancelSeriesConfirmDialog = false, errorMessage = null)
+            }
+
+            cancelMatchSeries(matchId)
+                .onSuccess {
+                    _state.update {
+                        it.copy(
+                            isCancellingSeries = false,
+                            successMessage = strings.cancelSeriesSuccess,
+                        )
+                    }
+                }.onFailure {
+                    _state.update {
+                        it.copy(
+                            isCancellingSeries = false,
+                            errorMessage = strings.cancelSeriesError,
                         )
                     }
                 }
@@ -513,8 +609,20 @@ internal class MatchDetailStepModel(
                     result.onSuccess { summary ->
                         detectPromotion(summary)
                         _state.update { it.copy(participants = summary) }
+                        loadParticipantRatings(summary)
                     }
                 }
+        }
+    }
+
+    private fun loadParticipantRatings(summary: ParticipantsSummary) {
+        val userIds = (summary.confirmed + summary.waitlist).map { it.userId }
+        if (userIds.isEmpty()) return
+
+        screenModelScope.launch {
+            playerRepository.getPlayersRatingSummary(userIds).onSuccess { ratings ->
+                _state.update { it.copy(participantRatings = ratings) }
+            }
         }
     }
 

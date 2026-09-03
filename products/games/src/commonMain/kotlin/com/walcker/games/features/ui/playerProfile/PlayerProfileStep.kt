@@ -25,10 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.playerProfile.component.AvailabilityCard
 import com.walcker.games.features.ui.playerProfile.component.ProfileHeader
 import com.walcker.games.features.ui.playerProfile.component.RatingItemCard
 import com.walcker.games.features.ui.shared.common.LoginRequiredBottomSheet
+import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsStep
 import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarLoading
@@ -37,10 +40,13 @@ import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.CedarStat
 import com.walcker.match.cedar.components.CedarStatRow
+import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.format.formatDecimal
 import com.walcker.match.navigator.LoginCoordinator
+import com.walcker.match.navigator.MatchDetailCoordinator
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.compose.koinInject
 
@@ -52,6 +58,8 @@ internal class PlayerProfileStep : Screen {
         val state by model.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         val loginCoordinator: LoginCoordinator = koinInject()
+        val matchDetailCoordinator: MatchDetailCoordinator = koinInject()
+        val navigator = LocalNavigator.currentOrThrow
         val loginRequired = rememberGamesStrings().strings.loginRequired
         var showLoginSheet by remember { mutableStateOf(false) }
 
@@ -69,10 +77,21 @@ internal class PlayerProfileStep : Screen {
             }
         }
 
+        LaunchedEffect(state.sportsErrorMessage) {
+            state.sportsErrorMessage?.let {
+                snackbarHostState.showSnackbar(it)
+                model.onEvent(PlayerProfileEvent.DismissSportsError)
+            }
+        }
+
         LaunchedEffect(model) {
             model.effects.collect { effect ->
                 when (effect) {
                     PlayerProfileEffect.RequireLogin -> showLoginSheet = true
+                    is PlayerProfileEffect.NavigateToMatchDetail ->
+                        matchDetailCoordinator.open(effect.matchId)
+                    is PlayerProfileEffect.NavigateToOwnPublicProfile ->
+                        navigator.push(PlayerDetailsStep(effect.userId))
                 }
             }
         }
@@ -124,12 +143,16 @@ internal fun PlayerProfileContent(
             return@Scaffold
         }
 
-        if (state.userName == null) {
+        if (state.userId == null) {
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(padding)
+                        .padding(
+                            horizontal = CedarTokens.spacing.lg,
+                            vertical = CedarTokens.spacing.md,
+                        ),
             ) {
                 CedarScreenTitle(title = strings.title)
                 Box(
@@ -167,10 +190,32 @@ internal fun PlayerProfileContent(
             }
 
             item {
-                ProfileHeader(
-                    name = state.userName,
-                    email = state.userEmail,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
+                    ProfileHeader(
+                        name = state.userName,
+                        email = state.userEmail,
+                        fallbackName = strings.fallbackAccountName,
+                    )
+                    CedarTextButton(
+                        text = strings.viewPublicProfileAction,
+                        onClick = { onEvent(PlayerProfileEvent.ViewPublicProfileClicked) },
+                    )
+                }
+            }
+
+            val nextMatch = state.nextMatch
+            if (nextMatch != null) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs)) {
+                        CedarSectionHeader(title = strings.nextMatchSection)
+                        MatchCard(
+                            venueName = nextMatch.game.venueName,
+                            startsAtSeconds = nextMatch.game.startsAtSeconds,
+                            onClick = { onEvent(PlayerProfileEvent.NextMatchClicked(nextMatch.game.id)) },
+                            metaLabel = "${nextMatch.game.sport.label} · ${nextMatch.game.neighborhood}",
+                        )
+                    }
+                }
             }
 
             item {
@@ -181,6 +226,12 @@ internal fun PlayerProfileContent(
                     onCheckedChange = { checked ->
                         onEvent(PlayerProfileEvent.AvailabilityChanged(checked))
                     },
+                    availableUntilTonight = state.availableUntilMs != null,
+                    onUntilTonightChange = { enabled ->
+                        onEvent(PlayerProfileEvent.AvailableUntilTonightToggled(enabled))
+                    },
+                    availableSports = state.availableSports,
+                    onSportToggled = { sport -> onEvent(PlayerProfileEvent.SportToggled(sport)) },
                 )
             }
 

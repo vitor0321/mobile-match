@@ -22,6 +22,11 @@ internal class RatingRepositoryImpl(
             .submitPlayerRating(matchId, ratedUserId, rating, comment, dimensions)
             .onSuccess { playerCache.invalidatePlayer(ratedUserId) }
 
+    override suspend fun submitMatchRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> = ratingSource.submitMatchRating(matchId, rating)
+
     override suspend fun getUserRatings(
         userId: String,
         limit: Int,

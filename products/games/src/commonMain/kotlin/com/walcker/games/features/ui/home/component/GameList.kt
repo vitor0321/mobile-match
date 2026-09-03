@@ -37,6 +37,9 @@ internal fun GameList(
                 slotsLabel = strings.slotsBadge(game.openSlots),
                 openSlots = game.openSlots,
                 onClick = { onClick(game.id) },
+                matchRating = game.matchRating.toFloat().takeIf { game.matchRatingCount > 0 },
+                matchRatingCountLabel =
+                    strings.ratingsCount(game.matchRatingCount).takeIf { game.matchRatingCount > 0 },
             )
         }
     }

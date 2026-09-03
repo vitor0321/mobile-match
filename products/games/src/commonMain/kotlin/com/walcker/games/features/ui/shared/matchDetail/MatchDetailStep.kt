@@ -19,19 +19,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
+import com.walcker.games.features.domain.shared.model.RecurrenceOption
+import com.walcker.games.features.domain.shared.repository.PlayerRepository
+import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.shared.usecase.JoinGameUseCase
 import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCase
+import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.ui.create.CreateMatchStep
@@ -55,7 +62,9 @@ import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.datetime.formatWhen
@@ -104,7 +113,9 @@ internal fun MatchDetailScreenContent(
     val observeMatch: ObserveMatchUseCase = koinInject()
     val observeParticipants: ObserveParticipantsUseCase = koinInject()
     val submitRating: SubmitRatingUseCase = koinInject()
+    val submitMatchRating: SubmitMatchRatingUseCase = koinInject()
     val submitReport: SubmitReportUseCase = koinInject()
+    val playerRepository: PlayerRepository = koinInject()
     val sessionHolder: SessionHolder = koinInject()
     val promotionCoordinator: PromotionCoordinator = koinInject()
     val stringsHolder: GamesStringsHolder = koinInject()
@@ -114,6 +125,7 @@ internal fun MatchDetailScreenContent(
     val joinGame: JoinGameUseCase = koinInject()
     val leaveGame: LeaveMatchUseCase = koinInject()
     val cancelGame: CancelMatchUseCase = koinInject()
+    val cancelSeries: CancelMatchSeriesUseCase = koinInject()
 
     val stepModel =
         remember {
@@ -124,8 +136,11 @@ internal fun MatchDetailScreenContent(
                 joinGame = joinGame,
                 leaveMatch = leaveGame,
                 cancelMatch = cancelGame,
+                cancelMatchSeries = cancelSeries,
                 submitRating = submitRating,
+                submitMatchRating = submitMatchRating,
                 submitReport = submitReport,
+                playerRepository = playerRepository,
                 sessionHolder = sessionHolder,
                 promotionCoordinator = promotionCoordinator,
                 stringsHolder = stringsHolder,
@@ -168,6 +183,7 @@ internal fun MatchDetailScreenContent(
         onConfirm = {
             loginCoordinator.requestLogin()
             showLoginSheet = false
+            onDismiss()
         },
         onDismiss = { showLoginSheet = false },
     )
@@ -282,7 +298,10 @@ internal fun MatchDetailContent(
                         isMatchOver = state.isMatchOver,
                         isLeavingMatch = state.isLeavingMatch,
                         isCancellingMatch = state.isCancellingMatch,
+                        isCancellingSeries = state.isCancellingSeries,
                         currentUserId = state.currentUserId,
+                        isParticipant = isParticipant,
+                        participantRatings = state.participantRatings,
                         reportStrings = strings.reports,
                         onReportPlayer = { userId, displayName ->
                             onEvent(MatchDetailEvent.OpenReportSheet(userId, displayName))
@@ -290,8 +309,10 @@ internal fun MatchDetailContent(
                         onRatePlayer = { userId, displayName ->
                             onEvent(MatchDetailEvent.OpenRatingSheet(userId, displayName))
                         },
+                        onRateMatch = { onEvent(MatchDetailEvent.OpenMatchRatingSheet) },
                         onLeaveMatch = { onEvent(MatchDetailEvent.RequestLeaveMatch) },
                         onCancelMatch = { onEvent(MatchDetailEvent.RequestCancelMatch) },
+                        onCancelMatchSeries = { onEvent(MatchDetailEvent.RequestCancelSeries) },
                         onEditMatch = onEditMatch,
                     )
 
@@ -342,6 +363,15 @@ internal fun MatchDetailContent(
         isLoading = state.isSubmittingRating,
     )
 
+    MatchRatingBottomSheet(
+        isVisible = state.showMatchRatingSheet,
+        strings = detail,
+        starContentDescription = strings.ratings.starContentDescription,
+        onDismiss = { onEvent(MatchDetailEvent.CloseMatchRatingSheet) },
+        onSubmit = { rating -> onEvent(MatchDetailEvent.SubmitMatchRating(rating)) },
+        isLoading = state.isSubmittingMatchRating,
+    )
+
     if (state.showLeaveConfirmDialog) {
         ConfirmDialog(
             title = detail.leaveDialogTitle,
@@ -365,6 +395,18 @@ internal fun MatchDetailContent(
             onDismiss = { onEvent(MatchDetailEvent.CancelCancelMatch) },
         )
     }
+
+    if (state.showCancelSeriesConfirmDialog) {
+        ConfirmDialog(
+            title = detail.cancelSeriesDialogTitle,
+            body = detail.cancelSeriesDialogBody,
+            confirmLabel = detail.cancelSeriesDialogConfirm,
+            dismissLabel = detail.dialogDismiss,
+            isWorking = state.isCancellingSeries,
+            onConfirm = { onEvent(MatchDetailEvent.ConfirmCancelSeries) },
+            onDismiss = { onEvent(MatchDetailEvent.CancelCancelSeries) },
+        )
+    }
 }
 
 @Composable
@@ -379,14 +421,19 @@ internal fun MatchDetailBody(
     canRate: Boolean,
     isMatchOver: Boolean,
     currentUserId: String?,
+    isParticipant: Boolean,
+    participantRatings: Map<String, PlayerRatingSummary>,
     reportStrings: ReportStrings,
     onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
+    onRateMatch: () -> Unit,
     onLeaveMatch: () -> Unit,
     onCancelMatch: () -> Unit,
+    onCancelMatchSeries: () -> Unit,
     onEditMatch: () -> Unit,
     isLeavingMatch: Boolean,
     isCancellingMatch: Boolean,
+    isCancellingSeries: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -410,6 +457,19 @@ internal fun MatchDetailBody(
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+            if (match.matchRatingCount > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                ) {
+                    RatingStars(rating = match.matchRating.toFloat())
+                    Text(
+                        text = detail.ratingsCount(match.matchRatingCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             Text(
                 text = formatWhen(startsAtSeconds = match.startsAtSeconds),
                 style = MaterialTheme.typography.titleLarge,
@@ -468,11 +528,32 @@ internal fun MatchDetailBody(
             )
         }
 
-        Text(
-            text = detail.organizer(match.organizerName, match.organizerRating),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+        ) {
+            Text(
+                text = detail.organizedBy(match.organizerName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (match.organizerRatingCount > 0) {
+                RatingStars(rating = match.organizerRating.toFloat(), starSize = 12.dp)
+                Text(
+                    text = detail.ratingsCount(match.organizerRatingCount),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        if (canRate) {
+            CedarSecondaryButton(
+                text = detail.rateMatchAction,
+                onClick = onRateMatch,
+                fillWidth = false,
+            )
+        }
 
         CedarSectionHeader(title = detail.participants)
 
@@ -482,6 +563,7 @@ internal fun MatchDetailBody(
                 detail = detail,
                 canRate = canRate,
                 currentUserId = currentUserId,
+                participantRatings = participantRatings,
                 reportStrings = reportStrings,
                 onReportPlayer = onReportPlayer,
                 onRatePlayer = onRatePlayer,
@@ -516,7 +598,7 @@ internal fun MatchDetailBody(
                     fillWidth = false,
                     modifier = Modifier.weight(1f),
                 )
-            } else {
+            } else if (isParticipant) {
                 CedarSecondaryButton(
                     text = detail.leaveMatch,
                     onClick = onLeaveMatch,
@@ -526,6 +608,15 @@ internal fun MatchDetailBody(
                     modifier = Modifier.weight(1f),
                 )
             }
+        }
+
+        if (isOrganizer && match.recurrence != RecurrenceOption.NONE) {
+            CedarTextButton(
+                text = detail.cancelMatchSeries,
+                onClick = onCancelMatchSeries,
+                enabled = !isCancellingSeries,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

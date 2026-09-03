@@ -12,6 +12,7 @@ import com.walcker.identity.features.ui.login.LoginStepModel
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.identity.strings.PtBrIdentityStrings
 import com.walcker.match.core.navigation.NavigatorHolder
+import com.walcker.match.navigator.LoginCoordinator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -70,6 +71,7 @@ class LoginStepModelTest {
                 signUseCase = signUseCase,
                 navigatorHolder = NavigatorHolder(),
                 stringsHolder = stringsHolder,
+                loginCoordinator = LoginCoordinator(),
             )
         return model to
             Sources(

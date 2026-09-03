@@ -2,12 +2,16 @@ package com.walcker.games.features.data.shared.source
 
 import com.walcker.games.features.domain.shared.model.DimensionAverage
 import com.walcker.games.features.domain.shared.model.PROFILE_FIELD_IS_BANNED
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.model.RatingDimension
 import com.walcker.games.features.domain.shared.model.RatingSort
 import com.walcker.games.features.domain.shared.model.RatingsPage
 import com.walcker.match.firestore.DocumentSnapshot
 import com.walcker.match.firestore.FirestoreClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 internal class FirestorePlayerSource(
     private val firestore: FirestoreClient,
@@ -51,6 +55,38 @@ internal class FirestorePlayerSource(
             snapshot.toPlayerDetailsDto()
                 ?: throw NoSuchElementException("Player $userId has no name on the profile.")
         }
+
+    // Leituras individuais em paralelo, não um whereIn por id de documento: a
+    // abstração FirestoreClient não expõe FieldPath.documentId(), e o custo de
+    // leitura no Firestore é o mesmo dos dois jeitos (um doc lido = um doc
+    // cobrado, batched ou não) — só muda o número de round-trips, que o
+    // coroutineScope já paraleliza.
+    override suspend fun getPlayersRatingSummary(userIds: List<String>): Result<Map<String, PlayerRatingSummary>> =
+        runCatching {
+            coroutineScope {
+                userIds
+                    .distinct()
+                    .map { userId ->
+                        async {
+                            val snapshot =
+                                firestore
+                                    .document("$PROFILES_COLLECTION/$userId")
+                                    .get()
+                                    .getOrNull()
+                            userId to snapshot?.toPlayerRatingSummary()
+                        }
+                    }.awaitAll()
+                    .mapNotNull { (userId, summary) -> summary?.let { userId to it } }
+                    .toMap()
+            }
+        }
+
+    private fun DocumentSnapshot.toPlayerRatingSummary(): PlayerRatingSummary? {
+        val count = (getLong(FIELD_RATING_COUNT) ?: 0L).toInt()
+        if (count <= 0) return null
+        val rating = getDouble(FIELD_RATING)?.toFloat() ?: return null
+        return PlayerRatingSummary(rating = rating, ratingCount = count)
+    }
 
     override suspend fun getPlayerRatings(
         userId: String,

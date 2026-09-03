@@ -1,6 +1,7 @@
 package com.walcker.games.features.data.shared.source
 
 import com.walcker.games.features.domain.shared.model.Availability
+import com.walcker.games.features.domain.shared.model.Sport
 import kotlinx.coroutines.flow.Flow
 
 internal interface AvailabilitySource {
@@ -8,6 +9,12 @@ internal interface AvailabilitySource {
 
     suspend fun setAvailable(
         userId: String,
-        availability: Availability,
+        isAvailable: Boolean,
+        availableUntilMs: Long?,
+    ): Result<Unit>
+
+    suspend fun setAvailableSports(
+        userId: String,
+        sports: Set<Sport>,
     ): Result<Unit>
 }

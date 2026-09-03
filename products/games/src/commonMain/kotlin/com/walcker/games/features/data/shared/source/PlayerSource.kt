@@ -1,6 +1,7 @@
 package com.walcker.games.features.data.shared.source
 
 import com.walcker.games.features.domain.shared.model.DimensionAverage
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.model.RatingDimension
 import com.walcker.games.features.domain.shared.model.RatingSort
@@ -13,6 +14,8 @@ internal interface PlayerSource {
     ): Result<PlayerSearchPageDto>
 
     suspend fun getPlayerDetails(userId: String): Result<PlayerDetailsDto>
+
+    suspend fun getPlayersRatingSummary(userIds: List<String>): Result<Map<String, PlayerRatingSummary>>
 
     suspend fun getPlayerRatings(
         userId: String,

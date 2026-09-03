@@ -13,6 +13,7 @@ internal data class GameListStrings(
     val slotsBadge: (openSlots: Int) -> String,
     val showMapAction: String,
     val showListAction: String,
+    val ratingsCount: (Int) -> String,
 )
 
 internal val gameListStringsEn =
@@ -35,6 +36,7 @@ internal val gameListStringsEn =
                 else -> "$open slots"
             }
         },
+        ratingsCount = { n -> if (n == 1) "1 review" else "$n reviews" },
     )
 
 internal val gameListStringsPt =
@@ -57,4 +59,5 @@ internal val gameListStringsPt =
                 else -> "$open vagas"
             }
         },
+        ratingsCount = { n -> if (n == 1) "1 avaliação" else "$n avaliações" },
     )

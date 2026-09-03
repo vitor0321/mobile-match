@@ -186,16 +186,20 @@ service cloud.firestore {
         && data.totalSlots is int && data.totalSlots >= 1 && data.totalSlots <= 50
         && data.confirmedCount is int && data.confirmedCount >= 0 && data.confirmedCount <= data.totalSlots
         && data.priceCents is int && data.priceCents >= 0 && data.priceCents <= 100000
+        && isText(data.currencyCode, 3)
         && data.status is string
         && (!('recurrence' in data) || isText(data.recurrence, 20))
         && (!('seriesId' in data) || isText(data.seriesId, 30))
         && isText(data.organizerName, 80)
         && data.organizerRating is number
+        && data.organizerRatingCount is int && data.organizerRatingCount >= 0
+        && data.matchRating is number
+        && data.matchRatingCount is int && data.matchRatingCount >= 0
         && data.participants is list && data.participants.size() <= data.totalSlots;
     }
 
     match /matches/{matchId} {
-      allow read: if isSignedIn();
+      allow read: if true;
 
       allow create: if isSignedIn()
         && !isRestrictedUser()
@@ -245,6 +249,43 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if false;
       }
+
+      // Voto de "como foi a partida", um por participante (id = uid). Gravado
+      // pela callable submitMatchRating, que também atualiza a média em
+      // matchTemplates/{id} na mesma transação.
+      match /matchRatings/{raterUid} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // matchTemplates/{templateId} — reputação de "organizador + local +
+    // esporte" ao longo de várias edições da mesma partida recorrente.
+    //
+    // Localizado por query de igualdade (organizerId/venueName/sport), nunca
+    // por id determinístico — ver submitMatchRating em functions/src/index.ts.
+    // Só a callable grava; o client só lê pra decidir o snapshot de
+    // matchRating/matchRatingCount ao criar uma nova partida.
+    // ---------------------------------------------------------------------
+
+    match /matchTemplates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // matchSeries/{seriesId} — liga/desliga da recorrência.
+    //
+    // Nasce sob demanda: sem o documento, a série está ativa. Só existe
+    // quando o organizador cancela a recorrência via callable
+    // cancelMatchSeries, que grava active=false — generateRecurringMatches
+    // checa isso antes de criar a próxima ocorrência.
+    // ---------------------------------------------------------------------
+
+    match /matchSeries/{seriesId} {
+      allow read: if isSignedIn();
+      allow write: if false;
     }
 
     // ---------------------------------------------------------------------

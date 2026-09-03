@@ -106,9 +106,16 @@ private class AndroidDocumentReference(
             ref.delete().await()
         }
 
-    override suspend fun set(data: Map<String, Any?>): Result<Unit> =
+    override suspend fun set(
+        data: Map<String, Any?>,
+        merge: Boolean,
+    ): Result<Unit> =
         runCatching {
-            ref.set(data).await()
+            if (merge) {
+                ref.set(data, com.google.firebase.firestore.SetOptions.merge()).await()
+            } else {
+                ref.set(data).await()
+            }
         }
 
     override suspend fun update(data: Map<String, Any?>): Result<Unit> =

@@ -26,7 +26,10 @@ public interface FirestoreDocumentReference {
 
     public suspend fun delete(): Result<Unit>
 
-    public suspend fun set(data: Map<String, Any?>): Result<Unit>
+    public suspend fun set(
+        data: Map<String, Any?>,
+        merge: Boolean = false,
+    ): Result<Unit>
 
     public suspend fun update(data: Map<String, Any?>): Result<Unit>
 

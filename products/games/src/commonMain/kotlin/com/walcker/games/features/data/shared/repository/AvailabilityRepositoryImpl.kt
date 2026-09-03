@@ -2,6 +2,7 @@ package com.walcker.games.features.data.shared.repository
 
 import com.walcker.games.features.data.shared.source.AvailabilitySource
 import com.walcker.games.features.domain.shared.model.Availability
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.repository.AvailabilityRepository
 import kotlinx.coroutines.flow.Flow
 
@@ -12,6 +13,12 @@ internal class AvailabilityRepositoryImpl(
 
     override suspend fun setAvailable(
         userId: String,
-        availability: Availability,
-    ): Result<Unit> = source.setAvailable(userId, availability)
+        isAvailable: Boolean,
+        availableUntilMs: Long?,
+    ): Result<Unit> = source.setAvailable(userId, isAvailable, availableUntilMs)
+
+    override suspend fun setAvailableSports(
+        userId: String,
+        sports: Set<Sport>,
+    ): Result<Unit> = source.setAvailableSports(userId, sports)
 }

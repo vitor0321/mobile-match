@@ -35,6 +35,16 @@ internal class FirestoreRatingSource(
                 },
             ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
 
+    override suspend fun submitMatchRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> =
+        firestore
+            .callFunction(
+                SUBMIT_MATCH_RATING_FUNCTION,
+                mapOf("matchId" to matchId, "rating" to rating),
+            ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
     private fun Map<String, Any?>.toSubmitRatingOutcome(): SubmitRatingOutcome {
         val averageRating = (this["averageRating"] as? Number)?.toFloat() ?: 0f
         val ratingCount = (this["ratingCount"] as? Number)?.toInt() ?: 0
@@ -145,6 +155,7 @@ internal class FirestoreRatingSource(
 
     private companion object {
         const val SUBMIT_RATING_FUNCTION = "submitPlayerRating"
+        const val SUBMIT_MATCH_RATING_FUNCTION = "submitMatchRating"
         const val ASCENDING = "asc"
         const val DESCENDING = "desc"
 

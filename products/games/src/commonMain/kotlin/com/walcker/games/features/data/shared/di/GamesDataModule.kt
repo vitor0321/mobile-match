@@ -30,12 +30,16 @@ import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabili
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailabilityUseCase
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailabilityUseCaseImpl
+import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSportsUseCase
+import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSportsUseCaseImpl
 import com.walcker.games.features.domain.shared.repository.AvailabilityRepository
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.features.domain.shared.repository.NotificationRepository
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
 import com.walcker.games.features.domain.shared.repository.RatingRepository
 import com.walcker.games.features.domain.shared.repository.ReportRepository
+import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
+import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.DeleteNotificationUseCase
@@ -63,6 +67,7 @@ import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCa
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCase
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCaseImpl
@@ -101,6 +106,7 @@ internal val gamesDataModule =
         factory<UpdateMatchUseCase> { UpdateMatchUseCaseImpl(repository = get()) }
         factory<GetMyMatchesUseCase> { GetMyMatchesUseCaseImpl(repository = get()) }
         factory<CancelMatchUseCase> { CancelMatchUseCaseImpl(repository = get()) }
+        factory<CancelMatchSeriesUseCase> { CancelMatchSeriesUseCaseImpl(repository = get()) }
         factory<LeaveMatchUseCase> { LeaveMatchUseCaseImpl(repository = get()) }
         factory<GetNotificationHistoryUseCase> { GetNotificationHistoryUseCaseImpl(repository = get()) }
         factory<GetGameByIdUseCase> { GetGameByIdUseCaseImpl(repository = get()) }
@@ -112,6 +118,7 @@ internal val gamesDataModule =
         single<ReportRepository> { ReportRepositoryImpl(source = get()) }
         factory<SubmitReportUseCase> { SubmitReportUseCaseImpl(repository = get()) }
         factory { SubmitRatingUseCase(ratingRepository = get()) }
+        factory { SubmitMatchRatingUseCase(ratingRepository = get()) }
         factory { GetUserRatingsUseCase(ratingRepository = get()) }
 
         single<PlayerSource> {
@@ -132,4 +139,5 @@ internal val gamesDataModule =
         single<AvailabilityRepository> { AvailabilityRepositoryImpl(source = get()) }
         factory<ObserveAvailabilityUseCase> { ObserveAvailabilityUseCaseImpl(repository = get()) }
         factory<SetAvailabilityUseCase> { SetAvailabilityUseCaseImpl(repository = get()) }
+        factory<SetAvailableSportsUseCase> { SetAvailableSportsUseCaseImpl(repository = get()) }
     }

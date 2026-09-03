@@ -16,6 +16,7 @@ internal val identityUiModule =
                 signUseCase = get(),
                 navigatorHolder = get(),
                 stringsHolder = get(),
+                loginCoordinator = get(),
             )
         }
         factory {
@@ -40,6 +41,7 @@ internal val identityUiModule =
                 navigatorHolder = get(),
                 identityDestination = get(),
                 stringsHolder = get(),
+                firestore = get(),
             )
         }
         factory {

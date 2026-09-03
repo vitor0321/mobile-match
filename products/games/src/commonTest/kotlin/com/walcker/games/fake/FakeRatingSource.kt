@@ -27,6 +27,14 @@ internal class FakeRatingSource(
         return submitResult
     }
 
+    override suspend fun submitMatchRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> {
+        submitCallCount++
+        return submitResult
+    }
+
     override suspend fun getUserRatings(
         userId: String,
         limit: Int,

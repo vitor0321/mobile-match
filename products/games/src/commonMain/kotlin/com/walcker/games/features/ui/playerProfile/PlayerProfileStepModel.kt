@@ -4,7 +4,10 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCase
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailabilityUseCase
+import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSportsUseCase
 import com.walcker.games.features.domain.shared.error.GamesError
+import com.walcker.games.features.domain.shared.model.MatchRole
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
 import com.walcker.games.strings.GamesStringsHolder
@@ -19,6 +22,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 internal class PlayerProfileStepModel(
     private val sessionHolder: SessionHolder,
@@ -28,6 +36,7 @@ internal class PlayerProfileStepModel(
     private val logoutService: LogoutService,
     private val observeAvailability: ObserveAvailabilityUseCase,
     private val setAvailability: SetAvailabilityUseCase,
+    private val setAvailableSports: SetAvailableSportsUseCase,
 ) : ScreenModel {
     private val _state = MutableStateFlow(PlayerProfileState())
     val state: StateFlow<PlayerProfileState> = _state.asStateFlow()
@@ -42,7 +51,9 @@ internal class PlayerProfileStepModel(
             sessionHolder.currentUser.collect { session ->
                 if (session != null) {
                     currentUserId = session.uid
-                    _state.update { it.copy(userName = session.displayName, userEmail = session.email) }
+                    _state.update {
+                        it.copy(userId = session.uid, userName = session.displayName, userEmail = session.email)
+                    }
                     loadStats(session.uid)
                     observeAvailabilityOf(session.uid)
                 } else {
@@ -50,14 +61,18 @@ internal class PlayerProfileStepModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
+                            userId = null,
                             userName = null,
                             userEmail = null,
                             matchesOrganized = 0,
                             matchesParticipated = 0,
+                            nextMatch = null,
                             ratings = emptyList(),
                             averageRating = 0f,
                             totalRatings = 0,
                             isAvailable = false,
+                            availableUntilMs = null,
+                            availableSports = emptySet(),
                         )
                     }
                 }
@@ -69,7 +84,13 @@ internal class PlayerProfileStepModel(
         screenModelScope.launch {
             observeAvailability(userId).collect { result ->
                 result.onSuccess { availability ->
-                    _state.update { it.copy(isAvailable = availability.isAvailable) }
+                    _state.update {
+                        it.copy(
+                            isAvailable = availability.isAvailable,
+                            availableUntilMs = availability.availableUntilMs,
+                            availableSports = availability.sports,
+                        )
+                    }
                 }
             }
         }
@@ -82,6 +103,7 @@ internal class PlayerProfileStepModel(
             return
         }
         val strings = stringsHolder.resolveStringsOrDefault().playerProfile
+        val availableUntilMs = _state.value.availableUntilMs
 
         screenModelScope.launch {
             _state.update {
@@ -92,7 +114,7 @@ internal class PlayerProfileStepModel(
                 )
             }
 
-            setAvailability(userId, isAvailable)
+            setAvailability(userId, isAvailable, availableUntilMs)
                 .onSuccess {
                     _state.update { it.copy(isUpdatingAvailability = false) }
                 }.onFailure {
@@ -101,6 +123,52 @@ internal class PlayerProfileStepModel(
                             isAvailable = !isAvailable,
                             isUpdatingAvailability = false,
                             availabilityErrorMessage = strings.availabilityError,
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun changeAvailableUntilTonight(enabled: Boolean) {
+        val userId = currentUserId ?: return
+        val strings = stringsHolder.resolveStringsOrDefault().playerProfile
+        val previousUntilMs = _state.value.availableUntilMs
+        val nextUntilMs = if (enabled) endOfTodayEpochMs() else null
+
+        screenModelScope.launch {
+            _state.update { it.copy(availableUntilMs = nextUntilMs, isUpdatingAvailability = true) }
+
+            setAvailability(userId, _state.value.isAvailable, nextUntilMs)
+                .onSuccess {
+                    _state.update { it.copy(isUpdatingAvailability = false) }
+                }.onFailure {
+                    _state.update {
+                        it.copy(
+                            availableUntilMs = previousUntilMs,
+                            isUpdatingAvailability = false,
+                            availabilityErrorMessage = strings.availabilityError,
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun toggleSport(sport: Sport) {
+        val userId = currentUserId ?: return
+        val strings = stringsHolder.resolveStringsOrDefault().playerProfile
+        val previousSports = _state.value.availableSports
+        val nextSports =
+            if (sport in previousSports) previousSports - sport else previousSports + sport
+
+        screenModelScope.launch {
+            _state.update { it.copy(availableSports = nextSports, sportsErrorMessage = null) }
+
+            setAvailableSports(userId, nextSports)
+                .onFailure {
+                    _state.update {
+                        it.copy(
+                            availableSports = previousSports,
+                            sportsErrorMessage = strings.sportsPreferenceError,
                         )
                     }
                 }
@@ -119,6 +187,21 @@ internal class PlayerProfileStepModel(
             is PlayerProfileEvent.AvailabilityChanged -> changeAvailability(event.isAvailable)
             PlayerProfileEvent.DismissAvailabilityError ->
                 _state.update { it.copy(availabilityErrorMessage = null) }
+            is PlayerProfileEvent.AvailableUntilTonightToggled -> changeAvailableUntilTonight(event.enabled)
+            is PlayerProfileEvent.SportToggled -> toggleSport(event.sport)
+            PlayerProfileEvent.DismissSportsError -> _state.update { it.copy(sportsErrorMessage = null) }
+            is PlayerProfileEvent.NextMatchClicked ->
+                screenModelScope.launch {
+                    _effects.send(PlayerProfileEffect.NavigateToMatchDetail(event.matchId))
+                }
+            PlayerProfileEvent.ViewPublicProfileClicked -> {
+                val userId = currentUserId
+                if (userId != null) {
+                    screenModelScope.launch {
+                        _effects.send(PlayerProfileEffect.NavigateToOwnPublicProfile(userId))
+                    }
+                }
+            }
         }
     }
 
@@ -145,14 +228,9 @@ internal class PlayerProfileStepModel(
             matchesResult
                 .onSuccess { result ->
                     val allMatches = result.active + result.past
-                    val organized =
-                        allMatches.count { match ->
-                            match.role == com.walcker.games.features.domain.shared.model.MatchRole.ORGANIZER
-                        }
-                    val participated =
-                        allMatches.count { match ->
-                            match.role == com.walcker.games.features.domain.shared.model.MatchRole.PARTICIPANT
-                        }
+                    val organized = allMatches.count { match -> match.role == MatchRole.ORGANIZER }
+                    val participated = allMatches.count { match -> match.role == MatchRole.PARTICIPANT }
+                    val nextMatch = result.active.minByOrNull { match -> match.game.startsAtSeconds }
 
                     ratingsResult
                         .onSuccess { ratings ->
@@ -168,6 +246,7 @@ internal class PlayerProfileStepModel(
                                     isLoading = false,
                                     matchesOrganized = organized,
                                     matchesParticipated = participated,
+                                    nextMatch = nextMatch,
                                     ratings = ratings,
                                     averageRating = avgRating,
                                     totalRatings = ratings.size,
@@ -180,6 +259,7 @@ internal class PlayerProfileStepModel(
                                     isLoading = false,
                                     matchesOrganized = organized,
                                     matchesParticipated = participated,
+                                    nextMatch = nextMatch,
                                     errorMessage = message,
                                 )
                             }
@@ -195,4 +275,12 @@ internal class PlayerProfileStepModel(
         kotlin.time.Clock.System
             .now()
             .toEpochMilliseconds() / 1000L
+
+    private fun endOfTodayEpochMs(): Long {
+        val timeZone = TimeZone.currentSystemDefault()
+        val today = kotlin.time.Clock.System.now().toLocalDateTime(timeZone).date
+        return LocalDateTime(today, LocalTime(23, 59))
+            .toInstant(timeZone)
+            .toEpochMilliseconds()
+    }
 }

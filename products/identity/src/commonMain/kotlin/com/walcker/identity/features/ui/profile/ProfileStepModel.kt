@@ -8,6 +8,7 @@ import com.walcker.identity.features.domain.usecase.ProfileAccountUseCase
 import com.walcker.identity.features.domain.usecase.SignUseCase
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.match.core.navigation.NavigatorHolder
+import com.walcker.match.firestore.FirestoreClient
 import com.walcker.match.navigator.IdentityDestination
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -27,6 +28,7 @@ internal class ProfileStepModel(
     private val navigatorHolder: NavigatorHolder,
     private val identityDestination: IdentityDestination,
     private val stringsHolder: IdentityStringsHolder,
+    private val firestore: FirestoreClient,
 ) : StateScreenModel<ProfileState>(ProfileState()),
     KoinComponent {
     private val languageProvider: LanguageProvider? =
@@ -40,6 +42,7 @@ internal class ProfileStepModel(
         screenModelScope.launch {
             signUseCase.observeSession().collect { session ->
                 mutableState.value = mutableState.value.copy(userSession = session)
+                session?.uid?.let { loadReputation(it) }
             }
         }
         screenModelScope.launch {
@@ -169,6 +172,21 @@ internal class ProfileStepModel(
         screenModelScope.launch {
             mutableState.value = mutableState.value.copy(selectedLanguage = language)
             languageProvider?.saveLanguage(language)
+        }
+    }
+
+    private fun loadReputation(uid: String) {
+        screenModelScope.launch {
+            val profile = firestore.document("profiles/$uid").get().getOrNull()
+            val count = (profile?.getLong("ratingCount") ?: 0L).toInt()
+            if (count > 0) {
+                val rating = profile?.getDouble("rating")?.toFloat() ?: 0f
+                mutableState.value =
+                    mutableState.value.copy(
+                        reputationRating = rating,
+                        reputationCount = count,
+                    )
+            }
         }
     }
 

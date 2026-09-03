@@ -13,4 +13,6 @@ internal data class ProfileState(
     val message: String? = null,
     val error: String? = null,
     val selectedLanguage: String = "pt",
+    val reputationRating: Float = 0f,
+    val reputationCount: Int = 0,
 )

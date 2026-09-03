@@ -101,10 +101,13 @@ private class IosDocumentReference(
             }
         }
 
-    override suspend fun set(data: Map<String, Any?>): Result<Unit> =
+    override suspend fun set(
+        data: Map<String, Any?>,
+        merge: Boolean,
+    ): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
             @Suppress("UNCHECKED_CAST")
-            ref.setData(data as Map<Any?, *>, completion = { error ->
+            ref.setData(data as Map<Any?, *>, merge = merge, completion = { error ->
                 continuation.resume(if (error != null) Result.failure(error.toThrowable()) else Result.success(Unit))
             })
         }

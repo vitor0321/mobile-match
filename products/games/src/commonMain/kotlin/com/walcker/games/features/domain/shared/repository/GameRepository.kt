@@ -32,6 +32,8 @@ internal interface GameRepository {
 
     suspend fun cancelMatch(gameId: String): Result<CancelMatchOutcome>
 
+    suspend fun cancelMatchSeries(matchId: String): Result<Unit>
+
     suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome>
 
     suspend fun getGameById(gameId: String): Result<Game>

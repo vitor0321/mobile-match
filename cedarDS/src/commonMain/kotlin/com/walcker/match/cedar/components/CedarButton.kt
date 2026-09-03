@@ -104,6 +104,7 @@ public fun CedarSecondaryButton(
             ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.primary,
             ),
+        contentPadding = ButtonDefaults.ContentPadding,
         modifier =
             modifier
                 .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)

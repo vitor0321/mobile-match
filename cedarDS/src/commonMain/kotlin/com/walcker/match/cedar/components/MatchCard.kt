@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
 
@@ -29,6 +30,8 @@ public fun MatchCard(
     openSlots: Int = 0,
     joinButtonLabel: String? = null,
     onJoinClick: (() -> Unit)? = null,
+    matchRating: Float? = null,
+    matchRatingCountLabel: String? = null,
 ) {
     val shape = CedarTokens.radius.mdShape
     val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -55,6 +58,8 @@ public fun MatchCard(
                 openSlots = openSlots,
                 joinButtonLabel = joinButtonLabel,
                 onJoinClick = onJoinClick,
+                matchRating = matchRating,
+                matchRatingCountLabel = matchRatingCountLabel,
             )
         }
     } else {
@@ -73,6 +78,8 @@ public fun MatchCard(
                 openSlots = openSlots,
                 joinButtonLabel = joinButtonLabel,
                 onJoinClick = onJoinClick,
+                matchRating = matchRating,
+                matchRatingCountLabel = matchRatingCountLabel,
             )
         }
     }
@@ -88,6 +95,8 @@ private fun MatchCardContent(
     openSlots: Int,
     joinButtonLabel: String?,
     onJoinClick: (() -> Unit)?,
+    matchRating: Float?,
+    matchRatingCountLabel: String?,
 ) {
     Column(
         modifier = Modifier.padding(CedarTokens.spacing.md),
@@ -108,6 +117,19 @@ private fun MatchCardContent(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (matchRating != null && matchRatingCountLabel != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                    ) {
+                        RatingStars(rating = matchRating, starSize = 12.dp)
+                        Text(
+                            text = matchRatingCountLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Text(
                     text = formatWhen(startsAtSeconds = startsAtSeconds),
                     style = MaterialTheme.typography.bodySmall,

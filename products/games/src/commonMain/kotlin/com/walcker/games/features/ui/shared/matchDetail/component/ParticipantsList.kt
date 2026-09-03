@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.strings.MatchDetailStrings
 import com.walcker.games.strings.ReportStrings
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -19,6 +20,7 @@ internal fun ParticipantsList(
     detail: MatchDetailStrings,
     canRate: Boolean,
     currentUserId: String?,
+    participantRatings: Map<String, PlayerRatingSummary>,
     reportStrings: ReportStrings,
     onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
@@ -42,6 +44,8 @@ internal fun ParticipantsList(
                     rateLabel = detail.rateAction,
                     canRate = canRate,
                     canReport = participant.userId != currentUserId,
+                    ratingSummary = participantRatings[participant.userId],
+                    ratingsCountLabel = detail.ratingsCount,
                     reportStrings = reportStrings,
                     onReportPlayer = onReportPlayer,
                     onRatePlayer = onRatePlayer,
@@ -64,6 +68,8 @@ internal fun ParticipantsList(
                     rateLabel = detail.rateAction,
                     canRate = false,
                     canReport = participant.userId != currentUserId,
+                    ratingSummary = participantRatings[participant.userId],
+                    ratingsCountLabel = detail.ratingsCount,
                     reportStrings = reportStrings,
                     onReportPlayer = onReportPlayer,
                     onRatePlayer = onRatePlayer,

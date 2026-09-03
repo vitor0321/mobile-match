@@ -1,6 +1,7 @@
 package com.walcker.games.features.domain.shared.repository
 
 import com.walcker.games.features.domain.shared.model.PlayerDetails
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.model.PlayerSearchResults
 import com.walcker.games.features.domain.shared.model.RatingSort
@@ -10,6 +11,8 @@ internal interface PlayerRepository {
     suspend fun searchPlayers(filters: PlayerSearchFilters): Result<PlayerSearchResults>
 
     suspend fun getPlayerDetails(userId: String): Result<PlayerDetails>
+
+    suspend fun getPlayersRatingSummary(userIds: List<String>): Result<Map<String, PlayerRatingSummary>>
 
     suspend fun getPlayerRatings(
         userId: String,

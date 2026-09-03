@@ -12,3 +12,13 @@ internal class CancelMatchUseCaseImpl(
 ) : CancelMatchUseCase {
     override suspend operator fun invoke(gameId: String): Result<CancelMatchOutcome> = repository.cancelMatch(gameId)
 }
+
+internal interface CancelMatchSeriesUseCase {
+    suspend operator fun invoke(matchId: String): Result<Unit>
+}
+
+internal class CancelMatchSeriesUseCaseImpl(
+    private val repository: GameRepository,
+) : CancelMatchSeriesUseCase {
+    override suspend operator fun invoke(matchId: String): Result<Unit> = repository.cancelMatchSeries(matchId)
+}

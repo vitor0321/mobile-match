@@ -2,13 +2,17 @@ package com.walcker.games.features.ui.create.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.walcker.games.strings.CreateMatchStrings
 import com.walcker.match.cedar.tokens.CedarTokens
+
+private val SummaryMinHeight = 40.dp
 
 @Composable
 internal fun LocationSummary(
@@ -20,7 +24,10 @@ internal fun LocationSummary(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = SummaryMinHeight),
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
     ) {
         when {

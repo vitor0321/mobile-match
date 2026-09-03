@@ -55,7 +55,6 @@ internal class MapStepModel(
     init {
         analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.MAP))
         observeMatches()
-        refresh()
         requestLocationPermissionAndTrack()
     }
 
@@ -113,12 +112,6 @@ internal class MapStepModel(
 
     fun onRetryLocation() {
         requestLocationPermissionAndTrack()
-    }
-
-    private fun refresh() {
-        screenModelScope.launch {
-            repository.refresh(preferences.radiusKm.first())
-        }
     }
 
     private fun requestLocationPermissionAndTrack() {

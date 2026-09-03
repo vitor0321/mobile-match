@@ -6,6 +6,7 @@ import com.walcker.identity.fake.FakeAppleAuthSource
 import com.walcker.identity.fake.FakeBillingClient
 import com.walcker.identity.fake.FakeBillingRepository
 import com.walcker.identity.fake.FakeFirebaseAuthSource
+import com.walcker.identity.fake.FakeFirestoreClient
 import com.walcker.identity.fake.FakeGoogleAuthSource
 import com.walcker.identity.fake.FakeIdentityDestination
 import com.walcker.identity.fake.FakeProStateCache
@@ -68,6 +69,7 @@ class ProfileStepModelTest {
         proStateCache: FakeProStateCache = FakeProStateCache(),
         proStateHolder: FakeProStateHolder = FakeProStateHolder(),
         identityDestination: FakeIdentityDestination = FakeIdentityDestination(),
+        firestore: FakeFirestoreClient = FakeFirestoreClient(),
     ): Pair<ProfileStepModel, Dependencies> {
         val authRepository =
             AuthRepositoryImpl(
@@ -96,6 +98,7 @@ class ProfileStepModelTest {
                 navigatorHolder = NavigatorHolder(),
                 identityDestination = identityDestination,
                 stringsHolder = stringsHolder,
+                firestore = firestore,
             )
         return model to
             Dependencies(

@@ -1,6 +1,7 @@
 package com.walcker.games.features.domain.playerProfile.usecase
 
 import com.walcker.games.features.domain.shared.model.Availability
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.repository.AvailabilityRepository
 import kotlinx.coroutines.flow.Flow
 
@@ -18,6 +19,7 @@ internal interface SetAvailabilityUseCase {
     suspend operator fun invoke(
         userId: String,
         isAvailable: Boolean,
+        availableUntilMs: Long? = null,
     ): Result<Unit>
 }
 
@@ -27,9 +29,27 @@ internal class SetAvailabilityUseCaseImpl(
     override suspend operator fun invoke(
         userId: String,
         isAvailable: Boolean,
+        availableUntilMs: Long?,
     ): Result<Unit> =
         repository.setAvailable(
             userId = userId,
-            availability = Availability(isAvailable = isAvailable, availableUntilMs = null),
+            isAvailable = isAvailable,
+            availableUntilMs = availableUntilMs,
         )
+}
+
+internal interface SetAvailableSportsUseCase {
+    suspend operator fun invoke(
+        userId: String,
+        sports: Set<Sport>,
+    ): Result<Unit>
+}
+
+internal class SetAvailableSportsUseCaseImpl(
+    private val repository: AvailabilityRepository,
+) : SetAvailableSportsUseCase {
+    override suspend operator fun invoke(
+        userId: String,
+        sports: Set<Sport>,
+    ): Result<Unit> = repository.setAvailableSports(userId, sports)
 }

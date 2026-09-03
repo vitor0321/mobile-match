@@ -154,6 +154,7 @@ internal fun MyMatchesContent(
                                     myMatch.game.confirmedPlayers,
                                     myMatch.game.totalPlayers,
                                 ),
+                            ratingsCountLabel = strings.ratingsCount,
                             isPast = !isActiveTab,
                             onActionClick = {
                                 if (myMatch.role == MatchRole.ORGANIZER) {

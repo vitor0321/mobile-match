@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -19,6 +20,8 @@ import org.koin.mp.KoinPlatform
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.Duration.Companion.seconds
+
+private const val MAX_LOCATION_AGE_SECONDS = 5.0
 
 internal actual fun createLocationProvider(): LocationProvider =
     AndroidLocationProvider(
@@ -44,7 +47,7 @@ private class AndroidLocationProvider(
 
     override suspend fun currentLocation(): Result<Coordinates> =
         runCatching {
-            val location = getLastKnownLocation() ?: getFreshLocation()
+            val location = getLastKnownLocation()?.takeIf { it.isFresh() } ?: getFreshLocation()
             Coordinates(lat = location.latitude, lng = location.longitude)
         }.recoverCatching { e ->
             when (e) {
@@ -52,6 +55,11 @@ private class AndroidLocationProvider(
                 else -> throw LocationError.Unavailable
             }
         }
+
+    private fun android.location.Location.isFresh(): Boolean {
+        val ageSeconds = (SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos) / 1_000_000_000.0
+        return ageSeconds <= MAX_LOCATION_AGE_SECONDS
+    }
 
     @Suppress("MissingPermission")
     private suspend fun getLastKnownLocation(): android.location.Location? =

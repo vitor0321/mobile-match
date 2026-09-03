@@ -87,7 +87,7 @@ internal class GameListStepModel(
                 games
                     .filter { game ->
                         (sport == null || game.sport == sport) && game.isDiscoverable(nowSeconds)
-                    }.sortedBy { (it.lat * it.lat + it.lng * it.lng) } // TODO: sort by distance from user
+                    }.sortedBy { it.startsAtSeconds }
             _state.update {
                 it.copy(
                     strings = strings,
@@ -95,7 +95,6 @@ internal class GameListStepModel(
                     radiusKm = radius,
                     games = filtered.toImmutableList(),
                     preferencesLoaded = true,
-                    isLoading = false,
                 )
             }
             homeViewCoordinator.markHomeDataReady()
@@ -108,7 +107,9 @@ internal class GameListStepModel(
             val radiusKm = preferences.radiusKm.first()
             repository
                 .refresh(radiusKm)
-                .onFailure { error ->
+                .onSuccess {
+                    _state.update { it.copy(isLoading = false) }
+                }.onFailure { error ->
                     _state.update {
                         it.copy(
                             isLoading = false,

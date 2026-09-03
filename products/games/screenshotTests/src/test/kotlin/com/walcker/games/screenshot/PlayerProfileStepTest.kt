@@ -16,6 +16,7 @@ class PlayerProfileStepTest {
 
     private val loadedState =
         PlayerProfileState(
+            userId = "user-1",
             userName = "Ana Souza",
             userEmail = "ana@example.com",
             matchesOrganized = 5,

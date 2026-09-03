@@ -18,13 +18,19 @@ internal data class SearchStrings(
     val applyFilters: String,
     val openFiltersContentDescription: String,
     val clearQueryContentDescription: String,
+    val dateFromLabel: String,
+    val dateToLabel: String,
+    val priceMinLabel: String,
+    val priceMaxLabel: String,
+    val confirm: String,
+    val cancel: String,
 )
 
 internal val searchStringsEn =
     SearchStrings(
         title = "Search matches",
         subtitle = "Search by venue or sport",
-        placeholder = "Search by city or sport",
+        placeholder = "City or sport",
         emptyForQuery = { q -> "No matches found for \"$q\"." },
         resultsCount = { n -> if (n == 1) "1 match found" else "$n matches found" },
         idlePrompt = "Search for a city or a sport.",
@@ -39,13 +45,19 @@ internal val searchStringsEn =
         applyFilters = "Apply filters",
         openFiltersContentDescription = "Open filters",
         clearQueryContentDescription = "Clear search",
+        dateFromLabel = "From",
+        dateToLabel = "Until",
+        priceMinLabel = "Min.",
+        priceMaxLabel = "Max.",
+        confirm = "Confirm",
+        cancel = "Cancel",
     )
 
 internal val searchStringsPt =
     SearchStrings(
         title = "Buscar partidas",
         subtitle = "Pesquise por local ou esporte",
-        placeholder = "Buscar por cidade ou esporte",
+        placeholder = "Cidade ou esporte",
         emptyForQuery = { q -> "Nenhuma partida encontrada para \"$q\"." },
         resultsCount = { n -> if (n == 1) "1 partida encontrada" else "$n partidas encontradas" },
         idlePrompt = "Busque por uma quadra, um bairro ou um esporte.",
@@ -60,4 +72,10 @@ internal val searchStringsPt =
         applyFilters = "Aplicar filtros",
         openFiltersContentDescription = "Abrir filtros",
         clearQueryContentDescription = "Limpar busca",
+        dateFromLabel = "De",
+        dateToLabel = "Até",
+        priceMinLabel = "Mín.",
+        priceMaxLabel = "Máx.",
+        confirm = "Confirmar",
+        cancel = "Cancelar",
     )

@@ -30,6 +30,8 @@ internal class FakeGameSource(
         private set
     var cancelMatchCallCount: Int = 0
         private set
+    var cancelMatchSeriesCallCount: Int = 0
+        private set
     var leaveMatchCallCount: Int = 0
         private set
 
@@ -51,6 +53,10 @@ internal class FakeGameSource(
     override suspend fun cancelMatch(gameId: String): CancelMatchOutcome {
         cancelMatchCallCount++
         return cancelMatchResult()
+    }
+
+    override suspend fun cancelMatchSeries(matchId: String) {
+        cancelMatchSeriesCallCount++
     }
 
     override suspend fun createMatch(request: CreateMatchRequest): String {

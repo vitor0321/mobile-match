@@ -3,7 +3,12 @@ package com.walcker.match.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -103,6 +108,10 @@ private fun AuthenticatedShell() {
         loginCoordinator.requests.collect { setShowLogin(true) }
     }
 
+    LaunchedEffect(loginCoordinator) {
+        loginCoordinator.dismissals.collect { setShowLogin(false) }
+    }
+
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated == true) setShowLogin(false)
     }
@@ -114,7 +123,8 @@ private fun AuthenticatedShell() {
                     Modifier
                         .weight(1f)
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
+                        .background(MaterialTheme.colorScheme.background)
+                        .consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Bottom)),
             ) {
                 val tabScreen =
                     when (selectedTab) {

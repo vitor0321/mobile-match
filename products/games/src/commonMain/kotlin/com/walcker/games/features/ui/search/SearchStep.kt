@@ -85,6 +85,10 @@ internal fun SearchContent(
             SearchFiltersPanel(
                 strings = strings,
                 selectedSports = state.filters.sports,
+                startDateMs = state.filters.startDateMs,
+                endDateMs = state.filters.endDateMs,
+                minPrice = state.filters.minPrice,
+                maxPrice = state.filters.maxPrice,
                 onSportToggled = { sport ->
                     val current = state.filters.sports
                     val next =
@@ -96,6 +100,12 @@ internal fun SearchContent(
                             current + sport
                         }
                     onEvent(SearchEvents.SportFilterChanged(next))
+                },
+                onDateRangeChanged = { start, end ->
+                    onEvent(SearchEvents.DateRangeChanged(start, end))
+                },
+                onPriceRangeChanged = { min, max ->
+                    onEvent(SearchEvents.PriceRangeChanged(min, max))
                 },
                 onResetFilters = { onEvent(SearchEvents.ResetFilters) },
                 onDismiss = { onEvent(SearchEvents.ToggleFiltersPanel) },
@@ -191,6 +201,9 @@ internal fun SearchContent(
                                 slotsLabel = cardStrings.slotsBadge(game.openSlots),
                                 openSlots = game.openSlots,
                                 onClick = { onEvent(SearchEvents.SelectGame(game.id)) },
+                                matchRating = game.matchRating.toFloat().takeIf { game.matchRatingCount > 0 },
+                                matchRatingCountLabel =
+                                    cardStrings.ratingsCount(game.matchRatingCount).takeIf { game.matchRatingCount > 0 },
                             )
                         }
                     }

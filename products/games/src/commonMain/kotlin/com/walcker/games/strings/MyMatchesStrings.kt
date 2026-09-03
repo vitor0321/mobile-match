@@ -18,6 +18,7 @@ internal data class MyMatchesStrings(
     val statusFinished: String,
     val playersCount: (confirmed: Int, total: Int) -> String,
     val emptyActiveAction: String,
+    val ratingsCount: (Int) -> String,
 )
 
 internal val myMatchesStringsPt =
@@ -39,6 +40,7 @@ internal val myMatchesStringsPt =
         statusFinished = "Finalizada",
         playersCount = { confirmed, total -> "$confirmed/$total jogadores" },
         emptyActiveAction = "Buscar partidas",
+        ratingsCount = { n -> if (n == 1) "1 avaliação" else "$n avaliações" },
     )
 
 internal val myMatchesStringsEn =
@@ -60,4 +62,5 @@ internal val myMatchesStringsEn =
         statusFinished = "Finished",
         playersCount = { confirmed, total -> "$confirmed/$total players" },
         emptyActiveAction = "Find matches",
+        ratingsCount = { n -> if (n == 1) "1 review" else "$n reviews" },
     )

@@ -79,6 +79,7 @@ internal val gamesUiModule =
                 logoutService = get(),
                 observeAvailability = get(),
                 setAvailability = get(),
+                setAvailableSports = get(),
             )
         }
         factory {

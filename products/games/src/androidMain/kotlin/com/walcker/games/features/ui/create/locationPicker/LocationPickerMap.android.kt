@@ -1,5 +1,6 @@
 package com.walcker.games.features.ui.create.locationPicker
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -17,8 +18,10 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.walcker.games.features.ui.shared.map.rememberGoogleMapStyleOptions
 
 @Composable
 internal actual fun LocationPickerMap(
@@ -32,6 +35,7 @@ internal actual fun LocationPickerMap(
         rememberCameraPositionState {
             position = CameraPosition.fromLatLngZoom(LatLng(initialLat, initialLng), 16f)
         }
+    val mapStyleOptions = rememberGoogleMapStyleOptions(isSystemInDarkTheme())
 
     LaunchedEffect(cameraPositionState.isMoving) {
         if (!cameraPositionState.isMoving) {
@@ -52,6 +56,7 @@ internal actual fun LocationPickerMap(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
+            properties = MapProperties(mapStyleOptions = mapStyleOptions),
             uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
         )
         Icon(

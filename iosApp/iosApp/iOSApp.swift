@@ -1,4 +1,5 @@
 import App
+import FirebaseAuth
 import FirebaseCore
 import FirebaseMessaging
 import Foundation
@@ -13,9 +14,17 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil,
     ) -> Bool {
         FirebaseApp.configure()
+        signOutStaleKeychainSessionOnFreshInstall()
         configureGoogleSignIn()
         configurePushNotifications(application)
         return true
+    }
+
+    private func signOutStaleKeychainSessionOnFreshInstall() {
+        let hasLaunchedKey = "com.walcker.match.hasLaunchedBefore"
+        guard !UserDefaults.standard.bool(forKey: hasLaunchedKey) else { return }
+        try? Auth.auth().signOut()
+        UserDefaults.standard.set(true, forKey: hasLaunchedKey)
     }
 
     private func configurePushNotifications(_ application: UIApplication) {

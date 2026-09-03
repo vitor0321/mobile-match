@@ -3,6 +3,7 @@ package com.walcker.identity.features.ui.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -42,6 +43,7 @@ import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
+import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.strings.Locales
 
@@ -128,6 +130,10 @@ internal fun ProfileScreen(
                         ?: state.userSession?.email
                         ?: strings.fallbackAccountName,
                 email = state.userSession?.email,
+                reputationRating = state.reputationRating,
+                reputationCount = state.reputationCount,
+                reputationLabel = strings.reputationLabel,
+                ratingsCountLabel = strings.ratingsCount,
             )
 
             PlanCard(
@@ -198,6 +204,10 @@ internal fun ProfileScreen(
 private fun AccountHeader(
     displayName: String,
     email: String?,
+    reputationRating: Float,
+    reputationCount: Int,
+    reputationLabel: String,
+    ratingsCountLabel: (Int) -> String,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -222,6 +232,19 @@ private fun AccountHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+        }
+        if (reputationCount > 0) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+            ) {
+                RatingStars(rating = reputationRating, contentDescription = reputationLabel)
+                Text(
+                    text = ratingsCountLabel(reputationCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.walcker.games.fake
 
 import com.walcker.games.features.domain.shared.model.PlayerDetails
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.model.PlayerSearchResult
 import com.walcker.games.features.domain.shared.model.PlayerSearchResults
@@ -13,6 +14,7 @@ import com.walcker.games.features.domain.shared.repository.PlayerRepository
 internal class FakePlayerRepository(
     var searchResult: Result<PlayerSearchResults> = Result.success(PlayerSearchResults.Empty),
     var detailsResult: Result<PlayerDetails> = Result.success(playerDetails()),
+    var ratingSummaryResult: Result<Map<String, PlayerRatingSummary>> = Result.success(emptyMap()),
     var ratingPages: Map<String?, Result<RatingsPage>> =
         mapOf(null to Result.success(RatingsPage.Empty)),
 ) : PlayerRepository {
@@ -35,6 +37,10 @@ internal class FakePlayerRepository(
     }
 
     override suspend fun getPlayerDetails(userId: String): Result<PlayerDetails> = detailsResult
+
+    override suspend fun getPlayersRatingSummary(
+        userIds: List<String>,
+    ): Result<Map<String, PlayerRatingSummary>> = ratingSummaryResult
 
     override suspend fun getPlayerRatings(
         userId: String,

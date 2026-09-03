@@ -20,6 +20,7 @@ internal class FakeGameRepository(
     var createMatchResult: Result<String> = Result.success("match-1"),
     var updateMatchResult: Result<Unit> = Result.success(Unit),
     var cancelMatchResult: Result<CancelMatchOutcome> = Result.success(CancelMatchOutcome.Cancelled("match-1")),
+    var cancelMatchSeriesResult: Result<Unit> = Result.success(Unit),
     var leaveMatchResult: Result<LeaveMatchOutcome> = Result.success(LeaveMatchOutcome("match-1")),
     var getGameByIdResult: Result<Game> = Result.success(game()),
 ) : GameRepository {
@@ -32,6 +33,7 @@ internal class FakeGameRepository(
     val createMatchCalls: MutableList<CreateMatchRequest> = mutableListOf()
     val updateMatchCalls: MutableList<Pair<String, CreateMatchRequest>> = mutableListOf()
     val cancelMatchCalls: MutableList<String> = mutableListOf()
+    val cancelMatchSeriesCalls: MutableList<String> = mutableListOf()
     val leaveMatchCalls: MutableList<String> = mutableListOf()
     val getGameByIdCalls: MutableList<String> = mutableListOf()
 
@@ -77,6 +79,11 @@ internal class FakeGameRepository(
     override suspend fun cancelMatch(gameId: String): Result<CancelMatchOutcome> {
         cancelMatchCalls += gameId
         return cancelMatchResult
+    }
+
+    override suspend fun cancelMatchSeries(matchId: String): Result<Unit> {
+        cancelMatchSeriesCalls += matchId
+        return cancelMatchSeriesResult
     }
 
     override suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome> {

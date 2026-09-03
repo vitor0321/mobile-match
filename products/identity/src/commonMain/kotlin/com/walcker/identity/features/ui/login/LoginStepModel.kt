@@ -11,12 +11,14 @@ import com.walcker.identity.features.ui.forgotpassword.ForgotPasswordStep
 import com.walcker.identity.features.ui.signup.SignUpStep
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.match.core.navigation.NavigatorHolder
+import com.walcker.match.navigator.LoginCoordinator
 import kotlinx.coroutines.launch
 
 internal class LoginStepModel(
     private val signUseCase: SignUseCase,
     private val navigatorHolder: NavigatorHolder,
     private val stringsHolder: IdentityStringsHolder,
+    private val loginCoordinator: LoginCoordinator,
 ) : StateScreenModel<LoginState>(LoginState()) {
     private var navigationHandled = false
 
@@ -142,6 +144,9 @@ internal class LoginStepModel(
     private fun navigateBack() {
         if (navigationHandled) return
         navigationHandled = true
-        navigatorHolder.navigator?.pop()
+        val popped = navigatorHolder.navigator?.pop() ?: false
+        if (!popped) {
+            loginCoordinator.dismiss()
+        }
     }
 }

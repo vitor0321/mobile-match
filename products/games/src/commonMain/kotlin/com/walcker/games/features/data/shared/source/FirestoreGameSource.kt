@@ -15,6 +15,7 @@ import com.walcker.match.core.geo.DefaultCenter
 import com.walcker.match.core.geo.boundsForRadius
 import com.walcker.match.core.geo.distanceKm
 import com.walcker.match.core.location.LocationProvider
+import com.walcker.match.core.payments.currentDeviceCurrencyCode
 import com.walcker.match.firestore.FirestoreClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -104,12 +105,41 @@ internal class FirestoreGameSource(
         )
     }
 
+    override suspend fun cancelMatchSeries(matchId: String) {
+        firestore
+            .callFunction(
+                name = "cancelMatchSeries",
+                data = mapOf("matchId" to matchId),
+            ).getOrThrow()
+    }
+
     override suspend fun createMatch(request: CreateMatchRequest): String {
         val session =
             sessionHolder.currentUser.first()
                 ?: throw IllegalStateException("Cannot create match: no authenticated user")
         val organizerId = session.uid
         val organizerName = session.displayName ?: "Anonymous"
+
+        val organizerProfile = firestore.document("profiles/$organizerId").get().getOrThrow()
+        val organizerRating = organizerProfile?.getDouble("rating") ?: 0.0
+        val organizerRatingCount = organizerProfile?.getLong("ratingCount")?.toInt() ?: 0
+
+        // "A mesma partida" ao longo do tempo = mesmo organizador + local + esporte.
+        // Localizado por query de igualdade, não por id determinístico — ver
+        // submitMatchRating em functions/src/index.ts, que usa a mesma query.
+        val matchTemplate =
+            firestore
+                .collection("matchTemplates")
+                .query()
+                .where("organizerId", "==", organizerId)
+                .where("venueName", "==", request.venueName)
+                .where("sport", "==", request.sport.name)
+                .limit(1)
+                .get()
+                .getOrThrow()
+                .firstOrNull()
+        val matchRating = matchTemplate?.getDouble("rating") ?: 0.0
+        val matchRatingCount = matchTemplate?.getLong("ratingCount")?.toInt() ?: 0
 
         val data =
             mapOf(
@@ -135,7 +165,14 @@ internal class FirestoreGameSource(
                 "status" to "OPEN",
                 "organizerName" to organizerName,
                 "organizerId" to organizerId,
-                "organizerRating" to 4.5, // TODO: Get from user profile
+                "organizerRating" to organizerRating,
+                "organizerRatingCount" to organizerRatingCount,
+                "matchRating" to matchRating,
+                "matchRatingCount" to matchRatingCount,
+                // Moeda do dispositivo de quem está criando agora — não o idioma
+                // escolhido no app. Fica congelada na partida; quem vir depois,
+                // de outro país, ainda vê o preço na moeda de quem organizou.
+                "currencyCode" to currentDeviceCurrencyCode(),
                 "participants" to listOf(organizerId),
             )
 

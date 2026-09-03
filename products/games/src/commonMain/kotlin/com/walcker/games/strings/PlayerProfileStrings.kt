@@ -21,6 +21,12 @@ internal data class PlayerProfileStrings(
     val visitorMessage: String,
     val visitorSupportingText: String,
     val visitorCta: String,
+    val availableUntilTonightLabel: String,
+    val sportsPreferenceTitle: String,
+    val sportsPreferenceError: String,
+    val nextMatchSection: String,
+    val viewPublicProfileAction: String,
+    val fallbackAccountName: String,
 )
 
 internal val playerProfileStringsPt =
@@ -45,6 +51,12 @@ internal val playerProfileStringsPt =
         visitorMessage = "Entre para ver seu perfil",
         visitorSupportingText = "Suas partidas, avaliações e disponibilidade aparecem aqui depois que você entra.",
         visitorCta = "Entrar",
+        availableUntilTonightLabel = "Só por hoje",
+        sportsPreferenceTitle = "Esportes que eu jogo",
+        sportsPreferenceError = "Não foi possível salvar seus esportes. Tente de novo.",
+        nextMatchSection = "Próxima partida",
+        viewPublicProfileAction = "Ver como outros jogadores me veem",
+        fallbackAccountName = "Jogador",
     )
 
 internal val playerProfileStringsEn =
@@ -69,4 +81,10 @@ internal val playerProfileStringsEn =
         visitorMessage = "Sign in to see your profile",
         visitorSupportingText = "Your matches, ratings and availability show up here once you sign in.",
         visitorCta = "Sign in",
+        availableUntilTonightLabel = "Just for today",
+        sportsPreferenceTitle = "Sports I play",
+        sportsPreferenceError = "Couldn't save your sports. Please try again.",
+        nextMatchSection = "Next match",
+        viewPublicProfileAction = "See how other players see you",
+        fallbackAccountName = "Player",
     )

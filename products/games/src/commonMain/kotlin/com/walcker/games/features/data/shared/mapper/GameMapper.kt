@@ -4,7 +4,7 @@ import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
 import com.walcker.games.features.domain.shared.model.Sport
-import com.walcker.match.core.payments.formatBRLCents
+import com.walcker.match.core.payments.formatCurrencyCents
 import com.walcker.match.firestore.DocumentSnapshot
 
 internal fun DocumentSnapshot.toGame(): Game? {
@@ -31,11 +31,15 @@ internal fun DocumentSnapshot.toGame(): Game? {
             pricePerPlayer =
                 (getLong("priceCents")?.toInt() ?: 0)
                     .takeIf { it > 0 }
-                    ?.let(::formatBRLCents),
+                    ?.let { formatCurrencyCents(it, getString("currencyCode") ?: "BRL") },
             priceCents = getLong("priceCents")?.toInt() ?: 0,
+            currencyCode = getString("currencyCode") ?: "BRL",
             organizerName = getString("organizerName") ?: return null,
             organizerId = getString("organizerId") ?: return null,
-            organizerRating = getDouble("organizerRating") ?: 5.0,
+            organizerRating = getDouble("organizerRating") ?: 0.0,
+            organizerRatingCount = getLong("organizerRatingCount")?.toInt() ?: 0,
+            matchRating = getDouble("matchRating") ?: 0.0,
+            matchRatingCount = getLong("matchRatingCount")?.toInt() ?: 0,
             status =
                 getString("status")
                     ?.let { runCatching { MatchStatus.valueOf(it.uppercase()) }.getOrNull() }

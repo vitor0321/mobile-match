@@ -17,6 +17,8 @@ internal interface GameSource {
 
     suspend fun cancelMatch(gameId: String): CancelMatchOutcome
 
+    suspend fun cancelMatchSeries(matchId: String)
+
     suspend fun createMatch(request: CreateMatchRequest): String
 
     suspend fun updateMatch(

@@ -10,8 +10,10 @@ import com.walcker.games.fake.game
 import com.walcker.games.fake.rating
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailabilityUseCaseImpl
+import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSportsUseCaseImpl
 import com.walcker.games.features.domain.shared.model.Availability
 import com.walcker.games.features.domain.shared.model.MatchRole
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.repository.MyMatch
 import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
@@ -62,6 +64,7 @@ class PlayerProfileStepModelTest {
         logoutService = logoutService,
         observeAvailability = ObserveAvailabilityUseCaseImpl(availabilityRepository),
         setAvailability = SetAvailabilityUseCaseImpl(availabilityRepository),
+        setAvailableSports = SetAvailableSportsUseCaseImpl(availabilityRepository),
     )
 
     @Test
@@ -200,5 +203,101 @@ class PlayerProfileStepModelTest {
             model.onEvent(PlayerProfileEvent.DismissAvailabilityError)
 
             assertNull(model.state.value.availabilityErrorMessage)
+        }
+
+    @Test
+    fun `toggling a sport adds it to the preferred set and persists it`() =
+        runTest(testDispatcher) {
+            val availabilityRepository = FakeAvailabilityRepository()
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            assertEquals(setOf(Sport.FUTEBOL), model.state.value.availableSports)
+            assertEquals("user-1" to setOf(Sport.FUTEBOL), availabilityRepository.setAvailableSportsCalls.last())
+        }
+
+    @Test
+    fun `toggling an already selected sport removes it`() =
+        runTest(testDispatcher) {
+            val availabilityRepository = FakeAvailabilityRepository()
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            assertEquals(emptySet(), model.state.value.availableSports)
+        }
+
+    @Test
+    fun `a failed sport toggle reverts the optimistic update`() =
+        runTest(testDispatcher) {
+            val availabilityRepository =
+                FakeAvailabilityRepository(setAvailableSportsResult = Result.failure(IllegalStateException("boom")))
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            assertEquals(emptySet(), model.state.value.availableSports)
+            assertEquals(stringsHolder.strings.playerProfile.sportsPreferenceError, model.state.value.sportsErrorMessage)
+        }
+
+    @Test
+    fun `the next match is the soonest active one, ignoring past matches`() =
+        runTest(testDispatcher) {
+            val soonest = game(id = "match-1").let { it.copy(organizerId = "user-1", startsAtSeconds = 9_999_998_000) }
+            val later = game(id = "match-2").let { it.copy(organizerId = "user-1", startsAtSeconds = 9_999_999_000) }
+            val gameRepository =
+                FakeGameRepository(
+                    myMatches =
+                        Result.success(
+                            listOf(
+                                MyMatch(game = later, role = MatchRole.ORGANIZER),
+                                MyMatch(game = soonest, role = MatchRole.ORGANIZER),
+                            ),
+                        ),
+                )
+            val model = buildModel(gameRepository = gameRepository)
+
+            advanceUntilIdle()
+
+            assertEquals("match-1", model.state.value.nextMatch?.game?.id)
+        }
+
+    @Test
+    fun `clicking the next match navigates to its detail`() =
+        runTest(testDispatcher) {
+            val model = buildModel()
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.NextMatchClicked("match-1"))
+                advanceUntilIdle()
+
+                assertEquals(PlayerProfileEffect.NavigateToMatchDetail("match-1"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `viewing the public profile navigates with the current user id`() =
+        runTest(testDispatcher) {
+            val model = buildModel()
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.ViewPublicProfileClicked)
+                advanceUntilIdle()
+
+                assertEquals(PlayerProfileEffect.NavigateToOwnPublicProfile("user-1"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }

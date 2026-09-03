@@ -3,7 +3,7 @@ package com.walcker.games.features.data.shared.mapper
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
 import com.walcker.games.features.domain.shared.model.Sport
-import com.walcker.match.core.payments.formatBRLCents
+import com.walcker.match.core.payments.formatCurrencyCents
 import com.walcker.match.firestore.DocumentSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -59,8 +59,9 @@ class GameMapperTest {
         assertEquals(90, game.durationMin)
         assertEquals(5, game.confirmedPlayers)
         assertEquals(10, game.totalPlayers)
-        assertEquals(formatBRLCents(2_500), game.pricePerPlayer)
+        assertEquals(formatCurrencyCents(2_500, "BRL"), game.pricePerPlayer)
         assertEquals(2_500, game.priceCents)
+        assertEquals("BRL", game.currencyCode)
         assertEquals("Organizador", game.organizerName)
         assertEquals("organizer-1", game.organizerId)
         assertEquals(4.8, game.organizerRating)
@@ -68,6 +69,16 @@ class GameMapperTest {
         assertEquals(listOf("p1", "p2"), game.participants)
         assertEquals(RecurrenceOption.WEEKLY, game.recurrence)
         assertEquals("series-1", game.seriesId)
+    }
+
+    @Test
+    fun `price is formatted using the organizer's currency, not a hardcoded one`() {
+        val data = fullMatchData(mapOf("currencyCode" to "USD"))
+
+        val game = snapshot(data).toGame()!!
+
+        assertEquals("USD", game.currencyCode)
+        assertEquals(formatCurrencyCents(2_500, "USD"), game.pricePerPlayer)
     }
 
     @Test
@@ -114,7 +125,10 @@ class GameMapperTest {
         assertEquals(1, game.totalPlayers)
         assertNull(game.pricePerPlayer)
         assertEquals(0, game.priceCents)
-        assertEquals(5.0, game.organizerRating)
+        assertEquals(0.0, game.organizerRating)
+        assertEquals(0, game.organizerRatingCount)
+        assertEquals(0.0, game.matchRating)
+        assertEquals(0, game.matchRatingCount)
         assertEquals(MatchStatus.OPEN, game.status)
         assertEquals(emptyList(), game.participants)
         assertEquals(RecurrenceOption.NONE, game.recurrence)

@@ -910,6 +910,160 @@ function requireMatchIsOver(match: Record<string, unknown>): void {
 }
 
 // ---------------------------------------------------------------------------
+// submitMatchRating — Callable (invocada por products/games)
+//
+// Irmã de submitPlayerRating, mas avalia o evento em si, não outro jogador:
+// nota 1-5 por participante, um voto por pessoa por partida
+// (matches/{matchId}/matchRatings/{uid}).
+//
+// A agregação não vive no próprio documento da partida (isso ficaria
+// congelado, igual organizerRating antes desta mudança) — vive em
+// matchTemplates/{autoId}, uma linha por combinação organizador+local+esporte,
+// localizada por query de igualdade (nunca por id determinístico, pra não
+// duplicar em TS e Kotlin a mesma lógica de slug). Partidas futuras dessa
+// mesma combinação nascem já lendo esse agregado (ver
+// FirestoreGameSource.createMatch no client); a partida avaliada não muda o
+// próprio matchRating depois de criada.
+//
+// Retorna {status: "recorded" | "already_rated", averageRating, ratingCount}.
+// ---------------------------------------------------------------------------
+
+export const submitMatchRating = onCall(
+  {region: REGION},
+  async (request): Promise<SubmitMatchRatingResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+
+    const {matchId, rating} = parseSubmitMatchRatingPayload(request.data);
+
+    return db.runTransaction(async (txn) => {
+      await requireNotBlocked(txn, uid, Date.now());
+
+      const matchRef = db.doc(`matches/${matchId}`);
+      const matchRatingRef = db.doc(`matches/${matchId}/matchRatings/${uid}`);
+
+      const [matchSnap, existingSnap] = await txn.getAll(matchRef, matchRatingRef);
+
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      const status = String(match.status ?? "OPEN");
+      if (status === "CANCELLED") {
+        throw new HttpsError("failed-precondition", "Cannot rate a cancelled match.");
+      }
+      requireMatchIsOver(match);
+
+      const participants: string[] = Array.isArray(match.participants)
+        ? match.participants.filter((x): x is string => typeof x === "string")
+        : [];
+      if (!participants.includes(uid)) {
+        throw new HttpsError("permission-denied", "Only participants can rate this match.");
+      }
+
+      const organizerId = String(match.organizerId ?? "");
+      const venueName = String(match.venueName ?? "");
+      const sport = String(match.sport ?? "");
+
+      // Todas as leituras (getAll + esta query) precisam terminar antes de
+      // qualquer escrita — exigência da transação.
+      const templateQuery = db
+        .collection("matchTemplates")
+        .where("organizerId", "==", organizerId)
+        .where("venueName", "==", venueName)
+        .where("sport", "==", sport)
+        .limit(1);
+      const templateSnap = await txn.get(templateQuery);
+
+      const templateRef = templateSnap.empty
+        ? db.collection("matchTemplates").doc()
+        : templateSnap.docs[0].ref;
+      const templateData = templateSnap.empty ? {} : templateSnap.docs[0].data();
+
+      const previousCount = Number(templateData.ratingCount ?? 0);
+      const previousAverage = Number(templateData.rating ?? 0);
+
+      // Idempotente, como submitPlayerRating: reenviar não infla a média.
+      if (existingSnap.exists) {
+        return {
+          status: "already_rated" as const,
+          matchId,
+          averageRating: previousAverage,
+          ratingCount: previousCount,
+        };
+      }
+
+      const nextCount = previousCount + 1;
+      const nextAverage = nextRatingAverage(
+        previousAverage,
+        previousCount,
+        rating,
+        RATING_AVERAGE_DECIMALS,
+      );
+
+      const now = Date.now();
+      txn.set(matchRatingRef, {
+        matchId,
+        raterUserId: uid,
+        rating,
+        createdAtMs: now,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      txn.set(
+        templateRef,
+        {
+          organizerId,
+          venueName,
+          sport,
+          rating: nextAverage,
+          ratingCount: nextCount,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        {merge: true},
+      );
+
+      return {
+        status: "recorded" as const,
+        matchId,
+        averageRating: nextAverage,
+        ratingCount: nextCount,
+      };
+    });
+  },
+);
+
+interface SubmitMatchRatingResponse {
+  status: "recorded" | "already_rated";
+  matchId: string;
+  averageRating: number;
+  ratingCount: number;
+}
+
+interface SubmitMatchRatingPayload {
+  matchId: string;
+  rating: number;
+}
+
+function parseSubmitMatchRatingPayload(value: unknown): SubmitMatchRatingPayload {
+  const data = (value ?? {}) as Partial<SubmitMatchRatingPayload>;
+
+  if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+    throw new HttpsError("invalid-argument", "matchId is required.");
+  }
+  if (
+    typeof data.rating !== "number" ||
+    !Number.isInteger(data.rating) ||
+    data.rating < 1 ||
+    data.rating > 5
+  ) {
+    throw new HttpsError("invalid-argument", "rating must be an integer between 1 and 5.");
+  }
+
+  return {matchId: data.matchId, rating: data.rating};
+}
+
+// ---------------------------------------------------------------------------
 // submitReport — Callable (invocada por products/games)
 //
 // Denunciar alguém com quem se jogou. Duas travas contra abuso, ambas
@@ -1190,14 +1344,86 @@ export const onParticipantChanged = onDocumentWritten(
 );
 
 // ---------------------------------------------------------------------------
+// cancelMatchSeries — Callable (invocada por products/games)
+//
+// Botão explícito "cancelar recorrência": o organizador para a série sem
+// depender do efeito colateral de cancelar a última ocorrência. Não mexe na
+// ocorrência atual nem em nenhuma já criada — só marca
+// matchSeries/{seriesId}.active = false, que generateRecurringMatches passa a
+// checar antes de gerar a próxima. Documento nasce sob demanda: uma série sem
+// esse doc está sempre ativa.
+// ---------------------------------------------------------------------------
+
+export const cancelMatchSeries = onCall(
+  {region: REGION},
+  async (request): Promise<CancelMatchSeriesResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+
+    const {matchId} = parseCancelMatchSeriesPayload(request.data);
+
+    return db.runTransaction(async (txn) => {
+      const matchRef = db.doc(`matches/${matchId}`);
+      const matchSnap = await txn.get(matchRef);
+
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      if (match.organizerId !== uid) {
+        throw new HttpsError("permission-denied", "Only the organizer can cancel the recurrence.");
+      }
+
+      const seriesId = typeof match.seriesId === "string" ? match.seriesId : "";
+      if (!seriesId) {
+        throw new HttpsError("failed-precondition", "This match is not part of a recurring series.");
+      }
+
+      txn.set(
+        db.doc(`matchSeries/${seriesId}`),
+        {
+          organizerId: match.organizerId,
+          active: false,
+          cancelledAt: FieldValue.serverTimestamp(),
+          cancelledBy: uid,
+        },
+        {merge: true},
+      );
+
+      return {status: "recorded" as const, seriesId};
+    });
+  },
+);
+
+interface CancelMatchSeriesResponse {
+  status: "recorded";
+  seriesId: string;
+}
+
+interface CancelMatchSeriesPayload {
+  matchId: string;
+}
+
+function parseCancelMatchSeriesPayload(value: unknown): CancelMatchSeriesPayload {
+  const data = (value ?? {}) as Partial<CancelMatchSeriesPayload>;
+  if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+    throw new HttpsError("invalid-argument", "matchId is required.");
+  }
+  return {matchId: data.matchId};
+}
+
+// ---------------------------------------------------------------------------
 // generateRecurringMatches — Scheduled function (1x por dia)
 //
 // O cliente só grava a preferência de repetição (`recurrence`); nada cria a
 // próxima ocorrência sozinho. Aqui, para cada série (`seriesId`), olha a
 // ocorrência mais recente da série — independente do status — e só gera a
-// próxima se essa mais recente ainda estiver 'OPEN'. Se ela foi cancelada, a
-// série para ali: cancelar a última ocorrência é como cancelar a recorrência
-// inteira, não só aquela data.
+// próxima se essa mais recente ainda estiver 'OPEN' E a série não tiver sido
+// explicitamente cancelada via cancelMatchSeries (matchSeries/{id}.active).
+// Cancelar a última ocorrência continua parando a série pelo mesmo efeito
+// colateral de sempre — o botão explícito é o jeito confiável de fazer isso
+// de qualquer ocorrência, não só da mais recente.
 //
 // Gera no máximo uma ocorrência nova por série a cada execução, quando a
 // próxima data cai dentro de ~1 mês — mantém sempre pelo menos uma ocorrência
@@ -1268,6 +1494,9 @@ export const generateRecurringMatches = onSchedule(
 
       const seriesId = typeof data.seriesId === "string" ? data.seriesId : doc.id;
 
+      const seriesSnap = await db.doc(`matchSeries/${seriesId}`).get();
+      if (seriesSnap.exists && seriesSnap.data()?.active === false) continue;
+
       const nextMatch = {
         sport: data.sport,
         venueName: data.venueName,
@@ -1288,6 +1517,10 @@ export const generateRecurringMatches = onSchedule(
         organizerName: data.organizerName,
         organizerId,
         organizerRating: data.organizerRating,
+        organizerRatingCount: data.organizerRatingCount ?? 0,
+        matchRating: data.matchRating ?? 0,
+        matchRatingCount: data.matchRatingCount ?? 0,
+        currencyCode: data.currencyCode ?? "BRL",
         participants: [organizerId],
       };
 

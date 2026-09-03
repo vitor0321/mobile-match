@@ -15,6 +15,11 @@ internal interface RatingSource {
         dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome>
 
+    suspend fun submitMatchRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome>
+
     suspend fun getUserRatings(
         userId: String,
         limit: Int,

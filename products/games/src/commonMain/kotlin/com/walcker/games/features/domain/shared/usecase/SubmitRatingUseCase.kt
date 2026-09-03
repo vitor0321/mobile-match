@@ -16,6 +16,15 @@ internal class SubmitRatingUseCase(
     ): Result<SubmitRatingOutcome> = ratingRepository.submitPlayerRating(matchId, ratedUserId, rating, comment, dimensions)
 }
 
+internal class SubmitMatchRatingUseCase(
+    private val ratingRepository: RatingRepository,
+) {
+    suspend operator fun invoke(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> = ratingRepository.submitMatchRating(matchId, rating)
+}
+
 internal class GetUserRatingsUseCase(
     private val ratingRepository: RatingRepository,
 ) {

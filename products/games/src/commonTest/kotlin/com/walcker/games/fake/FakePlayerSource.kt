@@ -4,6 +4,7 @@ import com.walcker.games.features.data.shared.source.PlayerDetailsDto
 import com.walcker.games.features.data.shared.source.PlayerSearchPageDto
 import com.walcker.games.features.data.shared.source.PlayerSearchResultDto
 import com.walcker.games.features.data.shared.source.PlayerSource
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.model.RatingSort
 import com.walcker.games.features.domain.shared.model.RatingsPage
@@ -14,6 +15,7 @@ internal class FakePlayerSource(
             PlayerSearchPageDto(players = listOf(playerSearchResultDto()), reachedLimit = false),
         ),
     var detailsResult: Result<PlayerDetailsDto> = Result.success(playerDetailsDto()),
+    var ratingSummaryResult: Result<Map<String, PlayerRatingSummary>> = Result.success(emptyMap()),
 ) : PlayerSource {
     var searchCallCount: Int = 0
         private set
@@ -32,6 +34,10 @@ internal class FakePlayerSource(
         detailsCallCount++
         return detailsResult
     }
+
+    override suspend fun getPlayersRatingSummary(
+        userIds: List<String>,
+    ): Result<Map<String, PlayerRatingSummary>> = ratingSummaryResult
 
     override suspend fun getPlayerRatings(
         userId: String,

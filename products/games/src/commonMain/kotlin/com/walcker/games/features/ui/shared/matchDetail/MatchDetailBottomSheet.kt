@@ -7,10 +7,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import com.walcker.games.features.ui.create.CreateMatchStep
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.navigation.NavigatorHolder
 import com.walcker.match.navigator.MatchDetailCoordinator
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,29 +25,41 @@ public fun MatchDetailBottomSheet() {
 
     if (matchId != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val scope = rememberCoroutineScope()
+
+        fun hideThenRun(action: () -> Unit) {
+            scope
+                .launch { sheetState.hide() }
+                .invokeOnCompletion { action() }
+        }
+
         ModalBottomSheet(
-            onDismissRequest = { coordinator.close() },
+            onDismissRequest = { hideThenRun { coordinator.close() } },
             sheetState = sheetState,
             shape = CedarTokens.radius.sheet,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             MatchDetailScreenContent(
                 matchId = matchId,
-                onDismiss = { coordinator.close() },
+                onDismiss = { hideThenRun { coordinator.close() } },
                 onNavigateToConfirmation = { id, venueName, startsAtSeconds, sportLabel ->
-                    coordinator.close()
-                    navigatorHolder.navigator?.push(
-                        MatchConfirmedStep(
-                            matchId = id,
-                            venueName = venueName,
-                            startsAtSeconds = startsAtSeconds,
-                            sportLabel = sportLabel,
-                        ),
-                    )
+                    hideThenRun {
+                        coordinator.close()
+                        navigatorHolder.navigator?.push(
+                            MatchConfirmedStep(
+                                matchId = id,
+                                venueName = venueName,
+                                startsAtSeconds = startsAtSeconds,
+                                sportLabel = sportLabel,
+                            ),
+                        )
+                    }
                 },
                 onEditMatch = { id ->
-                    coordinator.close()
-                    navigatorHolder.navigator?.push(CreateMatchStep(id))
+                    hideThenRun {
+                        coordinator.close()
+                        navigatorHolder.navigator?.push(CreateMatchStep(id))
+                    }
                 },
             )
         }
