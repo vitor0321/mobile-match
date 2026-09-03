@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -179,6 +181,7 @@ internal fun MatchDetailScreenContent(
         strings = strings,
         onEvent = stepModel::onEvent,
         onEditMatch = { onEditMatch(matchId) },
+        onDismiss = onDismiss,
     )
 
     LoginRequiredBottomSheet(
@@ -200,6 +203,7 @@ internal fun MatchDetailContent(
     onEvent: (MatchDetailEvent) -> Unit,
     modifier: Modifier = Modifier,
     onEditMatch: () -> Unit = {},
+    onDismiss: () -> Unit = {},
 ) {
     val detail = strings.matchDetail
 
@@ -223,7 +227,12 @@ internal fun MatchDetailContent(
                 .fillMaxWidth()
                 .background(CedarTokens.colors.canvas),
     ) {
-        CedarTopBar(title = detail.title)
+        CedarTopBar(
+            title = detail.title,
+            onBack = onDismiss,
+            backContentDescription = detail.dismissContentDescription,
+            leadingIcon = Icons.Default.Close,
+        )
 
         Column(
             modifier =

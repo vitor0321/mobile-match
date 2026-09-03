@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 public class IosPushNotificationService : PushNotificationService {
     private val _deviceToken = MutableSharedFlow<String?>(replay = 1)
     override val deviceToken: Flow<String?> = _deviceToken.asSharedFlow()
+    override val platform: String = "ios"
 
     override suspend fun requestNotificationPermission(): Result<Boolean> =
         runCatching {

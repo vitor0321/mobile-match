@@ -68,8 +68,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // Handle notification when app is in foreground
-        // In ETAPA3, we'll process and show local notification
+        // Show the system banner/sound/badge even while the app is in foreground.
         completionHandler([.banner, .sound, .badge])
     }
 
@@ -78,8 +77,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        // Handle notification tap
-        // In ETAPA3, we'll deep link to match details
+        if let matchId = response.notification.request.content.userInfo["matchId"] as? String {
+            IosDeepLinkBridge.companion.getInstance().openMatch(matchId: matchId)
+        }
         completionHandler()
     }
 

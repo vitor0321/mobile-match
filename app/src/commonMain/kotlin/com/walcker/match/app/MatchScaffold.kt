@@ -26,6 +26,7 @@ import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import com.walcker.games.features.ui.shared.matchDetail.MatchDetailBottomSheet
 import com.walcker.identity.api.SessionHolder
+import com.walcker.match.app.notifications.DeviceTokenRegistrar
 import com.walcker.match.app.strings.AppShellStrings
 import com.walcker.match.app.strings.rememberAppShellStrings
 import com.walcker.match.cedar.components.MatchBottomBar
@@ -85,6 +86,7 @@ private fun AuthenticatedShell() {
     val matchDetailCoordinator = koinInject<MatchDetailCoordinator>()
     val navigatorHolder = koinInject<NavigatorHolder>()
     val sessionHolder = koinInject<SessionHolder>()
+    val deviceTokenRegistrar = koinInject<DeviceTokenRegistrar>()
     val strings = rememberAppShellStrings()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(MainTab.Home) }
     val (showLogin, setShowLogin) = remember { mutableStateOf(false) }
@@ -93,6 +95,10 @@ private fun AuthenticatedShell() {
     val isAuthenticated: Boolean? by remember(sessionHolder) {
         sessionHolder.isAuthenticated
     }.collectAsState(initial = null)
+
+    LaunchedEffect(deviceTokenRegistrar) {
+        deviceTokenRegistrar.start()
+    }
 
     LaunchedEffect(tabCoordinator) {
         tabCoordinator.tabs.collect { tab -> setSelectedTab(tab) }

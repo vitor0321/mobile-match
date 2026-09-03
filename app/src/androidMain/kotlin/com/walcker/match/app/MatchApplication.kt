@@ -4,11 +4,13 @@ import android.app.Application
 import android.util.Log
 import com.walcker.identity.features.data.billing.PurchasesBootstrap
 import com.walcker.match.app.di.initKoin
+import com.walcker.match.app.notifications.createMatchNotificationChannel
 import org.koin.android.ext.koin.androidContext
 
 internal class MatchApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        createMatchNotificationChannel(this)
         PurchasesBootstrap.configure(BuildConfig.REVENUECAT_ANDROID_KEY)
         initKoin(isDebug = BuildConfig.IS_DEBUG) {
             androidContext(this@MatchApplication)

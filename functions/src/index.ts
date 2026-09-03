@@ -1305,7 +1305,7 @@ export const onMatchCreated = onDocumentCreated(
     if (recipients.length === 0) return;
 
     const title = "Partida nova perto de você";
-    const body = [match.sport, match.venue, match.neighborhood]
+    const body = [match.sport, match.venueName, match.neighborhood]
       .filter((part): part is string => typeof part === "string" && part.length > 0)
       .join(" · ");
 
@@ -1335,7 +1335,7 @@ export const onParticipantChanged = onDocumentWritten(
     const matchId = event.params.matchId;
     const matchSnap = await db.doc(`matches/${matchId}`).get();
     const match = matchSnap.data() ?? {};
-    const body = [match.sport, match.venue]
+    const body = [match.sport, match.venueName]
       .filter((part): part is string => typeof part === "string" && part.length > 0)
       .join(" · ");
 
@@ -1533,6 +1533,85 @@ export const generateRecurringMatches = onSchedule(
     }
 
     await Promise.all(writes);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// sendMatchReminders — Scheduled (a cada hora)
+//
+// Avisa quem participa de uma partida quando ela está chegando perto: um
+// lembrete ~1 dia antes e outro ~2h antes. Cada marco tem uma janela de 2h de
+// largura (o dobro da cadência do cron) para não deixar nenhuma partida
+// escapar por causa de atraso/jitter do agendador; a flag em `matches/{id}`
+// (`dayBeforeReminderSent`/`hoursBeforeReminderSent`) garante que a mesma
+// partida não recebe o mesmo lembrete duas vezes mesmo com a janela sobrando.
+// ---------------------------------------------------------------------------
+
+const REMINDER_WINDOW_SECONDS = 60 * 60;
+
+interface ReminderTier {
+  field: "dayBeforeReminderSent" | "hoursBeforeReminderSent";
+  leadSeconds: number;
+  type: "match_reminder_day" | "match_reminder_hours";
+  title: string;
+}
+
+const REMINDER_TIERS: ReminderTier[] = [
+  {
+    field: "dayBeforeReminderSent",
+    leadSeconds: 24 * 60 * 60,
+    type: "match_reminder_day",
+    title: "Sua partida é amanhã",
+  },
+  {
+    field: "hoursBeforeReminderSent",
+    leadSeconds: 2 * 60 * 60,
+    type: "match_reminder_hours",
+    title: "Sua partida é daqui a pouco",
+  },
+];
+
+export const sendMatchReminders = onSchedule(
+  {schedule: "every 60 minutes", region: REGION, timeZone: "America/Sao_Paulo"},
+  async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    for (const tier of REMINDER_TIERS) {
+      const windowCenter = nowSeconds + tier.leadSeconds;
+      const windowStart = windowCenter - REMINDER_WINDOW_SECONDS;
+      const windowEnd = windowCenter + REMINDER_WINDOW_SECONDS;
+
+      const snapshot = await db
+        .collection("matches")
+        .where("status", "==", "OPEN")
+        .where("startsAtSeconds", ">=", windowStart)
+        .where("startsAtSeconds", "<=", windowEnd)
+        .get();
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        if (data[tier.field] === true) continue;
+
+        const participants: string[] = Array.isArray(data.participants)
+          ? data.participants.filter((x): x is string => typeof x === "string")
+          : [];
+
+        if (participants.length > 0) {
+          const body = [data.sport, data.venueName, data.neighborhood]
+            .filter((part): part is string => typeof part === "string" && part.length > 0)
+            .join(" · ");
+
+          await writeNotifications(participants, {
+            type: tier.type,
+            title: tier.title,
+            body,
+            matchId: doc.id,
+          });
+        }
+
+        await doc.ref.update({[tier.field]: true});
+      }
+    }
   },
 );
 
