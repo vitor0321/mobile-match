@@ -6,6 +6,10 @@ import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
+import com.walcker.match.core.analytics.PlayerProfileSource
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
@@ -22,6 +26,8 @@ import kotlinx.coroutines.launch
 internal class PlayerSearchStepModel(
     private val searchPlayersUseCase: SearchPlayersUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
     private val debounceMs: Long = SEARCH_DEBOUNCE_MS,
 ) : ScreenModel {
     private val strings get() = stringsHolder.resolveStringsOrDefault().playerSearch
@@ -77,6 +83,7 @@ internal class PlayerSearchStepModel(
             }
 
             is PlayerSearchEvents.SelectPlayer -> {
+                analytics.track(AnalyticsEvent.PlayerProfileViewed(PlayerProfileSource.SEARCH))
                 screenModelScope.launch {
                     _effects.send(PlayerSearchEffect.NavigateToPlayer(event.userId))
                 }
@@ -118,6 +125,7 @@ internal class PlayerSearchStepModel(
                             )
                         }
                     }.onFailure { error ->
+                        crashReporter.recordException(error)
                         val message = error.message ?: strings.errorLoading
                         _state.update { it.copy(isLoading = false, errorMessage = message) }
                         _effects.send(PlayerSearchEffect.ShowMessage(message))

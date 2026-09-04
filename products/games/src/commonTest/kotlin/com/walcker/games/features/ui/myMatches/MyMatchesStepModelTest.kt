@@ -1,5 +1,7 @@
 package com.walcker.games.features.ui.myMatches
 
+import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
@@ -49,6 +51,8 @@ class MyMatchesStepModelTest {
         leaveMatch = LeaveMatchUseCaseImpl(repository),
         stringsHolder = stringsHolder,
         sessionHolder = sessionHolder,
+        analytics = FakeAnalyticsTracker(),
+        crashReporter = FakeCrashReporter(),
     )
 
     @Test

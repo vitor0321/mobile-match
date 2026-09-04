@@ -1,5 +1,8 @@
 package com.walcker.games.features.ui.home.map
 
+import android.R.attr.strokeWidth
+import android.R.attr.textSize
+import android.R.attr.typeface
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -8,6 +11,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.system.Os.close
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -155,6 +159,7 @@ private fun createLabeledMarkerBitmap(
     isDarkTheme: Boolean,
 ): LabeledMarkerBitmap {
     val density = context.resources.displayMetrics.density
+
     fun dp(value: Float) = value * density
 
     val pinRadius = dp(11f)

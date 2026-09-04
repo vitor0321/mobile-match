@@ -2,6 +2,7 @@ package com.walcker.games.features.ui.create
 
 import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeLocationProvider
 import com.walcker.games.fake.FakeReverseGeocoder
@@ -55,6 +56,7 @@ class CreateMatchStepModelTest {
         sessionHolder: FakeSessionHolder = FakeSessionHolder(),
         tabCoordinator: TabCoordinator = TabCoordinator(),
         analytics: FakeAnalyticsTracker = FakeAnalyticsTracker(),
+        crashReporter: FakeCrashReporter = FakeCrashReporter(),
         locationProvider: FakeLocationProvider = FakeLocationProvider(),
         reverseGeocoder: FakeReverseGeocoder = FakeReverseGeocoder(),
         editingMatchId: String? = null,
@@ -66,6 +68,7 @@ class CreateMatchStepModelTest {
         sessionHolder = sessionHolder,
         tabCoordinator = tabCoordinator,
         analytics = analytics,
+        crashReporter = crashReporter,
         locationProvider = locationProvider,
         reverseGeocoder = reverseGeocoder,
         editingMatchId = editingMatchId,

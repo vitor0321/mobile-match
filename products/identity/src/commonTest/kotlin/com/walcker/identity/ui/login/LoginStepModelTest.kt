@@ -1,7 +1,9 @@
 package com.walcker.identity.ui.login
 
 import com.walcker.identity.api.UserSession
+import com.walcker.identity.fake.FakeAnalyticsTracker
 import com.walcker.identity.fake.FakeAppleAuthSource
+import com.walcker.identity.fake.FakeCrashReporter
 import com.walcker.identity.fake.FakeFirebaseAuthSource
 import com.walcker.identity.fake.FakeGoogleAuthSource
 import com.walcker.identity.features.data.repository.AuthRepositoryImpl
@@ -72,6 +74,8 @@ class LoginStepModelTest {
                 navigatorHolder = NavigatorHolder(),
                 stringsHolder = stringsHolder,
                 loginCoordinator = LoginCoordinator(),
+                analytics = FakeAnalyticsTracker(),
+                crashReporter = FakeCrashReporter(),
             )
         return model to
             Sources(

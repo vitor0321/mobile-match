@@ -14,6 +14,10 @@ import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.SessionHolder
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
+import com.walcker.match.core.analytics.PlayerProfileSource
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +41,8 @@ internal class PlayerProfileStepModel(
     private val observeAvailability: ObserveAvailabilityUseCase,
     private val setAvailability: SetAvailabilityUseCase,
     private val setAvailableSports: SetAvailableSportsUseCase,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : ScreenModel {
     private val _state = MutableStateFlow(PlayerProfileState())
     val state: StateFlow<PlayerProfileState> = _state.asStateFlow()
@@ -116,8 +122,10 @@ internal class PlayerProfileStepModel(
 
             setAvailability(userId, isAvailable, availableUntilMs)
                 .onSuccess {
+                    analytics.track(AnalyticsEvent.AvailabilityToggled(isAvailable))
                     _state.update { it.copy(isUpdatingAvailability = false) }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isAvailable = !isAvailable,
@@ -141,7 +149,8 @@ internal class PlayerProfileStepModel(
             setAvailability(userId, _state.value.isAvailable, nextUntilMs)
                 .onSuccess {
                     _state.update { it.copy(isUpdatingAvailability = false) }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             availableUntilMs = previousUntilMs,
@@ -164,7 +173,8 @@ internal class PlayerProfileStepModel(
             _state.update { it.copy(availableSports = nextSports, sportsErrorMessage = null) }
 
             setAvailableSports(userId, nextSports)
-                .onFailure {
+                .onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             availableSports = previousSports,
@@ -190,16 +200,10 @@ internal class PlayerProfileStepModel(
             is PlayerProfileEvent.AvailableUntilTonightToggled -> changeAvailableUntilTonight(event.enabled)
             is PlayerProfileEvent.SportToggled -> toggleSport(event.sport)
             PlayerProfileEvent.DismissSportsError -> _state.update { it.copy(sportsErrorMessage = null) }
-            is PlayerProfileEvent.NextMatchClicked ->
+            is PlayerProfileEvent.NextMatchClicked -> {
+                analytics.track(AnalyticsEvent.PlayerProfileViewed(PlayerProfileSource.NEXT_MATCH))
                 screenModelScope.launch {
                     _effects.send(PlayerProfileEffect.NavigateToMatchDetail(event.matchId))
-                }
-            PlayerProfileEvent.ViewPublicProfileClicked -> {
-                val userId = currentUserId
-                if (userId != null) {
-                    screenModelScope.launch {
-                        _effects.send(PlayerProfileEffect.NavigateToOwnPublicProfile(userId))
-                    }
                 }
             }
         }
@@ -210,7 +214,9 @@ internal class PlayerProfileStepModel(
             logoutService
                 .logout()
                 .onSuccess {
+                    analytics.track(AnalyticsEvent.SignedOut())
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message = error.message ?: "Erro ao fazer logout"
                     _state.update { it.copy(errorMessage = message) }
                 }
@@ -253,6 +259,7 @@ internal class PlayerProfileStepModel(
                                 )
                             }
                         }.onFailure { error ->
+                            crashReporter.recordException(error)
                             val message = (error as? GamesError)?.message ?: error.message ?: "Erro ao carregar avaliações"
                             _state.update {
                                 it.copy(
@@ -265,6 +272,7 @@ internal class PlayerProfileStepModel(
                             }
                         }
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
                     _state.update { it.copy(isLoading = false, errorMessage = message) }
                 }
@@ -278,7 +286,11 @@ internal class PlayerProfileStepModel(
 
     private fun endOfTodayEpochMs(): Long {
         val timeZone = TimeZone.currentSystemDefault()
-        val today = kotlin.time.Clock.System.now().toLocalDateTime(timeZone).date
+        val today =
+            kotlin.time.Clock.System
+                .now()
+                .toLocalDateTime(timeZone)
+                .date
         return LocalDateTime(today, LocalTime(23, 59))
             .toInstant(timeZone)
             .toEpochMilliseconds()

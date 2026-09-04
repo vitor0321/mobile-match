@@ -10,6 +10,7 @@ import com.walcker.games.features.ui.home.map.model.MapPin
 import com.walcker.games.features.ui.home.map.model.NearbyMatch
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.analytics.MatchListSource
 import com.walcker.match.core.geo.Coordinates
 import com.walcker.match.core.geo.distanceKm
@@ -46,6 +47,7 @@ internal class MapStepModel(
     private val preferences: GamesPreferences,
     private val locationProvider: LocationProvider,
     private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : ScreenModel {
     private val _state = MutableStateFlow(MapState())
     val state: StateFlow<MapState> = _state.asStateFlow()
@@ -138,7 +140,8 @@ internal class MapStepModel(
                             locationUnavailable = false,
                         )
                     }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update { it.copy(locationUnavailable = true) }
                 }
         }

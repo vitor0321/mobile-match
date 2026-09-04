@@ -9,6 +9,9 @@ import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +27,8 @@ internal class MyMatchesStepModel(
     private val leaveMatch: LeaveMatchUseCase,
     private val stringsHolder: GamesStringsHolder,
     private val sessionHolder: SessionHolder,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : ScreenModel {
     private val _state = MutableStateFlow(MyMatchesState())
     val state: StateFlow<MyMatchesState> = _state.asStateFlow()
@@ -66,18 +71,30 @@ internal class MyMatchesStepModel(
                         )
                     }
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
                     _state.update { it.copy(isLoading = false, errorMessage = message) }
                 }
         }
     }
 
+    private fun sportOf(gameId: String): String =
+        (_state.value.active + _state.value.past)
+            .firstOrNull { it.game.id == gameId }
+            ?.game
+            ?.sport
+            ?.name ?: UNKNOWN_SPORT
+
     private fun handleCancel(gameId: String) {
+        val sport = sportOf(gameId)
         screenModelScope.launch {
             _state.update { it.copy(processingMatchId = gameId) }
             cancelMatch(gameId)
-                .onSuccess { refresh() }
-                .onFailure { error ->
+                .onSuccess {
+                    analytics.track(AnalyticsEvent.MatchCancelled(sport, isSeries = false))
+                    refresh()
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message =
                         (error as? GamesError)?.message
                             ?: stringsHolder.resolveStringsOrDefault().myMatches.cancelError
@@ -88,11 +105,15 @@ internal class MyMatchesStepModel(
     }
 
     private fun handleLeave(gameId: String) {
+        val sport = sportOf(gameId)
         screenModelScope.launch {
             _state.update { it.copy(processingMatchId = gameId) }
             leaveMatch(gameId)
-                .onSuccess { refresh() }
-                .onFailure { error ->
+                .onSuccess {
+                    analytics.track(AnalyticsEvent.MatchLeft(sport))
+                    refresh()
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message =
                         (error as? GamesError)?.message
                             ?: stringsHolder.resolveStringsOrDefault().myMatches.leaveError
@@ -106,4 +127,8 @@ internal class MyMatchesStepModel(
         kotlin.time.Clock.System
             .now()
             .toEpochMilliseconds() / 1000L
+
+    private companion object {
+        const val UNKNOWN_SPORT = "unknown"
+    }
 }

@@ -8,6 +8,9 @@ import com.walcker.identity.features.domain.billing.BillingRepository
 import com.walcker.identity.features.domain.billing.ProductOffering
 import com.walcker.identity.features.domain.billing.PurchaseError
 import com.walcker.identity.strings.IdentityStringsHolder
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -18,6 +21,8 @@ internal class PaywallStepModel(
     private val sessionHolder: SessionHolder,
     private val proStateHolder: ProStateHolder,
     private val stringsHolder: IdentityStringsHolder,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : StateScreenModel<PaywallState>(PaywallState()) {
     private val eventChannel = Channel<PaywallInternalEvents>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
@@ -90,6 +95,7 @@ internal class PaywallStepModel(
                         errorMessage = null,
                     )
             }.onFailure { error ->
+                crashReporter.recordException(error)
                 val resolvedError = resolveError(error)
                 mutableState.value =
                     mutableState.value.copy(
@@ -123,9 +129,11 @@ internal class PaywallStepModel(
                     error = null,
                     errorMessage = null,
                 )
+            analytics.track(AnalyticsEvent.PurchaseAttempted(offering.packageId))
             billingRepository
                 .purchase(offering.packageId)
                 .onSuccess {
+                    analytics.track(AnalyticsEvent.PurchaseResult(offering.packageId, success = true))
                     mutableState.value =
                         mutableState.value.copy(
                             purchaseInProgress = null,
@@ -133,6 +141,8 @@ internal class PaywallStepModel(
                         )
                     eventChannel.send(PaywallInternalEvents.Dismiss)
                 }.onFailure { error ->
+                    analytics.track(AnalyticsEvent.PurchaseResult(offering.packageId, success = false))
+                    crashReporter.recordException(error)
                     val resolvedError = resolveError(error)
                     mutableState.value =
                         mutableState.value.copy(
@@ -156,6 +166,7 @@ internal class PaywallStepModel(
             billingRepository
                 .restore()
                 .onSuccess { hasProAccess ->
+                    analytics.track(AnalyticsEvent.PurchaseRestored(success = true))
                     mutableState.value =
                         mutableState.value.copy(
                             isRestoring = false,
@@ -169,6 +180,8 @@ internal class PaywallStepModel(
                         }
                     eventChannel.send(PaywallInternalEvents.ShowSnackbar(message))
                 }.onFailure { error ->
+                    analytics.track(AnalyticsEvent.PurchaseRestored(success = false))
+                    crashReporter.recordException(error)
                     val resolvedError = resolveError(error)
                     mutableState.value =
                         mutableState.value.copy(

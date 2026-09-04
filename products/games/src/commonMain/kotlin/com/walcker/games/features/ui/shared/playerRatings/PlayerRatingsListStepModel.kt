@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.shared.usecase.GetPlayerRatingsUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.match.core.analytics.CrashReporter
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -21,6 +22,7 @@ internal class PlayerRatingsListStepModel(
     private val playerName: String,
     private val getPlayerRatings: GetPlayerRatingsUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val crashReporter: CrashReporter,
 ) : ScreenModel {
     private val strings get() = stringsHolder.resolveStringsOrDefault().playerRatings
 
@@ -118,6 +120,7 @@ internal class PlayerRatingsListStepModel(
         error: Throwable,
         isFirstPage: Boolean,
     ) {
+        crashReporter.recordException(error)
         val message = error.message ?: strings.errorLoading
         _state.update {
             it.copy(

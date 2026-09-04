@@ -1,7 +1,9 @@
 package com.walcker.games.features.ui.playerProfile
 
 import app.cash.turbine.test
+import com.walcker.games.fake.FakeAnalyticsTracker
 import com.walcker.games.fake.FakeAvailabilityRepository
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeLogoutService
 import com.walcker.games.fake.FakeRatingRepository
@@ -65,6 +67,8 @@ class PlayerProfileStepModelTest {
         observeAvailability = ObserveAvailabilityUseCaseImpl(availabilityRepository),
         setAvailability = SetAvailabilityUseCaseImpl(availabilityRepository),
         setAvailableSports = SetAvailableSportsUseCaseImpl(availabilityRepository),
+        analytics = FakeAnalyticsTracker(),
+        crashReporter = FakeCrashReporter(),
     )
 
     @Test
@@ -268,7 +272,12 @@ class PlayerProfileStepModelTest {
 
             advanceUntilIdle()
 
-            assertEquals("match-1", model.state.value.nextMatch?.game?.id)
+            assertEquals(
+                "match-1",
+                model.state.value.nextMatch
+                    ?.game
+                    ?.id,
+            )
         }
 
     @Test
@@ -286,18 +295,4 @@ class PlayerProfileStepModelTest {
             }
         }
 
-    @Test
-    fun `viewing the public profile navigates with the current user id`() =
-        runTest(testDispatcher) {
-            val model = buildModel()
-            advanceUntilIdle()
-
-            model.effects.test {
-                model.onEvent(PlayerProfileEvent.ViewPublicProfileClicked)
-                advanceUntilIdle()
-
-                assertEquals(PlayerProfileEffect.NavigateToOwnPublicProfile("user-1"), awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
 }

@@ -1,6 +1,8 @@
 package com.walcker.games.features.ui.shared.playerDetails
 
 import app.cash.turbine.test
+import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakePlayerRepository
 import com.walcker.games.fake.playerDetails
 import com.walcker.games.fake.rating
@@ -50,6 +52,8 @@ class PlayerDetailsStepModelTest {
         getPlayerDetails = GetPlayerDetailsUseCaseImpl(repository),
         getPlayerRatings = GetPlayerRatingsUseCaseImpl(repository),
         stringsHolder = stringsHolder,
+        analytics = FakeAnalyticsTracker(),
+        crashReporter = FakeCrashReporter(),
     )
 
     @Test

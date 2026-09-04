@@ -17,6 +17,8 @@ internal val identityUiModule =
                 navigatorHolder = get(),
                 stringsHolder = get(),
                 loginCoordinator = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory {
@@ -24,6 +26,8 @@ internal val identityUiModule =
                 signUseCase = get(),
                 navigatorHolder = get(),
                 stringsHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory {
@@ -31,6 +35,8 @@ internal val identityUiModule =
                 signUseCase = get(),
                 navigatorHolder = get(),
                 stringsHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory {
@@ -42,6 +48,8 @@ internal val identityUiModule =
                 identityDestination = get(),
                 stringsHolder = get(),
                 firestore = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory {
@@ -50,6 +58,8 @@ internal val identityUiModule =
                 sessionHolder = get(),
                 proStateHolder = get(),
                 stringsHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         single<IdentityDestination> { IdentityDestinationImpl() }

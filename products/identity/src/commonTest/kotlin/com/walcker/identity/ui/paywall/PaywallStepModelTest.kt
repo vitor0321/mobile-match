@@ -1,7 +1,9 @@
 package com.walcker.identity.ui.paywall
 
 import app.cash.turbine.test
+import com.walcker.identity.fake.FakeAnalyticsTracker
 import com.walcker.identity.fake.FakeBillingRepository
+import com.walcker.identity.fake.FakeCrashReporter
 import com.walcker.identity.fake.FakeProStateHolder
 import com.walcker.identity.fake.FakeSessionHolder
 import com.walcker.identity.features.domain.billing.ProductOffering
@@ -66,6 +68,8 @@ class PaywallStepModelTest {
             sessionHolder = sessionHolder,
             proStateHolder = proStateHolder,
             stringsHolder = stringsHolder,
+            analytics = FakeAnalyticsTracker(),
+            crashReporter = FakeCrashReporter(),
         ) to billingRepository
 
     @Test

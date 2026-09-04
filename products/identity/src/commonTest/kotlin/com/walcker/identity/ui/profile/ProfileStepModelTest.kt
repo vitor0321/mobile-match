@@ -2,9 +2,11 @@ package com.walcker.identity.ui.profile
 
 import com.walcker.identity.api.UserSession
 import com.walcker.identity.fake.FakeAccountDeletionRepository
+import com.walcker.identity.fake.FakeAnalyticsTracker
 import com.walcker.identity.fake.FakeAppleAuthSource
 import com.walcker.identity.fake.FakeBillingClient
 import com.walcker.identity.fake.FakeBillingRepository
+import com.walcker.identity.fake.FakeCrashReporter
 import com.walcker.identity.fake.FakeFirebaseAuthSource
 import com.walcker.identity.fake.FakeFirestoreClient
 import com.walcker.identity.fake.FakeGoogleAuthSource
@@ -99,6 +101,8 @@ class ProfileStepModelTest {
                 identityDestination = identityDestination,
                 stringsHolder = stringsHolder,
                 firestore = firestore,
+                analytics = FakeAnalyticsTracker(),
+                crashReporter = FakeCrashReporter(),
             )
         return model to
             Dependencies(

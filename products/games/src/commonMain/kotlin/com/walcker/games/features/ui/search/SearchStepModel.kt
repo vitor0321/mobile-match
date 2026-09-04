@@ -100,50 +100,51 @@ internal class SearchStepModel(
                 .now()
                 .toEpochMilliseconds() / MILLIS_PER_SECOND
         val filtered =
-            allMatches.filter { game ->
-                if (!game.isDiscoverable(nowSeconds)) return@filter false
+            allMatches
+                .filter { game ->
+                    if (!game.isDiscoverable(nowSeconds)) return@filter false
 
-                val matchesText =
-                    if (trimmedQuery.isBlank()) {
-                        true
-                    } else {
-                        game.venueName.lowercase().contains(trimmedQuery) ||
-                            game.neighborhood.lowercase().contains(trimmedQuery) ||
-                            game.city.lowercase().contains(trimmedQuery) ||
-                            game.sport.label
-                                .lowercase()
-                                .contains(trimmedQuery)
-                    }
+                    val matchesText =
+                        if (trimmedQuery.isBlank()) {
+                            true
+                        } else {
+                            game.venueName.lowercase().contains(trimmedQuery) ||
+                                game.neighborhood.lowercase().contains(trimmedQuery) ||
+                                game.city.lowercase().contains(trimmedQuery) ||
+                                game.sport.label
+                                    .lowercase()
+                                    .contains(trimmedQuery)
+                        }
 
-                val gameStartMs = game.startsAtSeconds * 1000
-                val matchesDateRange =
-                    if (filters.startDateMs != null && gameStartMs < filters.startDateMs) {
-                        false
-                    } else if (filters.endDateMs != null && gameStartMs > filters.endDateMs) {
-                        false
-                    } else {
-                        true
-                    }
+                    val gameStartMs = game.startsAtSeconds * 1000
+                    val matchesDateRange =
+                        if (filters.startDateMs != null && gameStartMs < filters.startDateMs) {
+                            false
+                        } else if (filters.endDateMs != null && gameStartMs > filters.endDateMs) {
+                            false
+                        } else {
+                            true
+                        }
 
-                val matchesSport =
-                    if (filters.sports.isEmpty()) {
-                        true
-                    } else {
-                        game.sport in filters.sports
-                    }
+                    val matchesSport =
+                        if (filters.sports.isEmpty()) {
+                            true
+                        } else {
+                            game.sport in filters.sports
+                        }
 
-                val gamePrice = game.priceCents / 100f
-                val matchesPrice =
-                    if (filters.minPrice != null && gamePrice < filters.minPrice) {
-                        false
-                    } else if (filters.maxPrice != null && gamePrice > filters.maxPrice) {
-                        false
-                    } else {
-                        true
-                    }
+                    val gamePrice = game.priceCents / 100f
+                    val matchesPrice =
+                        if (filters.minPrice != null && gamePrice < filters.minPrice) {
+                            false
+                        } else if (filters.maxPrice != null && gamePrice > filters.maxPrice) {
+                            false
+                        } else {
+                            true
+                        }
 
-                matchesText && matchesDateRange && matchesSport && matchesPrice
-            }.sortedBy { it.startsAtSeconds }
+                    matchesText && matchesDateRange && matchesSport && matchesPrice
+                }.sortedBy { it.startsAtSeconds }
 
         _state.update {
             it.copy(

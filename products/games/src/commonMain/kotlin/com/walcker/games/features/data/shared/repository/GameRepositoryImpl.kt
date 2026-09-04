@@ -23,6 +23,8 @@ internal class GameRepositoryImpl(
     private val cache: InMemoryMatchCache,
 ) : GameRepository {
     private var nearbyCursors: List<String?> = emptyList()
+
+    @Suppress("ktlint:standard:backing-property-naming")
     private val _hasMoreMatches = MutableStateFlow(false)
 
     override fun observeMatches(): Flow<List<Game>> = cache.matches

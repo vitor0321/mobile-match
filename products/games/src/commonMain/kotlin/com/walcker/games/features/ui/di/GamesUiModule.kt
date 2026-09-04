@@ -21,6 +21,7 @@ internal val gamesUiModule =
                 preferences = get(),
                 stringsHolder = get(),
                 analytics = get(),
+                crashReporter = get(),
                 homeViewCoordinator = get(),
             )
         }
@@ -30,6 +31,7 @@ internal val gamesUiModule =
                 preferences = get(),
                 locationProvider = get(),
                 analytics = get(),
+                crashReporter = get(),
             )
         }
         factory {
@@ -48,6 +50,7 @@ internal val gamesUiModule =
                 sessionHolder = get(),
                 tabCoordinator = get(),
                 analytics = get(),
+                crashReporter = get(),
                 locationProvider = get(),
                 reverseGeocoder = get(),
                 editingMatchId = matchId,
@@ -68,6 +71,8 @@ internal val gamesUiModule =
                 leaveMatch = get(),
                 stringsHolder = get(),
                 sessionHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory {
@@ -80,6 +85,8 @@ internal val gamesUiModule =
                 observeAvailability = get(),
                 setAvailability = get(),
                 setAvailableSports = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory {
@@ -89,12 +96,15 @@ internal val gamesUiModule =
                 deleteNotification = get(),
                 sessionHolder = get(),
                 stringsHolder = get(),
+                crashReporter = get(),
             )
         }
         factory {
             PlayerSearchStepModel(
                 searchPlayersUseCase = get(),
                 stringsHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory { (userId: String) ->
@@ -103,6 +113,8 @@ internal val gamesUiModule =
                 getPlayerDetails = get(),
                 getPlayerRatings = get(),
                 stringsHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
             )
         }
         factory { (userId: String, playerName: String) ->
@@ -111,6 +123,7 @@ internal val gamesUiModule =
                 playerName = playerName,
                 getPlayerRatings = get(),
                 stringsHolder = get(),
+                crashReporter = get(),
             )
         }
     }

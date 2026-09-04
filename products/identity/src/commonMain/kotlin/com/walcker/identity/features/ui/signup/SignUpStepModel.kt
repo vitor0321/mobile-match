@@ -6,6 +6,9 @@ import com.walcker.identity.features.domain.error.IdentityError
 import com.walcker.identity.features.domain.error.signUpMessage
 import com.walcker.identity.features.domain.usecase.SignUseCase
 import com.walcker.identity.strings.IdentityStringsHolder
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.navigation.NavigatorHolder
 import kotlinx.coroutines.launch
 
@@ -13,6 +16,8 @@ internal class SignUpStepModel(
     private val signUseCase: SignUseCase,
     private val navigatorHolder: NavigatorHolder,
     private val stringsHolder: IdentityStringsHolder,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : StateScreenModel<SignUpState>(SignUpState()) {
     private var navigationHandled = false
 
@@ -68,13 +73,17 @@ internal class SignUpStepModel(
             return
         }
         mutableState.value = mutableState.value.copy(isLoading = true, error = null, email = email)
+        analytics.track(AnalyticsEvent.SignUpAttempted())
         screenModelScope.launch {
             signUseCase
                 .signUp(email = email, password = password)
                 .onSuccess {
+                    analytics.track(AnalyticsEvent.SignUpResult(success = true))
                     mutableState.value = mutableState.value.copy(isLoading = false)
                     navigateBack()
                 }.onFailure { error ->
+                    analytics.track(AnalyticsEvent.SignUpResult(success = false))
+                    crashReporter.recordException(error)
                     mutableState.value =
                         mutableState.value.copy(
                             isLoading = false,

@@ -286,8 +286,6 @@ private fun formatFilterDate(millis: Long): String {
         "${date.year}"
 }
 
-private fun formatFilterPrice(price: Float): String =
-    formatCurrencyCents((price * 100).roundToInt(), currentDeviceCurrencyCode())
+private fun formatFilterPrice(price: Float): String = formatCurrencyCents((price * 100).roundToInt(), currentDeviceCurrencyCode())
 
-private fun formatPriceInputValue(price: Float): String =
-    if (price == price.toInt().toFloat()) price.toInt().toString() else price.toString()
+private fun formatPriceInputValue(price: Float): String = if (price == price.toInt().toFloat()) price.toInt().toString() else price.toString()

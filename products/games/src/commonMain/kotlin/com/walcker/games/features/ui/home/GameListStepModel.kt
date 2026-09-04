@@ -11,6 +11,7 @@ import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.analytics.MatchListSource
 import com.walcker.match.navigator.HomeViewCoordinator
 import kotlinx.collections.immutable.toImmutableList
@@ -34,6 +35,7 @@ internal class GameListStepModel(
     private val preferences: GamesPreferences,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
     private val homeViewCoordinator: HomeViewCoordinator,
 ) : ScreenModel {
     init {
@@ -115,6 +117,7 @@ internal class GameListStepModel(
                 .onSuccess {
                     _state.update { it.copy(isLoading = false) }
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isLoading = false,
@@ -138,6 +141,7 @@ internal class GameListStepModel(
                 .onSuccess {
                     _state.update { it.copy(isLoadingMore = false) }
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isLoadingMore = false,

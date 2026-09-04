@@ -18,8 +18,7 @@ internal class FakeFirestoreClient(
 
     override fun query(path: String): FirestoreQueryBuilder = error("not used in this fake")
 
-    override suspend fun <T> runTransaction(block: suspend (FirestoreTransaction) -> T): Result<T> =
-        error("not used in this fake")
+    override suspend fun <T> runTransaction(block: suspend (FirestoreTransaction) -> T): Result<T> = error("not used in this fake")
 
     override suspend fun callFunction(
         name: String,

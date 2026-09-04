@@ -30,6 +30,7 @@ import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.analytics.JoinOutcome
 import com.walcker.match.navigator.PromotionCoordinator
 import com.walcker.match.navigator.PromotionNotice
@@ -172,6 +173,7 @@ internal class MatchDetailStepModel(
     private val promotionCoordinator: PromotionCoordinator,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
     private val matchId: String,
     private val nowSeconds: () -> Long = {
         kotlin.time.Clock.System
@@ -308,6 +310,7 @@ internal class MatchDetailStepModel(
                 reason = reason,
                 details = details,
             ).onSuccess { outcome ->
+                analytics.track(AnalyticsEvent.PlayerReported(reason.name))
                 val message =
                     when (outcome) {
                         SubmitReportOutcome.Recorded -> strings.success
@@ -321,7 +324,8 @@ internal class MatchDetailStepModel(
                         successMessage = message,
                     )
                 }
-            }.onFailure {
+            }.onFailure { error ->
+                crashReporter.recordException(error)
                 _state.update {
                     it.copy(isSubmittingReport = false, reportErrorMessage = strings.error)
                 }
@@ -346,6 +350,7 @@ internal class MatchDetailStepModel(
                 comment = comment,
                 dimensions = dimensions,
             ).onSuccess { outcome ->
+                analytics.track(AnalyticsEvent.PlayerRated(rating))
                 val message =
                     when (outcome) {
                         is SubmitRatingOutcome.Recorded -> strings.submitSuccess
@@ -359,7 +364,8 @@ internal class MatchDetailStepModel(
                         successMessage = message,
                     )
                 }
-            }.onFailure {
+            }.onFailure { error ->
+                crashReporter.recordException(error)
                 _state.update {
                     it.copy(
                         isSubmittingRating = false,
@@ -439,6 +445,7 @@ internal class MatchDetailStepModel(
                     analytics.track(
                         AnalyticsEvent.MatchJoinResult(sport, JoinOutcome.FAILED),
                     )
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isJoining = false,
@@ -450,12 +457,17 @@ internal class MatchDetailStepModel(
     }
 
     private fun submitMatchRatingAction(rating: Int) {
+        val sport =
+            _state.value.match
+                ?.sport
+                ?.name ?: UNKNOWN_SPORT
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
             _state.update { it.copy(isSubmittingMatchRating = true, errorMessage = null) }
 
             submitMatchRating(matchId, rating)
                 .onSuccess { outcome ->
+                    analytics.track(AnalyticsEvent.MatchRated(sport, rating))
                     val message =
                         when (outcome) {
                             is SubmitRatingOutcome.Recorded -> strings.matchRatingSubmitSuccess
@@ -468,7 +480,8 @@ internal class MatchDetailStepModel(
                             successMessage = message,
                         )
                     }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isSubmittingMatchRating = false,
@@ -480,19 +493,25 @@ internal class MatchDetailStepModel(
     }
 
     private fun leaveMatchAction() {
+        val sport =
+            _state.value.match
+                ?.sport
+                ?.name ?: UNKNOWN_SPORT
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
             _state.update { it.copy(isLeavingMatch = true, showLeaveConfirmDialog = false, errorMessage = null) }
 
             leaveMatch(matchId)
                 .onSuccess {
+                    analytics.track(AnalyticsEvent.MatchLeft(sport))
                     _state.update {
                         it.copy(
                             isLeavingMatch = false,
                             successMessage = strings.leaveSuccess,
                         )
                     }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isLeavingMatch = false,
@@ -504,6 +523,10 @@ internal class MatchDetailStepModel(
     }
 
     private fun cancelMatchSeriesAction() {
+        val sport =
+            _state.value.match
+                ?.sport
+                ?.name ?: UNKNOWN_SPORT
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
             _state.update {
@@ -512,13 +535,15 @@ internal class MatchDetailStepModel(
 
             cancelMatchSeries(matchId)
                 .onSuccess {
+                    analytics.track(AnalyticsEvent.MatchCancelled(sport, isSeries = true))
                     _state.update {
                         it.copy(
                             isCancellingSeries = false,
                             successMessage = strings.cancelSeriesSuccess,
                         )
                     }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isCancellingSeries = false,
@@ -530,12 +555,17 @@ internal class MatchDetailStepModel(
     }
 
     private fun cancelMatchAction() {
+        val sport =
+            _state.value.match
+                ?.sport
+                ?.name ?: UNKNOWN_SPORT
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
             _state.update { it.copy(isCancellingMatch = true, showCancelConfirmDialog = false, errorMessage = null) }
 
             cancelMatch(matchId)
                 .onSuccess { outcome ->
+                    analytics.track(AnalyticsEvent.MatchCancelled(sport, isSeries = false))
                     val message =
                         when (outcome) {
                             is CancelMatchOutcome.Cancelled -> strings.cancelSuccess
@@ -547,7 +577,8 @@ internal class MatchDetailStepModel(
                             successMessage = message,
                         )
                     }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isCancellingMatch = false,
@@ -567,7 +598,8 @@ internal class MatchDetailStepModel(
                 .onSuccess { game ->
                     trackViewOnce(game)
                     _state.update { it.copy(isLoading = false, match = game).withCanRate() }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update {
                         it.copy(
                             isLoading = false,

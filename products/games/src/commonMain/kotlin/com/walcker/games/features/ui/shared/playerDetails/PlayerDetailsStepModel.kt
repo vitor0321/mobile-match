@@ -10,6 +10,10 @@ import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsState.Com
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsState.Companion.RATINGS_SAMPLE_SIZE
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
+import com.walcker.match.core.analytics.PlayerProfileSource
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +29,8 @@ internal class PlayerDetailsStepModel(
     private val getPlayerDetails: GetPlayerDetailsUseCase,
     private val getPlayerRatings: GetPlayerRatingsUseCase,
     private val stringsHolder: GamesStringsHolder,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : ScreenModel {
     private val strings get() = stringsHolder.resolveStringsOrDefault().playerDetails
 
@@ -35,6 +41,7 @@ internal class PlayerDetailsStepModel(
     val effects: Flow<PlayerDetailsEffect> = _effects.receiveAsFlow()
 
     init {
+        analytics.track(AnalyticsEvent.PlayerProfileViewed(PlayerProfileSource.MATCH_DETAIL))
         loadPlayerData()
     }
 
@@ -60,6 +67,7 @@ internal class PlayerDetailsStepModel(
                     _state.update { it.copy(player = player, isLoadingPlayer = false) }
                     loadRatingsSample()
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message = error.message ?: strings.errorLoading
                     _state.update { it.copy(isLoadingPlayer = false, errorMessage = message) }
                     _effects.send(PlayerDetailsEffect.ShowMessage(message))
@@ -88,7 +96,8 @@ internal class PlayerDetailsStepModel(
                     isLoadingRatings = false,
                 )
             }
-        }.onFailure {
+        }.onFailure { error ->
+            crashReporter.recordException(error)
             _state.update { it.copy(isLoadingRatings = false) }
         }
     }

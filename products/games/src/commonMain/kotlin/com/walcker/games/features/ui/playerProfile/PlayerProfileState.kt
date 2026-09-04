@@ -50,8 +50,6 @@ internal sealed interface PlayerProfileEvent {
     data class NextMatchClicked(
         val matchId: String,
     ) : PlayerProfileEvent
-
-    data object ViewPublicProfileClicked : PlayerProfileEvent
 }
 
 internal sealed interface PlayerProfileEffect {
@@ -59,9 +57,5 @@ internal sealed interface PlayerProfileEffect {
 
     data class NavigateToMatchDetail(
         val matchId: String,
-    ) : PlayerProfileEffect
-
-    data class NavigateToOwnPublicProfile(
-        val userId: String,
     ) : PlayerProfileEffect
 }

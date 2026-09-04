@@ -1,5 +1,7 @@
 package com.walcker.games.features.ui.shared.playerSearch
 
+import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakePlayerRepository
 import com.walcker.games.fake.playerSearchResult
 import com.walcker.games.features.domain.shared.model.PlayerSearchResults
@@ -43,6 +45,8 @@ class PlayerSearchStepModelTest {
         PlayerSearchStepModel(
             searchPlayersUseCase = SearchPlayersUseCaseImpl(repository),
             stringsHolder = stringsHolder,
+            analytics = FakeAnalyticsTracker(),
+            crashReporter = FakeCrashReporter(),
             debounceMs = debounceMs,
         )
 

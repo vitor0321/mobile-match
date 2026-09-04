@@ -1,6 +1,7 @@
 package com.walcker.games.features.ui.home.map
 
 import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeLocationProvider
 import com.walcker.games.fake.game
@@ -41,6 +42,7 @@ class MapStepModelTest {
         preferences = testGamesPreferences(),
         locationProvider = locationProvider,
         analytics = FakeAnalyticsTracker(),
+        crashReporter = FakeCrashReporter(),
     )
 
     private fun futureGame(id: String) = game(id = id, startsAtSeconds = Long.MAX_VALUE / 1000)

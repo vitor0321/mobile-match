@@ -11,6 +11,7 @@ import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.geo.Coordinates
 import com.walcker.match.core.geo.DefaultCenter
 import com.walcker.match.core.geo.encodeGeoHash
@@ -46,6 +47,7 @@ internal class CreateMatchStepModel(
     private val sessionHolder: SessionHolder,
     private val tabCoordinator: TabCoordinator,
     private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
     private val locationProvider: LocationProvider,
     private val reverseGeocoder: ReverseGeocoder,
     private val editingMatchId: String? = null,
@@ -109,7 +111,8 @@ internal class CreateMatchStepModel(
                             isLoading = false,
                         )
                     }
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     _state.update { it.copy(isLoading = false) }
                     _effects.send(CreateMatchEffect.ShowMessage(strings.genericError))
                 }
@@ -237,16 +240,19 @@ internal class CreateMatchStepModel(
                     updateMatch(matchId, request)
                         .onSuccess {
                             _effects.send(CreateMatchEffect.MatchUpdated)
-                        }.onFailure {
+                        }.onFailure { error ->
+                            crashReporter.recordException(error)
                             _effects.send(CreateMatchEffect.ShowMessage(strings.genericError))
                         }
                 } else {
+                    analytics.track(AnalyticsEvent.MatchCreateAttempted(request.sport.name))
                     createMatch(request)
                         .onSuccess { newMatchId ->
                             analytics.track(AnalyticsEvent.MatchCreated(request.sport.name))
                             _effects.send(CreateMatchEffect.NavigateToMyMatches(newMatchId))
                             tabCoordinator.requestTab(MainTab.MyMatches)
-                        }.onFailure {
+                        }.onFailure { error ->
+                            crashReporter.recordException(error)
                             _effects.send(CreateMatchEffect.ShowMessage(strings.genericError))
                         }
                 }

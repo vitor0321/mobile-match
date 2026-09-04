@@ -1,5 +1,6 @@
 package com.walcker.games.features.ui.shared.notifications
 
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeNotificationRepository
 import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.features.data.shared.model.NotificationHistoryItem
@@ -46,6 +47,7 @@ class NotificationHistoryStepModelTest {
         deleteNotification = DeleteNotificationUseCaseImpl(repository),
         sessionHolder = sessionHolder,
         stringsHolder = stringsHolder,
+        crashReporter = FakeCrashReporter(),
     )
 
     private fun item(id: String) =

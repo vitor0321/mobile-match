@@ -71,6 +71,7 @@ import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.datetime.formatWhen
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.PromotionCoordinator
@@ -126,6 +127,7 @@ internal fun MatchDetailScreenContent(
     val promotionCoordinator: PromotionCoordinator = koinInject()
     val stringsHolder: GamesStringsHolder = koinInject()
     val analytics: AnalyticsTracker = koinInject()
+    val crashReporter: CrashReporter = koinInject()
     val loginCoordinator: LoginCoordinator = koinInject()
 
     val joinGame: JoinGameUseCase = koinInject()
@@ -151,6 +153,7 @@ internal fun MatchDetailScreenContent(
                 promotionCoordinator = promotionCoordinator,
                 stringsHolder = stringsHolder,
                 analytics = analytics,
+                crashReporter = crashReporter,
                 matchId = matchId,
             )
         }

@@ -4,10 +4,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Transaction
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.dagger.internal.DoubleCheck.lazy
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.Collections.emptyList
 
 private val firestore: FirebaseFirestore by lazy {
     FirebaseFirestore.getInstance()
@@ -112,7 +114,12 @@ private class AndroidDocumentReference(
     ): Result<Unit> =
         runCatching {
             if (merge) {
-                ref.set(data, com.google.firebase.firestore.SetOptions.merge()).await()
+                ref
+                    .set(
+                        data,
+                        com.google.firebase.firestore.SetOptions
+                            .merge(),
+                    ).await()
             } else {
                 ref.set(data).await()
             }

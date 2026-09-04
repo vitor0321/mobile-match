@@ -2,6 +2,7 @@ package com.walcker.games.features.ui.shared.matchDetail
 
 import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakePlayerRepository
 import com.walcker.games.fake.FakeRatingRepository
@@ -74,6 +75,7 @@ class MatchDetailStepModelTest {
         sessionHolder: FakeSessionHolder = FakeSessionHolder(),
         promotionCoordinator: PromotionCoordinator = PromotionCoordinator(),
         analytics: FakeAnalyticsTracker = FakeAnalyticsTracker(),
+        crashReporter: FakeCrashReporter = FakeCrashReporter(),
         matchId: String = "match-1",
         nowSeconds: () -> Long = { fixedNow },
     ) = MatchDetailStepModel(
@@ -92,6 +94,7 @@ class MatchDetailStepModelTest {
         promotionCoordinator = promotionCoordinator,
         stringsHolder = stringsHolder,
         analytics = analytics,
+        crashReporter = crashReporter,
         matchId = matchId,
         nowSeconds = nowSeconds,
     )

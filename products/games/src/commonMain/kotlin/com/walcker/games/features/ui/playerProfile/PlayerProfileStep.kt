@@ -25,13 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.playerProfile.component.AvailabilityCard
 import com.walcker.games.features.ui.playerProfile.component.ProfileHeader
 import com.walcker.games.features.ui.playerProfile.component.RatingItemCard
 import com.walcker.games.features.ui.shared.common.LoginRequiredBottomSheet
-import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsStep
 import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarLoading
@@ -40,7 +37,6 @@ import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.CedarStat
 import com.walcker.match.cedar.components.CedarStatRow
-import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -59,7 +55,6 @@ internal class PlayerProfileStep : Screen {
         val snackbarHostState = remember { SnackbarHostState() }
         val loginCoordinator: LoginCoordinator = koinInject()
         val matchDetailCoordinator: MatchDetailCoordinator = koinInject()
-        val navigator = LocalNavigator.currentOrThrow
         val loginRequired = rememberGamesStrings().strings.loginRequired
         var showLoginSheet by remember { mutableStateOf(false) }
 
@@ -90,8 +85,6 @@ internal class PlayerProfileStep : Screen {
                     PlayerProfileEffect.RequireLogin -> showLoginSheet = true
                     is PlayerProfileEffect.NavigateToMatchDetail ->
                         matchDetailCoordinator.open(effect.matchId)
-                    is PlayerProfileEffect.NavigateToOwnPublicProfile ->
-                        navigator.push(PlayerDetailsStep(effect.userId))
                 }
             }
         }
@@ -195,10 +188,6 @@ internal fun PlayerProfileContent(
                         name = state.userName,
                         email = state.userEmail,
                         fallbackName = strings.fallbackAccountName,
-                    )
-                    CedarTextButton(
-                        text = strings.viewPublicProfileAction,
-                        onClick = { onEvent(PlayerProfileEvent.ViewPublicProfileClicked) },
                     )
                 }
             }

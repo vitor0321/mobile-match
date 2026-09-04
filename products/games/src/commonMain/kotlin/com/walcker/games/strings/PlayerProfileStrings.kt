@@ -25,7 +25,6 @@ internal data class PlayerProfileStrings(
     val sportsPreferenceTitle: String,
     val sportsPreferenceError: String,
     val nextMatchSection: String,
-    val viewPublicProfileAction: String,
     val fallbackAccountName: String,
 )
 
@@ -55,7 +54,6 @@ internal val playerProfileStringsPt =
         sportsPreferenceTitle = "Esportes que eu jogo",
         sportsPreferenceError = "Não foi possível salvar seus esportes. Tente de novo.",
         nextMatchSection = "Próxima partida",
-        viewPublicProfileAction = "Ver como outros jogadores me veem",
         fallbackAccountName = "Jogador",
     )
 
@@ -85,6 +83,5 @@ internal val playerProfileStringsEn =
         sportsPreferenceTitle = "Sports I play",
         sportsPreferenceError = "Couldn't save your sports. Please try again.",
         nextMatchSection = "Next match",
-        viewPublicProfileAction = "See how other players see you",
         fallbackAccountName = "Player",
     )

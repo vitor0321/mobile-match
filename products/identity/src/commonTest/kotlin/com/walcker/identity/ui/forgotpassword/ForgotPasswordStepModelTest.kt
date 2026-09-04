@@ -1,6 +1,8 @@
 package com.walcker.identity.ui.forgotpassword
 
+import com.walcker.identity.fake.FakeAnalyticsTracker
 import com.walcker.identity.fake.FakeAppleAuthSource
+import com.walcker.identity.fake.FakeCrashReporter
 import com.walcker.identity.fake.FakeFirebaseAuthSource
 import com.walcker.identity.fake.FakeGoogleAuthSource
 import com.walcker.identity.features.data.repository.AuthRepositoryImpl
@@ -59,6 +61,8 @@ class ForgotPasswordStepModelTest {
                 signUseCase = signUseCase,
                 navigatorHolder = NavigatorHolder(),
                 stringsHolder = stringsHolder,
+                analytics = FakeAnalyticsTracker(),
+                crashReporter = FakeCrashReporter(),
             )
         return model to firebaseAuthSource
     }

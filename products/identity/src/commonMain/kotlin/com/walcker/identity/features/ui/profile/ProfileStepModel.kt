@@ -7,6 +7,9 @@ import com.walcker.identity.features.domain.usecase.DeleteAccountUseCase
 import com.walcker.identity.features.domain.usecase.ProfileAccountUseCase
 import com.walcker.identity.features.domain.usecase.SignUseCase
 import com.walcker.identity.strings.IdentityStringsHolder
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.navigation.NavigatorHolder
 import com.walcker.match.firestore.FirestoreClient
 import com.walcker.match.navigator.IdentityDestination
@@ -29,12 +32,15 @@ internal class ProfileStepModel(
     private val identityDestination: IdentityDestination,
     private val stringsHolder: IdentityStringsHolder,
     private val firestore: FirestoreClient,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : StateScreenModel<ProfileState>(ProfileState()),
     KoinComponent {
     private val languageProvider: LanguageProvider? =
         try {
             inject<LanguageProvider>().value
         } catch (e: Exception) {
+            crashReporter.log("LanguageProvider indisponível: ${e.message}")
             null
         }
 
@@ -64,6 +70,7 @@ internal class ProfileStepModel(
     }
 
     fun onUpgradeToProClicked() {
+        analytics.track(AnalyticsEvent.AccountUpgradeClicked())
         val destination = identityDestination.paywall()
         navigatorHolder.navigator?.push(destination)
     }
@@ -75,9 +82,11 @@ internal class ProfileStepModel(
             signUseCase
                 .signOut()
                 .onSuccess {
+                    analytics.track(AnalyticsEvent.SignedOut())
                     mutableState.value = mutableState.value.copy(isLoading = false)
                     navigatorHolder.navigator?.pop()
-                }.onFailure {
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
                     mutableState.value =
                         mutableState.value.copy(
                             isLoading = false,
@@ -110,8 +119,9 @@ internal class ProfileStepModel(
                 message = null,
             )
         screenModelScope.launch {
-            when (deleteAccountUseCase()) {
+            when (val result = deleteAccountUseCase()) {
                 DeleteAccountResult.Success -> {
+                    analytics.track(AnalyticsEvent.AccountDeleted())
                     mutableState.value = mutableState.value.copy(isDeletingAccount = false)
                     navigatorHolder.navigator?.pop()
                 }
@@ -122,10 +132,24 @@ internal class ProfileStepModel(
                             error = strings.deleteAccountRequiresRecentLogin,
                         )
                 }
-                is DeleteAccountResult.RemoteDataFailure,
-                is DeleteAccountResult.AuthDeletionFailure,
-                is DeleteAccountResult.LocalCleanupFailure,
-                -> {
+                is DeleteAccountResult.RemoteDataFailure -> {
+                    crashReporter.recordException(result.cause)
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isDeletingAccount = false,
+                            error = strings.deleteAccountError,
+                        )
+                }
+                is DeleteAccountResult.AuthDeletionFailure -> {
+                    crashReporter.recordException(result.cause)
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isDeletingAccount = false,
+                            error = strings.deleteAccountError,
+                        )
+                }
+                is DeleteAccountResult.LocalCleanupFailure -> {
+                    crashReporter.recordException(result.cause)
                     mutableState.value =
                         mutableState.value.copy(
                             isDeletingAccount = false,
@@ -148,6 +172,7 @@ internal class ProfileStepModel(
             profileAccountUseCase
                 .restorePurchases()
                 .onSuccess { hasProAccess ->
+                    analytics.track(AnalyticsEvent.PurchaseRestored(success = true))
                     mutableState.value =
                         mutableState.value.copy(
                             isRestoringPurchases = false,
@@ -159,6 +184,8 @@ internal class ProfileStepModel(
                                 },
                         )
                 }.onFailure { error ->
+                    analytics.track(AnalyticsEvent.PurchaseRestored(success = false))
+                    crashReporter.recordException(error)
                     mutableState.value =
                         mutableState.value.copy(
                             isRestoringPurchases = false,

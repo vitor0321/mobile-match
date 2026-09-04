@@ -16,7 +16,7 @@ import org.koin.dsl.module
 internal actual val platformCoreModule: Module =
     module {
         single<AnalyticsTracker> { IosAnalyticsTracker() }
-        single<CrashReporter> { IosCrashReporter() }
+        single<CrashReporter>(createdAtStart = true) { IosCrashReporter() }
         single<LocationProvider> { createLocationProvider() }
         single<ReverseGeocoder> { createReverseGeocoder() }
         single<AddressGeocoder> { createAddressGeocoder() }

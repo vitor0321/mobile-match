@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinMultiplatform)
+    id("org.jetbrains.kotlin.native.cocoapods")
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
 }
@@ -15,6 +16,21 @@ kotlin {
     }
     iosArm64()
     iosSimulatorArm64()
+
+    cocoapods {
+        version = "1.0.0"
+        summary = "Match core"
+        homepage = "https://github.com/walcker/mobile-match"
+        ios.deploymentTarget = "18.2"
+        podfile = project.file("../iosApp/Podfile")
+        pod("FirebaseAnalytics")
+        pod("FirebaseCrashlytics")
+
+        framework {
+            baseName = "Core"
+            isStatic = true
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {

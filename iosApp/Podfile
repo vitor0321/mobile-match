@@ -7,6 +7,8 @@ target 'iosApp' do
   pod 'FirebaseFirestore'
   pod 'FirebaseFunctions'
   pod 'Firebase/Messaging'
+  pod 'FirebaseAnalytics'
+  pod 'FirebaseCrashlytics'
   pod 'GoogleSignIn'
   pod 'PurchasesHybridCommon', '17.55.1'
   pod 'RevenueCat', '5.67.1'

@@ -2,6 +2,7 @@ package com.walcker.games.features.ui.home
 
 import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.game
 import com.walcker.games.fake.testGamesPreferences
@@ -46,6 +47,7 @@ class GameListStepModelTest {
         preferences = testGamesPreferences(),
         stringsHolder = stringsHolder,
         analytics = FakeAnalyticsTracker(),
+        crashReporter = FakeCrashReporter(),
         homeViewCoordinator = homeViewCoordinator,
     )
 

@@ -1,6 +1,7 @@
 package com.walcker.games.features.ui.shared.playerRatings
 
 import app.cash.turbine.test
+import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakePlayerRepository
 import com.walcker.games.fake.rating
 import com.walcker.games.features.domain.shared.model.RatingSort
@@ -46,6 +47,7 @@ class PlayerRatingsListStepModelTest {
             playerName = "Ana Souza",
             getPlayerRatings = GetPlayerRatingsUseCaseImpl(repository),
             stringsHolder = stringsHolder,
+            crashReporter = FakeCrashReporter(),
         )
 
     private fun page(

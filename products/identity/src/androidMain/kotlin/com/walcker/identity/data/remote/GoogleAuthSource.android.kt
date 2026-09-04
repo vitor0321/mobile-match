@@ -115,13 +115,22 @@ internal class AndroidGoogleAuthSource(
     }
 
     private fun resolveServerClientId(): String? {
+        val packageName = applicationContext.packageName
         val resourceId =
-            applicationContext.resources.getIdentifier(
-                "default_web_client_id",
-                "string",
-                applicationContext.packageName,
-            )
-        if (resourceId == 0) return null
+            applicationContext.resources
+                .getIdentifier(
+                    "default_web_client_id",
+                    "string",
+                    packageName,
+                ).takeIf { it != 0 }
+                ?: applicationContext.resources
+                    .getIdentifier(
+                        "default_web_client_id",
+                        "string",
+                        packageName.substringBeforeLast(".dev"),
+                    ).takeIf { it != 0 }
+
+        if (resourceId == null) return null
         return applicationContext
             .getString(resourceId)
             .trim()

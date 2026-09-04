@@ -8,6 +8,7 @@ import com.walcker.games.features.domain.shared.usecase.GetNotificationHistoryUs
 import com.walcker.games.features.domain.shared.usecase.MarkNotificationAsReadUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.identity.api.SessionHolder
+import com.walcker.match.core.analytics.CrashReporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +22,7 @@ internal class NotificationHistoryStepModel(
     private val deleteNotification: DeleteNotificationUseCase,
     private val sessionHolder: SessionHolder,
     private val stringsHolder: GamesStringsHolder,
+    private val crashReporter: CrashReporter,
 ) : ScreenModel {
     private val _state = MutableStateFlow(NotificationHistoryState())
     val state: StateFlow<NotificationHistoryState> = _state.asStateFlow()
@@ -54,6 +56,7 @@ internal class NotificationHistoryStepModel(
                         )
                     }
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
                     _state.update { it.copy(errorMessage = message) }
                 }
@@ -71,6 +74,7 @@ internal class NotificationHistoryStepModel(
                         state.copy(notifications = state.notifications.filter { it.id != notificationId })
                     }
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
                     _state.update { it.copy(errorMessage = message) }
                 }
@@ -91,6 +95,7 @@ internal class NotificationHistoryStepModel(
                 .onSuccess { notifications ->
                     _state.update { it.copy(isLoading = false, notifications = notifications) }
                 }.onFailure { error ->
+                    crashReporter.recordException(error)
                     val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
                     _state.update { it.copy(isLoading = false, errorMessage = message) }
                 }
