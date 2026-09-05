@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>UnreachableCode:FirestoreClient.android.kt$AndroidFirestoreClient$(result.data as Map&lt;String, Any?&gt;) ?: emptyMap()</ID>
+    <ID>UnusedPrivateProperty:FirestoreClient.android.kt$AndroidFirestoreClient$val wrappedTxn = AndroidTransaction(txn)</ID>
+  </CurrentIssues>
+</SmellBaseline>

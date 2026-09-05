@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <queries>
+        <package android:name="com.google.android.gms" />
+    </queries>
 
     <application
         android:name=".MatchApplication"
@@ -12,26 +19,33 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Match">
         <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+        <meta-data
             android:name="firebase_crashlytics_collection_enabled"
             android:value="true" />
         <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}" />
-        <meta-data
-            android:name="com.walcker.match.ads.BANNER_UNIT_ID"
-            android:value="${admobBannerUnitId}" />
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${googleMapsApiKey}" />
 
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mnc|mcc|keyboard|navigation|layoutDirection|fontScale|smallestScreenSize|density|uiMode"
             android:exported="true"
-            android:theme="@style/Theme.Match.Splash"
-            android:windowSoftInputMode="adjustResize">
+            android:theme="@style/Theme.Match.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".notifications.FirebasePushNotificationService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

@@ -1,23 +1,386 @@
 rules_version = '2';
 
+// Regras do Join Play — marketplace de vagas esportivas.
+//
+// Princípio central: tudo que decide lotação, dinheiro, reputação ou punição é
+// escrito exclusivamente por Cloud Functions (Admin SDK ignora estas regras).
+// O cliente só escreve o que é dele e não afeta ninguém: o próprio perfil, os
+// próprios dados privados, os próprios dispositivos e as partidas que organiza.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/favorites/{document} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // ---------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    match /users/{userId}/verse_comments/{document} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    function uid() {
+      return request.auth.uid;
     }
 
-    match /book_explanations/{document} {
-      allow read: if request.auth != null;
+    function isOwner(userId) {
+      return isSignedIn() && uid() == userId;
+    }
+
+    // Substitui a função has_role() do Postgres: o papel vem de Custom Claim,
+    // definida pela Function onUserCreate / painel de moderação.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function current() {
+      return resource.data;
+    }
+
+    function changedKeys() {
+      return incoming().diff(current()).affectedKeys();
+    }
+
+    function isBannedUser() {
+      return exists(/databases/$(database)/documents/profiles/$(uid()))
+        && get(/databases/$(database)/documents/profiles/$(uid())).data.isBanned == true;
+    }
+
+    // Banido para sempre, ou com suspensão ainda valendo.
+    //
+    // Entrar e avaliar passam por callable e são barrados lá; criar partida é
+    // escrita direta do cliente, então a checagem precisa existir aqui também.
+    // As chamadas get() repetidas são resolvidas uma vez só por avaliação.
+    function isSuspendedUser() {
+      return exists(/databases/$(database)/documents/moderation/$(uid()))
+        && (
+          get(/databases/$(database)/documents/moderation/$(uid())).data.level == 'banned'
+          || (
+            get(/databases/$(database)/documents/moderation/$(uid())).data.level == 'suspended'
+            && get(/databases/$(database)/documents/moderation/$(uid())).data.untilMs > request.time.toMillis()
+          )
+        );
+    }
+
+    function isRestrictedUser() {
+      return isBannedUser() || isSuspendedUser();
+    }
+
+    function isText(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function isLatitude(value) {
+      return value is number && value >= -90 && value <= 90;
+    }
+
+    function isLongitude(value) {
+      return value is number && value >= -180 && value <= 180;
+    }
+
+    // ---------------------------------------------------------------------
+    // profiles/{userId} — parte pública do jogador
+    //
+    // Legível por qualquer autenticado (é o que aparece no card da partida e
+    // na lista de confirmados). Telefone, chave Pix, coordenadas e
+    // disponibilidade NÃO moram aqui — ver profiles/{userId}/private/data.
+    // ---------------------------------------------------------------------
+
+    function profileEditableFields() {
+      return [
+        'fullName', 'nickname', 'avatarUrl', 'position', 'level',
+        'sports', 'city', 'neighborhood', 'updatedAt'
+      ];
+    }
+
+    function isValidProfileContent(data) {
+      return isText(data.fullName, 80)
+        && (!('nickname' in data) || data.nickname == null || isText(data.nickname, 40))
+        && (!('avatarUrl' in data) || data.avatarUrl == null || isText(data.avatarUrl, 500))
+        && (!('position' in data) || data.position == null || isText(data.position, 40))
+        && (!('level' in data) || isText(data.level, 30))
+        && (!('city' in data) || data.city == null || isText(data.city, 80))
+        && (!('neighborhood' in data) || data.neighborhood == null || isText(data.neighborhood, 80))
+        && (!('sports' in data) || (data.sports is list && data.sports.size() <= 20));
+    }
+
+    match /profiles/{userId} {
+      allow read: if isSignedIn();
+
+      // O documento normalmente nasce na Function onUserCreate. O create aqui é
+      // uma rede de segurança e por isso força os valores iniciais do servidor.
+      allow create: if isOwner(userId)
+        && isValidProfileContent(incoming())
+        && incoming().rating == 0
+        && incoming().ratingCount == 0
+        && incoming().matchesPlayed == 0
+        && incoming().isBanned == false
+        && incoming().createdAt == request.time;
+
+      // rating, ratingCount, matchesPlayed e isBanned são reputação e punição:
+      // só Functions mexem.
+      allow update: if isOwner(userId)
+        && changedKeys().hasOnly(profileEditableFields())
+        && isValidProfileContent(incoming());
+
+      allow update: if isAdmin();
+
+      // Exclusão de conta passa pela callable deleteAccount.
+      allow delete: if false;
+
+      // -------------------------------------------------------------------
+      // profiles/{userId}/private/data — dados sensíveis do jogador
+      //
+      // Telefone, chave Pix, e-mail, coordenadas, geohash e disponibilidade.
+      // No Postgres isso convivia com a leitura pública da linha; aqui fica
+      // isolado porque a permissão do Firestore é por documento.
+      // -------------------------------------------------------------------
+      match /private/{documentId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // -------------------------------------------------------------------
+      // profiles/{userId}/ratings/{ratingId} — avaliações RECEBIDAS
+      //
+      // Cópia desnormalizada do registro em matches/{matchId}/ratings, escrita
+      // pela mesma transação da callable submitPlayerRating. Mora sob profiles
+      // (público para quem está logado) e não sob users/ porque a tela de
+      // perfil precisa mostrar as avaliações de outra pessoa — users/ é a
+      // árvore privada do dono.
+      // -------------------------------------------------------------------
+      match /ratings/{ratingId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // matches/{matchId} — a partida
+    // ---------------------------------------------------------------------
+
+    function matchEditableFields() {
+      return [
+        'sport', 'venueName', 'address', 'neighborhood', 'city',
+        'lat', 'lng', 'geohash', 'startsAtSeconds', 'durationMin',
+        'totalSlots', 'priceCents', 'status', 'recurrence', 'seriesId'
+      ];
+    }
+
+    // Schema real gravado por FirestoreGameSource.createMatch() e lido por
+    // GameMapper.toGame() / functions/src/index.ts. status é maiúsculo
+    // (MatchStatus.name); startsAtSeconds é epoch em segundos, não Timestamp.
+    function isValidMatchContent(data) {
+      return isText(data.sport, 30)
+        && isText(data.venueName, 120)
+        && isText(data.address, 200)
+        && isText(data.neighborhood, 80)
+        && isText(data.city, 80)
+        && isLatitude(data.lat)
+        && isLongitude(data.lng)
+        && isText(data.geohash, 12)
+        && data.startsAtSeconds is int
+        && data.durationMin is int && data.durationMin >= 15 && data.durationMin <= 480
+        && data.totalSlots is int && data.totalSlots >= 1 && data.totalSlots <= 50
+        && data.confirmedCount is int && data.confirmedCount >= 0 && data.confirmedCount <= data.totalSlots
+        && data.priceCents is int && data.priceCents >= 0 && data.priceCents <= 100000
+        && isText(data.currencyCode, 3)
+        && data.status is string
+        && (!('recurrence' in data) || isText(data.recurrence, 20))
+        && (!('seriesId' in data) || isText(data.seriesId, 30))
+        && isText(data.organizerName, 80)
+        && data.organizerRating is number
+        && data.organizerRatingCount is int && data.organizerRatingCount >= 0
+        && data.matchRating is number
+        && data.matchRatingCount is int && data.matchRatingCount >= 0
+        && data.participants is list && data.participants.size() <= data.totalSlots;
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && !isRestrictedUser()
+        && incoming().organizerId == uid()
+        && isValidMatchContent(incoming())
+        && incoming().startsAtSeconds > request.time.toMillis() / 1000
+        && incoming().status == 'OPEN'
+        && incoming().confirmedCount == 1
+        && incoming().participants == [uid()];
+
+      // O organizador edita os dados da partida, mas nunca o contador —
+      // confirmedCount é a fonte da verdade da lotação e pertence às
+      // Functions joinMatch/leaveMatch.
+      allow update: if isSignedIn()
+        && current().organizerId == uid()
+        && changedKeys().hasOnly(matchEditableFields())
+        && isValidMatchContent(incoming())
+        && incoming().totalSlots >= current().confirmedCount
+        // 'FULL' e 'FINISHED' são estados calculados pelo servidor.
+        && incoming().status in ['OPEN', 'CANCELLED'];
+
+      allow update: if isAdmin();
+
+      // Só apaga partida que ninguém entrou; com gente dentro, cancela-se.
+      allow delete: if isSignedIn()
+        && current().organizerId == uid()
+        && current().confirmedCount == 0;
+
+      allow delete: if isAdmin();
+
+      // -------------------------------------------------------------------
+      // participants/{userId} — quem está dentro e em que ordem
+      //
+      // Escrita 100% negada ao cliente: entrar e sair passam pelas callables
+      // joinMatch/leaveMatch, que rodam em transação. É isso que impede
+      // overbooking, furo de fila e autoconfirmação de pagamento.
+      // -------------------------------------------------------------------
+      match /participants/{participantId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+
+      // Avaliações da partida — registro canônico, id `{raterUid}_{ratedUid}`.
+      // Gravadas pela callable submitPlayerRating, que recalcula a média do
+      // avaliado na mesma transação. Reputação nunca vem do cliente.
+      match /ratings/{ratingId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+
+      // Voto de "como foi a partida", um por participante (id = uid). Gravado
+      // pela callable submitMatchRating, que também atualiza a média em
+      // matchTemplates/{id} na mesma transação.
+      match /matchRatings/{raterUid} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // matchTemplates/{templateId} — reputação de "organizador + local +
+    // esporte" ao longo de várias edições da mesma partida recorrente.
+    //
+    // Localizado por query de igualdade (organizerId/venueName/sport), nunca
+    // por id determinístico — ver submitMatchRating em functions/src/index.ts.
+    // Só a callable grava; o client só lê pra decidir o snapshot de
+    // matchRating/matchRatingCount ao criar uma nova partida.
+    // ---------------------------------------------------------------------
+
+    match /matchTemplates/{templateId} {
+      allow read: if isSignedIn();
       allow write: if false;
     }
 
-    match /verse_explanations/{document} {
-      allow read: if request.auth != null;
+    // ---------------------------------------------------------------------
+    // matchSeries/{seriesId} — liga/desliga da recorrência.
+    //
+    // Nasce sob demanda: sem o documento, a série está ativa. Só existe
+    // quando o organizador cancela a recorrência via callable
+    // cancelMatchSeries, que grava active=false — generateRecurringMatches
+    // checa isso antes de criar a próxima ocorrência.
+    // ---------------------------------------------------------------------
+
+    match /matchSeries/{seriesId} {
+      allow read: if isSignedIn();
       allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // users/{userId} — tudo que é privado do usuário
+    // ---------------------------------------------------------------------
+
+    match /users/{userId} {
+      allow read, write: if false;
+
+      // Feed de notificações. O cliente só marca como lida ou apaga; a
+      // criação vem das Functions onMatchCreated / onParticipantChanged.
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if false;
+        allow update: if isOwner(userId)
+          && changedKeys().hasOnly(['readAt']);
+        allow delete: if isOwner(userId);
+      }
+
+      // Histórico de notificações consumido pelo products/games (Phase 3).
+      // Mesmo princípio do feed acima, mas o app marca `isRead: true` em vez de
+      // gravar um timestamp. A criação continua sendo só das Functions (o push
+      // recebido registra o item); o cliente apenas lê, marca como lida e apaga.
+      match /notificationHistory/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if false;
+        allow update: if isOwner(userId)
+          && changedKeys().hasOnly(['isRead'])
+          && incoming().isRead is bool;
+        allow delete: if isOwner(userId);
+      }
+
+      // Pagamentos Pix da partida — status só muda por callable
+      // (registerPixPayment / confirmPixPayment).
+      match /payments/{paymentId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+
+      // Espelho da assinatura do organizador, escrito pelo webhook do
+      // RevenueCat. Nunca pelo app.
+      match /subscription/{documentId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+
+      // Tokens de push. O app registra e remove o próprio dispositivo.
+      match /devices/{token} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && incoming().userId == userId
+          && isText(incoming().platform, 20);
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // reports/{reportId} — denúncias
+    //
+    // Criadas pela callable submitReport, que escalona para /moderation.
+    // O denunciante enxerga as próprias; o resto é só moderação.
+    // ---------------------------------------------------------------------
+
+    match /reports/{reportId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && current().reporterId == uid());
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // moderation/{userId} — advertência, suspensão, banimento
+    //
+    // O usuário lê o próprio status para o app poder explicar o bloqueio.
+    // ---------------------------------------------------------------------
+
+    match /moderation/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // Configuração remota: planos, taxa da plataforma, raio máximo.
+    // ---------------------------------------------------------------------
+
+    match /config/{documentId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // Negação explícita para qualquer caminho não previsto acima.
+    // ---------------------------------------------------------------------
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

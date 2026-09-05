@@ -8,7 +8,10 @@ internal actual fun currentDayKey(): String = SimpleDateFormat("yyyy-MM-dd", Loc
 
 internal actual fun formatEpochMillisToDayKey(epochMillis: Long): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(epochMillis))
 
-internal actual fun daysBetween(startDayKey: String, endDayKey: String): Int {
+internal actual fun daysBetween(
+    startDayKey: String,
+    endDayKey: String,
+): Int {
     return try {
         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val date1 = sdf.parse(startDayKey) ?: return 0

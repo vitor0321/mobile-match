@@ -1,5 +1,5 @@
 #include "Config.xcconfig"
 
-PRODUCT_NAME =Bible Match Dev
+PRODUCT_NAME = Join Play Dev
 PRODUCT_BUNDLE_IDENTIFIER = org.walcker.match.Match$(TEAM_ID).debug
-BUNDLE_DISPLAY_NAME = Match Dev
+BUNDLE_DISPLAY_NAME = Join Play Dev

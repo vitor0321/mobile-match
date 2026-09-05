@@ -11,4 +11,3 @@ internal fun SignUpEvents(
     val onEvent = remember(stepModel) { { event: SignUpInternalRoute -> stepModel.onEvent(event) } }
     content(onEvent)
 }
-

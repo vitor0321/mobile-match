@@ -58,12 +58,14 @@ internal class ProStateHolderImpl(
                     }
 
                     state.value = cache.read(uid)
-                    billingClient.logIn(uid)
+                    billingClient
+                        .logIn(uid)
                         .onSuccess { isPro -> publishForActiveUser(uid, isPro) }
                 }
         }
         scope.launch {
-            billingClient.customerInfoUpdates()
+            billingClient
+                .customerInfoUpdates()
                 .distinctUntilChanged()
                 .collect { update ->
                     publishForActiveUser(update.uid, update.isPro)
@@ -71,7 +73,10 @@ internal class ProStateHolderImpl(
         }
     }
 
-    private suspend fun publishForActiveUser(uid: String, isPro: Boolean) {
+    private suspend fun publishForActiveUser(
+        uid: String,
+        isPro: Boolean,
+    ) {
         if (activeUid.value != uid) return
         state.value = isPro
         cache.save(uid, isPro)

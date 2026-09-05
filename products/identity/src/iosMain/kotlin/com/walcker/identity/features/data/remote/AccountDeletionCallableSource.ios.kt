@@ -10,20 +10,23 @@ import kotlin.coroutines.resume
 
 private const val FUNCTIONS_REGION = "southamerica-east1"
 
-internal actual fun createAccountDeletionCallableSource(): AccountDeletionCallableSource =
-    IosAccountDeletionCallableSource(FIRFunctions.functionsForRegion(FUNCTIONS_REGION))
+internal actual fun createAccountDeletionCallableSource(): AccountDeletionCallableSource = IosAccountDeletionCallableSource(FIRFunctions.functionsForRegion(FUNCTIONS_REGION))
 
 private class IosAccountDeletionCallableSource(
     private val functions: FIRFunctions,
 ) : AccountDeletionCallableSource {
-    override suspend fun deleteRemoteData(): Result<Unit> = suspendCancellableCoroutine { continuation ->
-        functions.HTTPSCallableWithName("deleteAccount").callWithCompletion { _, error: NSError? ->
-            continuation.resume(
-                if (error == null) Result.success(Unit)
-                else Result.failure(error.toDeleteAccountThrowable()),
-            )
+    override suspend fun deleteRemoteData(): Result<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            functions.HTTPSCallableWithName("deleteAccount").callWithCompletion { _, error: NSError? ->
+                continuation.resume(
+                    if (error == null) {
+                        Result.success(Unit)
+                    } else {
+                        Result.failure(error.toDeleteAccountThrowable())
+                    },
+                )
+            }
         }
-    }
 }
 
 private fun NSError.toDeleteAccountThrowable(): Throwable {

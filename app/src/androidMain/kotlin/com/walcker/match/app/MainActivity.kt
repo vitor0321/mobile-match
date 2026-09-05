@@ -1,50 +1,101 @@
 package com.walcker.match.app
 
+import android.Manifest
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.walcker.match.cedar.ads.LocalAdBannerContent
-import com.walcker.match.core.ads.AdMobBannerAndroid
+import com.walcker.match.app.notifications.EXTRA_MATCH_ID
+import com.walcker.match.app.notifications.NotificationPermissionRequester
+import com.walcker.match.app.notifications.NotificationPermissionRequesterHolder
+import com.walcker.match.core.location.LocationPermissionRequester
+import com.walcker.match.core.location.LocationPermissionRequesterHolder
+import com.walcker.match.navigator.DeepLink
+import com.walcker.match.navigator.DeepLinkCoordinator
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.suspendCancellableCoroutine
+import org.koin.android.ext.android.inject
 
-private fun adMobBannerUnitId(): String =
-    BuildConfig.ADMOB_BANNER_UNIT_ID.ifBlank { "ca-app-pub-8514371864627144/7820524155" }
+internal class MainActivity :
+    ComponentActivity(),
+    LocationPermissionRequester,
+    NotificationPermissionRequester {
+    private val deepLinkCoordinator: DeepLinkCoordinator by inject()
 
-private const val MIN_SPLASH_DURATION_MS = 650L
+    private var pendingPermissionContinuation: CancellableContinuation<Boolean>? = null
+    private var pendingNotificationPermissionContinuation: CancellableContinuation<Boolean>? = null
 
-internal class MainActivity : ComponentActivity() {
+    private val locationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            pendingPermissionContinuation?.resume(granted) { _, _, _ -> }
+            pendingPermissionContinuation = null
+        }
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            pendingNotificationPermissionContinuation?.resume(granted) { _, _, _ -> }
+            pendingNotificationPermissionContinuation = null
+        }
+
+    override suspend fun requestFineLocationPermission(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            pendingPermissionContinuation = continuation
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+    override suspend fun requestNotificationPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return suspendCancellableCoroutine { continuation ->
+            pendingNotificationPermissionContinuation = continuation
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        val splashStartedAt = SystemClock.uptimeMillis()
         super.onCreate(savedInstanceState)
+
+        LocationPermissionRequesterHolder.requester = this
+        NotificationPermissionRequesterHolder.requester = this
 
         var keepSplashOnScreen = true
         splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
 
         enableEdgeToEdge()
         setContent {
-            CompositionLocalProvider(
-                LocalAdBannerContent provides { onVisibilityChanged ->
-                    AdMobBannerAndroid(
-                        adUnitId = adMobBannerUnitId(),
-                        onVisibilityChanged = onVisibilityChanged,
-                    )
-                }
-            ) {
-                App(
-                    onFirstFrameRendered = {
-                        val elapsed = SystemClock.uptimeMillis() - splashStartedAt
-                        val remaining = (MIN_SPLASH_DURATION_MS - elapsed).coerceAtLeast(0L)
-                        window.decorView.postDelayed(
-                            { keepSplashOnScreen = false },
-                            remaining,
-                        )
-                    },
-                )
-            }
+            App(
+                onFirstFrameRendered = { keepSplashOnScreen = false },
+            )
         }
+
+        handleNotificationIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        val matchId = intent?.getStringExtra(EXTRA_MATCH_ID) ?: return
+        deepLinkCoordinator.navigate(DeepLink.OpenMatch(matchId))
+    }
+
+    override fun onDestroy() {
+        if (LocationPermissionRequesterHolder.requester === this) {
+            LocationPermissionRequesterHolder.requester = null
+        }
+        if (NotificationPermissionRequesterHolder.requester === this) {
+            NotificationPermissionRequesterHolder.requester = null
+        }
+        super.onDestroy()
     }
 }

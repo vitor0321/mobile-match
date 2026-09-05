@@ -11,7 +11,7 @@ plugins {
 kotlin {
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
     iosArm64()
@@ -24,7 +24,6 @@ kotlin {
         ios.deploymentTarget = "18.2"
         podfile = project.file("../../iosApp/Podfile")
         pod("FirebaseAuth")
-        pod("FirebaseFunctions")
         pod("GoogleSignIn")
         pod("PurchasesHybridCommon") {
             version = "17.55.1"
@@ -42,6 +41,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.firestore)
             implementation(projects.navigator)
             implementation(projects.cedarDS)
 
@@ -90,15 +90,24 @@ kotlin {
 
 android {
     namespace = "com.walcker.identity"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.android.compileSdk
+            .get()
+            .toInt()
 
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+        targetSdk =
+            libs.versions.android.targetSdk
+                .get()
+                .toInt()
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }

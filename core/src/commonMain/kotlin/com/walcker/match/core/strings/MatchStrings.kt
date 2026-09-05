@@ -5,25 +5,27 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.text.intl.Locale
 
-public const val MatchDefaultLanguageTag = Locales.PT
+public const val MATCH_DEFAULT_LANGUAGE_TAG = Locales.PT
 
-private val supportedLanguageTags = setOf(
-    Locales.EN,
-    Locales.PT,
-)
+private val supportedLanguageTags =
+    setOf(
+        Locales.EN,
+        Locales.PT,
+    )
 
-public val LocalMatchLanguageTag = compositionLocalOf { MatchDefaultLanguageTag }
+public val LocalMatchLanguageTag = compositionLocalOf { MATCH_DEFAULT_LANGUAGE_TAG }
 
 public fun normalizeMatchLanguageTag(languageTag: String): String {
-    val baseLanguageTag = languageTag
-        .substringBefore('-')
-        .substringBefore('_')
-        .lowercase()
+    val baseLanguageTag =
+        languageTag
+            .substringBefore('-')
+            .substringBefore('_')
+            .lowercase()
 
     return if (baseLanguageTag in supportedLanguageTags) {
         baseLanguageTag
     } else {
-        MatchDefaultLanguageTag
+        MATCH_DEFAULT_LANGUAGE_TAG
     }
 }
 

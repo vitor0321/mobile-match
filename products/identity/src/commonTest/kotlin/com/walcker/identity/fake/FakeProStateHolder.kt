@@ -19,4 +19,3 @@ internal class FakeProStateHolder(
         state.value = value
     }
 }
-
