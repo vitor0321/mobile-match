@@ -20,10 +20,12 @@ class SignUpStepTest {
                 SignUpScreen(
                     state =
                         SignUpState(
+                            fullName = "Jonathan Tomaz",
                             email = "user@match.app",
                             password = "123456",
                             confirmPassword = "123456",
                         ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -42,10 +44,12 @@ class SignUpStepTest {
                 SignUpScreen(
                     state =
                         SignUpState(
+                            fullName = "Jonathan Tomaz",
                             email = "user@match.app",
                             password = "123456",
                             confirmPassword = "123456",
                         ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -67,6 +71,7 @@ class SignUpStepTest {
                             email = "user@match.app",
                             error = "Não foi possível criar a conta",
                         ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -88,6 +93,7 @@ class SignUpStepTest {
                             email = "user@match.app",
                             error = "Não foi possível criar a conta",
                         ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -106,11 +112,13 @@ class SignUpStepTest {
                 SignUpScreen(
                     state =
                         SignUpState(
+                            fullName = "Jonathan Tomaz",
                             email = "user@match.app",
                             password = "123456",
                             confirmPassword = "123456",
                             isLoading = true,
                         ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -129,11 +137,13 @@ class SignUpStepTest {
                 SignUpScreen(
                     state =
                         SignUpState(
+                            fullName = "Jonathan Tomaz",
                             email = "user@match.app",
                             password = "123456",
                             confirmPassword = "123456",
                             isLoading = true,
                         ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},

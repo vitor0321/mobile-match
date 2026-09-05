@@ -2,10 +2,14 @@ package com.walcker.games.features.ui.home
 
 import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeAvailabilityRepository
 import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
+import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
 import com.walcker.games.fake.testGamesPreferences
+import com.walcker.games.features.data.home.preferences.GamesPreferences
+import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
@@ -42,13 +46,16 @@ class GameListStepModelTest {
     private fun buildModel(
         repository: FakeGameRepository,
         homeViewCoordinator: HomeViewCoordinator = HomeViewCoordinator(),
+        preferences: GamesPreferences = testGamesPreferences(),
     ) = GameListStepModel(
         repository = repository,
-        preferences = testGamesPreferences(),
+        preferences = preferences,
         stringsHolder = stringsHolder,
         analytics = FakeAnalyticsTracker(),
         crashReporter = FakeCrashReporter(),
         homeViewCoordinator = homeViewCoordinator,
+        sessionHolder = FakeSessionHolder(session = null),
+        observeAvailability = ObserveAvailabilityUseCaseImpl(FakeAvailabilityRepository()),
     )
 
     private fun futureGame(id: String) = game(id = id, startsAtSeconds = Long.MAX_VALUE / 1000)
@@ -183,5 +190,45 @@ class GameListStepModelTest {
             advanceUntilIdle()
 
             assertTrue(repository.loadMoreMatchesCalls.isEmpty())
+        }
+
+    @Test
+    fun `first launch with no nearby matches falls back to an unlimited nearest search`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository, preferences = testGamesPreferences(hasSyncedBefore = false))
+            advanceUntilIdle()
+
+            assertEquals(listOf(15.0, 20_000.0), repository.refreshCalls)
+            assertTrue(model.state.value.isShowingNearestFallback)
+
+            repository.emitMatches((1..25).map { futureGame("match-$it") })
+            advanceUntilIdle()
+
+            assertEquals(20, model.state.value.games.size)
+            assertTrue(!model.state.value.hasMore)
+        }
+
+    @Test
+    fun `first launch with nearby matches does not trigger the fallback`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository, preferences = testGamesPreferences(hasSyncedBefore = false))
+            repository.emitMatches(listOf(futureGame("match-1")))
+            advanceUntilIdle()
+
+            assertEquals(listOf(15.0), repository.refreshCalls)
+            assertTrue(!model.state.value.isShowingNearestFallback)
+        }
+
+    @Test
+    fun `a returning user does not trigger the first launch fallback`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository)
+            advanceUntilIdle()
+
+            assertEquals(listOf(15.0), repository.refreshCalls)
+            assertTrue(!model.state.value.isShowingNearestFallback)
         }
 }

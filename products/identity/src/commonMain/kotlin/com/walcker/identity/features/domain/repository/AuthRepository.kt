@@ -18,6 +18,7 @@ internal interface AuthRepository {
     suspend fun signUp(
         email: String,
         password: String,
+        displayName: String,
     ): Result<UserSession>
 
     suspend fun deleteAccount(): Result<Unit>

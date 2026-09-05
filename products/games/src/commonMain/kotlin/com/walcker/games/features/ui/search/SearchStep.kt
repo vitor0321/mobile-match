@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -20,22 +21,28 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.ui.search.component.SearchFiltersPanel
 import com.walcker.match.cedar.components.CedarScreenTitle
+import com.walcker.match.cedar.components.CedarSearchEmptyAnimation
 import com.walcker.match.cedar.components.CedarSearchField
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.MatchDetailCoordinator
 import org.koin.compose.koinInject
+
+private val EmptyStateAnimationSize = 240.dp
 
 internal class SearchStep : Screen {
     @Composable
@@ -55,6 +62,10 @@ internal class SearchStep : Screen {
                         matchDetailCoordinator.open(effect.matchId)
                 }
             }
+        }
+
+        DisposableEffect(Unit) {
+            onDispose { stepModel.onEvent(SearchEvents.ResetFilters) }
         }
 
         SearchContent(
@@ -85,6 +96,7 @@ internal fun SearchContent(
             SearchFiltersPanel(
                 strings = strings,
                 selectedSports = state.filters.sports,
+                mySports = state.mySports,
                 startDateMs = state.filters.startDateMs,
                 endDateMs = state.filters.endDateMs,
                 minPrice = state.filters.minPrice,
@@ -157,8 +169,9 @@ internal fun SearchContent(
                 }
             }
 
+            val hasActiveFilters = state.filters != SearchFilters()
             when {
-                state.query.isBlank() && state.results.isEmpty() ->
+                state.query.isBlank() && !hasActiveFilters && state.results.isEmpty() ->
                     EmptyState(
                         message = strings.idlePrompt,
                         modifier = Modifier.fillMaxSize(),
@@ -166,7 +179,18 @@ internal fun SearchContent(
 
                 state.results.isEmpty() ->
                     EmptyState(
-                        message = strings.emptyForQuery(state.query),
+                        message =
+                            if (state.query.isNotBlank()) {
+                                strings.emptyForQuery(state.query)
+                            } else {
+                                strings.emptyForFilters
+                            },
+                        illustration = {
+                            CedarSearchEmptyAnimation(
+                                contentDescription = null,
+                                modifier = Modifier.size(EmptyStateAnimationSize),
+                            )
+                        },
                         actionLabel = strings.clearFilters,
                         onAction = { onEvent(SearchEvents.ResetFilters) },
                         modifier = Modifier.fillMaxSize(),
@@ -187,8 +211,10 @@ internal fun SearchContent(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding =
                             PaddingValues(
-                                horizontal = CedarTokens.spacing.lg,
-                                vertical = CedarTokens.spacing.xs,
+                                start = CedarTokens.spacing.lg,
+                                end = CedarTokens.spacing.lg,
+                                top = CedarTokens.spacing.xs,
+                                bottom = CedarTokens.spacing.xs + LocalBottomBarInset.current,
                             ),
                         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {
@@ -200,6 +226,7 @@ internal fun SearchContent(
                                 priceLabel = game.pricePerPlayer?.let { cardStrings.perPlayer(it) },
                                 slotsLabel = cardStrings.slotsBadge(game.openSlots),
                                 openSlots = game.openSlots,
+                                cityLabel = game.city,
                                 onClick = { onEvent(SearchEvents.SelectGame(game.id)) },
                                 matchRating = game.matchRating.toFloat().takeIf { game.matchRatingCount > 0 },
                                 matchRatingCountLabel =

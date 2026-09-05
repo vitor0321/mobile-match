@@ -2,6 +2,7 @@ package com.walcker.games.features.ui.create
 
 import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeAvailabilityRepository
 import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeLocationProvider
@@ -10,6 +11,7 @@ import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
 import com.walcker.games.features.domain.create.usecase.CreateMatchUseCaseImpl
 import com.walcker.games.features.domain.create.usecase.UpdateMatchUseCaseImpl
+import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCaseImpl
@@ -66,6 +68,7 @@ class CreateMatchStepModelTest {
         getGameById = GetGameByIdUseCaseImpl(gameRepository),
         stringsHolder = stringsHolder,
         sessionHolder = sessionHolder,
+        observeAvailability = ObserveAvailabilityUseCaseImpl(FakeAvailabilityRepository()),
         tabCoordinator = tabCoordinator,
         analytics = analytics,
         crashReporter = crashReporter,

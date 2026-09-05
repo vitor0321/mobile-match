@@ -42,7 +42,7 @@ public fun MatchDetailBottomSheet() {
             MatchDetailScreenContent(
                 matchId = matchId,
                 onDismiss = { hideThenRun { coordinator.close() } },
-                onNavigateToConfirmation = { id, venueName, startsAtSeconds, sportLabel ->
+                onNavigateToConfirmation = { id, venueName, startsAtSeconds, durationMin, sport ->
                     hideThenRun {
                         coordinator.close()
                         navigatorHolder.navigator?.push(
@@ -50,7 +50,8 @@ public fun MatchDetailBottomSheet() {
                                 matchId = id,
                                 venueName = venueName,
                                 startsAtSeconds = startsAtSeconds,
-                                sportLabel = sportLabel,
+                                durationMin = durationMin,
+                                sport = sport,
                             ),
                         )
                     }

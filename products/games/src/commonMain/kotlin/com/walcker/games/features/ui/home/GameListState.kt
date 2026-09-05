@@ -17,6 +17,8 @@ internal data class GameListState(
     val preferencesLoaded: Boolean = false,
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = false,
+    val mySports: Set<Sport> = emptySet(),
+    val isShowingNearestFallback: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_RADIUS_KM: Double = 15.0

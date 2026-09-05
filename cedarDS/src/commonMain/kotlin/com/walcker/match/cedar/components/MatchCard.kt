@@ -28,6 +28,7 @@ public fun MatchCard(
     priceLabel: String? = null,
     slotsLabel: String? = null,
     openSlots: Int = 0,
+    cityLabel: String? = null,
     joinButtonLabel: String? = null,
     onJoinClick: (() -> Unit)? = null,
     matchRating: Float? = null,
@@ -56,6 +57,7 @@ public fun MatchCard(
                 priceLabel = priceLabel,
                 slotsLabel = slotsLabel,
                 openSlots = openSlots,
+                cityLabel = cityLabel,
                 joinButtonLabel = joinButtonLabel,
                 onJoinClick = onJoinClick,
                 matchRating = matchRating,
@@ -76,6 +78,7 @@ public fun MatchCard(
                 priceLabel = priceLabel,
                 slotsLabel = slotsLabel,
                 openSlots = openSlots,
+                cityLabel = cityLabel,
                 joinButtonLabel = joinButtonLabel,
                 onJoinClick = onJoinClick,
                 matchRating = matchRating,
@@ -93,6 +96,7 @@ private fun MatchCardContent(
     priceLabel: String?,
     slotsLabel: String?,
     openSlots: Int,
+    cityLabel: String?,
     joinButtonLabel: String?,
     onJoinClick: (() -> Unit)?,
     matchRating: Float?,
@@ -157,7 +161,21 @@ private fun MatchCardContent(
                 }
             }
             if (slotsLabel != null) {
-                SlotBadge(label = slotsLabel, openSlots = openSlots)
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+                ) {
+                    SlotBadge(label = slotsLabel, openSlots = openSlots)
+                    if (cityLabel != null) {
+                        Text(
+                            text = cityLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
 

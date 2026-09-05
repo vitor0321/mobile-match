@@ -2,10 +2,12 @@ package com.walcker.games.features.ui.search
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCase
 import com.walcker.games.features.domain.shared.model.isDiscoverable
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.analytics.MatchListSource
@@ -27,6 +29,8 @@ internal class SearchStepModel(
     private val repository: GameRepository,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
+    private val sessionHolder: SessionHolder,
+    private val observeAvailability: ObserveAvailabilityUseCase,
 ) : ScreenModel {
     init {
         analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.SEARCH))
@@ -55,6 +59,28 @@ internal class SearchStepModel(
                 allMatches = games
                 applyQuery(_state.value.query)
             }.launchIn(screenModelScope)
+    }
+
+    init {
+        screenModelScope.launch {
+            sessionHolder.currentUser.collect { session ->
+                if (session == null) {
+                    _state.update { it.copy(mySports = emptySet()) }
+                } else {
+                    observeMySports(session.uid)
+                }
+            }
+        }
+    }
+
+    private fun observeMySports(userId: String) {
+        screenModelScope.launch {
+            observeAvailability(userId).collect { result ->
+                result.onSuccess { availability ->
+                    _state.update { current -> current.copy(mySports = availability.sports) }
+                }
+            }
+        }
     }
 
     fun onEvent(event: SearchEvents) {

@@ -23,6 +23,8 @@ internal val gamesUiModule =
                 analytics = get(),
                 crashReporter = get(),
                 homeViewCoordinator = get(),
+                sessionHolder = get(),
+                observeAvailability = get(),
             )
         }
         factory {
@@ -39,6 +41,8 @@ internal val gamesUiModule =
                 repository = get(),
                 stringsHolder = get(),
                 analytics = get(),
+                sessionHolder = get(),
+                observeAvailability = get(),
             )
         }
         factory { (matchId: String?) ->
@@ -48,6 +52,7 @@ internal val gamesUiModule =
                 getGameById = get(),
                 stringsHolder = get(),
                 sessionHolder = get(),
+                observeAvailability = get(),
                 tabCoordinator = get(),
                 analytics = get(),
                 crashReporter = get(),

@@ -6,8 +6,4 @@ public interface IdentityDestination {
     fun login(): Screen
 
     fun signUp(): Screen
-
-    fun paywall(): Screen
-
-    fun profile(): Screen
 }

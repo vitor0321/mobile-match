@@ -4,6 +4,7 @@ package com.walcker.games.screenshot
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.ui.shared.matchDetail.MatchDetailContent
 import com.walcker.games.features.ui.shared.matchDetail.MatchDetailState
 import com.walcker.games.strings.PtBrGamesStrings
@@ -19,6 +20,26 @@ class MatchDetailStepTest {
             isLoading = false,
             match = fakeGame(id = "match-1", participants = listOf("player-1")),
             participants = fakeParticipantsSummary(),
+            currentUserId = "player-1",
+        )
+
+    private val fullMatchState =
+        MatchDetailState(
+            isLoading = false,
+            match =
+                fakeGame(
+                    id = "match-2",
+                    confirmedPlayers = 10,
+                    totalPlayers = 10,
+                    status = MatchStatus.FULL,
+                    participants = listOf("player-2"),
+                ),
+            participants =
+                fakeParticipantsSummary(
+                    confirmed = listOf(fakeParticipant(userId = "player-2")),
+                    confirmedCount = 10,
+                    totalSlots = 10,
+                ),
             currentUserId = "player-1",
         )
 
@@ -47,6 +68,12 @@ class MatchDetailStepTest {
 
     @Test
     fun promoted_lightMode() = snapshot(loadedState.copy(justPromoted = true), darkTheme = false)
+
+    @Test
+    fun joiningWaitlist_lightMode() = snapshot(fullMatchState.copy(isJoining = true), darkTheme = false)
+
+    @Test
+    fun joiningWaitlist_darkMode() = snapshot(fullMatchState.copy(isJoining = true), darkTheme = true)
 
     @Test
     fun organizerView_lightMode() =

@@ -9,7 +9,5 @@ internal val EnIdentityStrings =
         login = loginStringsEn,
         nativeAuth = nativeAuthStringsEn,
         signUp = signUpStringsEn,
-        profile = profileStringsEn,
-        paywall = paywallStringsEn,
         forgotPassword = forgotPasswordStringsEn,
     )

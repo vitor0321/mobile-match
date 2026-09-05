@@ -5,6 +5,7 @@ import com.walcker.games.features.data.shared.di.gamesDataModule
 import com.walcker.games.features.data.shared.platform.gamesPlatformModule
 import com.walcker.games.features.ui.di.gamesUiModule
 import com.walcker.games.strings.di.gamesStringsModule
+import com.walcker.match.navigator.BottomBarVisibilityCoordinator
 import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.GamesDestination
 import com.walcker.match.navigator.HomeViewCoordinator
@@ -24,4 +25,5 @@ val gamesModule =
         single { LoginCoordinator() }
         single { HomeViewCoordinator() }
         single { MatchDetailCoordinator() }
+        single { BottomBarVisibilityCoordinator() }
     }

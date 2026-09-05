@@ -2,8 +2,11 @@ package com.walcker.games.features.ui.search
 
 import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeAvailabilityRepository
 import com.walcker.games.fake.FakeGameRepository
+import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
+import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
@@ -41,6 +44,8 @@ class SearchStepModelTest {
             repository = repository,
             stringsHolder = stringsHolder,
             analytics = FakeAnalyticsTracker(),
+            sessionHolder = FakeSessionHolder(session = null),
+            observeAvailability = ObserveAvailabilityUseCaseImpl(FakeAvailabilityRepository()),
         )
 
     // isDiscoverable() drops anything already started, so fixtures need a start far in the future.

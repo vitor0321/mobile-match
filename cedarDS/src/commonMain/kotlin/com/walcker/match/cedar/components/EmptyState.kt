@@ -23,6 +23,7 @@ public fun EmptyState(
     modifier: Modifier = Modifier,
     supportingText: String? = null,
     icon: ImageVector? = null,
+    illustration: (@Composable () -> Unit)? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
@@ -35,7 +36,9 @@ public fun EmptyState(
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (icon != null) {
+        if (illustration != null) {
+            illustration()
+        } else if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,

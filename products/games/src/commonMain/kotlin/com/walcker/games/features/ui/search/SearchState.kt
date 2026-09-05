@@ -25,4 +25,5 @@ internal data class SearchState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val showFiltersPanel: Boolean = false,
+    val mySports: Set<Sport> = emptySet(),
 )

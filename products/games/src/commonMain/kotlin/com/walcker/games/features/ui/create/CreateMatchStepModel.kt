@@ -4,7 +4,9 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.create.usecase.CreateMatchUseCase
 import com.walcker.games.features.domain.create.usecase.UpdateMatchUseCase
+import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCase
 import com.walcker.games.features.domain.shared.model.CreateMatchRequest
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
@@ -45,6 +47,7 @@ internal class CreateMatchStepModel(
     private val getGameById: GetGameByIdUseCase,
     private val stringsHolder: GamesStringsHolder,
     private val sessionHolder: SessionHolder,
+    private val observeAvailability: ObserveAvailabilityUseCase,
     private val tabCoordinator: TabCoordinator,
     private val analytics: AnalyticsTracker,
     private val crashReporter: CrashReporter,
@@ -66,6 +69,40 @@ internal class CreateMatchStepModel(
             loadMatchForEdit(matchId)
         } else {
             resolveInitialLocation()
+        }
+        observeMySports()
+    }
+
+    private fun observeMySports() {
+        screenModelScope.launch {
+            sessionHolder.currentUser.collect { session ->
+                if (session == null) {
+                    _state.update { it.copy(mySports = emptySet()) }
+                } else {
+                    observeAvailabilityOf(session.uid)
+                }
+            }
+        }
+    }
+
+    private fun observeAvailabilityOf(userId: String) {
+        screenModelScope.launch {
+            observeAvailability(userId).collect { result ->
+                result.onSuccess { availability ->
+                    val firstFavorite = Sport.entries.firstOrNull { it in availability.sports }
+                    _state.update {
+                        it.copy(
+                            mySports = availability.sports,
+                            selectedSport =
+                                if (it.selectedSport == null && editingMatchId == null) {
+                                    firstFavorite
+                                } else {
+                                    it.selectedSport
+                                },
+                        )
+                    }
+                }
+            }
         }
     }
 

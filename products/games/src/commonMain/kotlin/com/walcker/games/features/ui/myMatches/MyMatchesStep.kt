@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,19 +23,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.ui.myMatches.component.MyMatchCard
 import com.walcker.games.strings.MyMatchesStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarHistoryActiveAnimation
+import com.walcker.match.cedar.components.CedarHistoryPastAnimation
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.MainTab
 import com.walcker.match.navigator.TabCoordinator
 import org.koin.compose.koinInject
+
+private val EmptyStateAnimationSize = 180.dp
 
 internal class MyMatchesStep : Screen {
     @Composable
@@ -121,6 +128,19 @@ internal fun MyMatchesContent(
                 EmptyState(
                     message = if (isActiveTab) strings.emptyActive else strings.emptyPast,
                     supportingText = if (isActiveTab) strings.emptyActiveSubtitle else null,
+                    illustration = {
+                        if (isActiveTab) {
+                            CedarHistoryActiveAnimation(
+                                contentDescription = null,
+                                modifier = Modifier.size(EmptyStateAnimationSize),
+                            )
+                        } else {
+                            CedarHistoryPastAnimation(
+                                contentDescription = null,
+                                modifier = Modifier.size(EmptyStateAnimationSize),
+                            )
+                        }
+                    },
                     actionLabel = if (isActiveTab) strings.emptyActiveAction else null,
                     onAction =
                         if (isActiveTab) {
@@ -135,8 +155,10 @@ internal fun MyMatchesContent(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding =
                         PaddingValues(
-                            horizontal = CedarTokens.spacing.lg,
-                            vertical = CedarTokens.spacing.md,
+                            start = CedarTokens.spacing.lg,
+                            end = CedarTokens.spacing.lg,
+                            top = CedarTokens.spacing.md,
+                            bottom = CedarTokens.spacing.md + LocalBottomBarInset.current,
                         ),
                     verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                 ) {

@@ -15,6 +15,7 @@ internal interface FirebaseAuthSource {
     suspend fun signUp(
         email: String,
         password: String,
+        displayName: String,
     ): Result<UserSession>
 
     suspend fun deleteCurrentUser(): Result<Unit>

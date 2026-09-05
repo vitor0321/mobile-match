@@ -32,6 +32,7 @@ kotlin {
                 implementation(libs.coil.network.ktor)
                 implementation(libs.compottie)
                 implementation(libs.compottie.dot)
+                implementation(libs.haze)
             }
         }
     }

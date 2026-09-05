@@ -19,6 +19,7 @@ internal data class LoginStrings(
     val googleSignInError: String,
     val appleSignInError: String,
     val forgotPasswordButton: String,
+    val termsLabel: String,
 )
 
 internal val loginStringsEn =
@@ -41,6 +42,7 @@ internal val loginStringsEn =
         googleSignInError = "Could not sign in with Google",
         appleSignInError = "Could not sign in with Apple",
         forgotPasswordButton = "Forgot password?",
+        termsLabel = "Terms and Privacy Policy",
     )
 
 internal val loginStringsPt =
@@ -63,4 +65,5 @@ internal val loginStringsPt =
         googleSignInError = "Não foi possível entrar com Google",
         appleSignInError = "Não foi possível entrar com Apple",
         forgotPasswordButton = "Esqueci minha senha",
+        termsLabel = "Termos e Política de Privacidade",
     )

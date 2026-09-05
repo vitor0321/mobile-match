@@ -139,8 +139,9 @@ Firebase/Firestore com acesso via expect/actual e SDK nativo; Firebase Functions
 ./gradlew :products:games:compileKotlinIosSimulatorArm64
 ```
 
-Os goldens do Paparazzi cobrem as 5 telas de `products/identity` e os componentes do paywall. São a
-revisão visual mais barata que existe aqui — regravar sem olhar o diff joga fora o único sinal.
+Os goldens do Paparazzi cobrem as 3 telas de `products/identity` (Login, Cadastro, Esqueci a senha —
+Perfil/Configurações de conta e Paywall foram removidos). São a revisão visual mais barata que existe
+aqui — regravar sem olhar o diff joga fora o único sinal.
 
 ## Contexto
 

@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.walcker.identity.api.UserSession
 import com.walcker.identity.features.domain.usecase.RequiresRecentLoginException
 import com.walcker.identity.strings.IdentityStringsHolder
@@ -67,24 +68,17 @@ internal class AndroidFirebaseAuthSource(
     override suspend fun signUp(
         email: String,
         password: String,
+        displayName: String,
     ): Result<UserSession> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
-        return suspendCancellableCoroutine { continuation ->
-            firebaseAuth
-                .createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener { result ->
-                    val user = result.user?.toUserSession()
-                    if (user != null) {
-                        continuation.resume(Result.success(user))
-                    } else {
-                        val errorMsg = strings.missingAuthenticatedUser
-                        continuation.resume(Result.failure(IllegalStateException(errorMsg)))
-                    }
-                }.addOnFailureListener { error ->
-                    continuation.resume(Result.failure(error))
-                }.addOnCanceledListener {
-                    continuation.cancel()
-                }
+        return runCatching {
+            val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+            val user = requireNotNull(result.user) { strings.missingAuthenticatedUser }
+            if (displayName.isNotBlank()) {
+                val profileUpdate = UserProfileChangeRequest.Builder().setDisplayName(displayName).build()
+                user.updateProfile(profileUpdate).await()
+            }
+            user.toUserSession()
         }
     }
 

@@ -2,13 +2,13 @@ package com.walcker.games.features.ui.playerProfile.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
@@ -22,29 +22,29 @@ internal fun ProfileHeader(
     modifier: Modifier = Modifier,
 ) {
     val displayName = name ?: email ?: fallbackName
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
     ) {
         PlayerAvatar(displayName = displayName, size = PlayerAvatarSize.Large)
-        Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
+        Text(
+            text = displayName,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (email != null && email != displayName) {
             Text(
-                text = displayName,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                text = email,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (email != null && email != displayName) {
-                Text(
-                    text = email,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
 }

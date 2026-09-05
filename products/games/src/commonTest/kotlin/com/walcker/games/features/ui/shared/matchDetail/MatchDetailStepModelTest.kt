@@ -248,7 +248,8 @@ class MatchDetailStepModelTest {
                 assertEquals("match-1", effect.matchId)
                 assertEquals("Quadra Confirmada", effect.venueName)
                 assertEquals(50_000L, effect.startsAtSeconds)
-                assertEquals(Sport.FUTSAL.label, effect.sportLabel)
+                assertEquals(myGame.durationMin, effect.durationMin)
+                assertEquals(Sport.FUTSAL, effect.sport)
                 cancelAndIgnoreRemainingEvents()
             }
             assertTrue(analytics.trackedEvents.any { it is AnalyticsEvent.MatchJoinAttempted })

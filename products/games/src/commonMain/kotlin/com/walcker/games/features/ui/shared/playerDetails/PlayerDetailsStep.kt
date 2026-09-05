@@ -40,6 +40,7 @@ import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.components.RatingSummary
 import com.walcker.match.cedar.tokens.CedarTokens
 import kotlinx.collections.immutable.toImmutableList
@@ -141,8 +142,10 @@ internal fun PlayerDetailsContent(
         modifier = modifier,
         contentPadding =
             PaddingValues(
-                horizontal = CedarTokens.spacing.lg,
-                vertical = CedarTokens.spacing.md,
+                start = CedarTokens.spacing.lg,
+                end = CedarTokens.spacing.lg,
+                top = CedarTokens.spacing.md,
+                bottom = CedarTokens.spacing.md + LocalBottomBarInset.current,
             ),
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
     ) {

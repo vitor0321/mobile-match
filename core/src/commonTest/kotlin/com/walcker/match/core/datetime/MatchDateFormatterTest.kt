@@ -73,3 +73,46 @@ class FormatShortDateTest {
         assertEquals("05/01/2026", formatShortDate(epochMillis = millis, timeZone = saoPaulo))
     }
 }
+
+class FormatDayLabelTest {
+    private val saoPaulo = TimeZone.of("America/Sao_Paulo")
+
+    @Test
+    fun `today in São Paulo`() {
+        val matchSp = LocalDateTime(2026, 8, 12, 19, 30).toInstant(saoPaulo)
+        val nowSp = LocalDateTime(2026, 8, 12, 15, 30).toInstant(saoPaulo)
+        assertEquals("Hoje", formatDayLabel(matchSp, nowSp, saoPaulo))
+    }
+
+    @Test
+    fun `tomorrow in São Paulo`() {
+        val nowSp = LocalDateTime(2026, 8, 12, 20, 0).toInstant(saoPaulo)
+        val matchSp = LocalDateTime(2026, 8, 13, 19, 30).toInstant(saoPaulo)
+        assertEquals("Amanhã", formatDayLabel(matchSp, nowSp, saoPaulo))
+    }
+
+    @Test
+    fun `another day`() {
+        val nowSp = LocalDateTime(2026, 8, 12, 20, 0).toInstant(saoPaulo)
+        val matchSp = LocalDateTime(2026, 8, 15, 19, 30).toInstant(saoPaulo)
+        assertEquals("15/08", formatDayLabel(matchSp, nowSp, saoPaulo))
+    }
+}
+
+class FormatTimeRangeTest {
+    private val saoPaulo = TimeZone.of("America/Sao_Paulo")
+
+    @Test
+    fun `formats the start and end time for the match duration`() {
+        val startsAtSeconds = LocalDateTime(2026, 8, 12, 19, 0).toInstant(saoPaulo).epochSeconds
+
+        assertEquals("19:00 - 20:30", formatTimeRange(startsAtSeconds, durationMin = 90, timeZone = saoPaulo))
+    }
+
+    @Test
+    fun `rolls over into the next hour`() {
+        val startsAtSeconds = LocalDateTime(2026, 8, 12, 23, 30).toInstant(saoPaulo).epochSeconds
+
+        assertEquals("23:30 - 00:30", formatTimeRange(startsAtSeconds, durationMin = 60, timeZone = saoPaulo))
+    }
+}

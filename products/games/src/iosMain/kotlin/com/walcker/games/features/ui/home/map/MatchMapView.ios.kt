@@ -16,6 +16,7 @@ import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.ui.home.map.model.MapPin
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.CoreLocation.CLLocationCoordinate2D
@@ -139,7 +140,7 @@ internal actual fun MatchMapView(
                 modifier =
                     Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(16.dp),
+                        .padding(end = 16.dp, bottom = LocalBottomBarInset.current + 16.dp),
             ) {
                 Text("$nearbyCount próximas")
             }

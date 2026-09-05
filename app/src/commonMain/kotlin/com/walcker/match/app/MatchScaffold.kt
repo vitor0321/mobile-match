@@ -2,7 +2,6 @@ package com.walcker.match.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -12,6 +11,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -19,8 +19,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
@@ -29,11 +33,13 @@ import com.walcker.identity.api.SessionHolder
 import com.walcker.match.app.notifications.DeviceTokenRegistrar
 import com.walcker.match.app.strings.AppShellStrings
 import com.walcker.match.app.strings.rememberAppShellStrings
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.components.MatchBottomBar
 import com.walcker.match.cedar.components.MatchBottomBarTab
 import com.walcker.match.cedar.dismissKeyboardOnTap
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.navigation.NavigatorHolder
+import com.walcker.match.navigator.BottomBarVisibilityCoordinator
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.GamesDestination
@@ -42,6 +48,8 @@ import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.MainTab
 import com.walcker.match.navigator.MatchDetailCoordinator
 import com.walcker.match.navigator.TabCoordinator
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import org.koin.compose.koinInject
 
 @Composable
@@ -87,6 +95,8 @@ private fun AuthenticatedShell() {
     val navigatorHolder = koinInject<NavigatorHolder>()
     val sessionHolder = koinInject<SessionHolder>()
     val deviceTokenRegistrar = koinInject<DeviceTokenRegistrar>()
+    val bottomBarVisibility = koinInject<BottomBarVisibilityCoordinator>()
+    val isBottomBarVisible by bottomBarVisibility.isVisible.collectAsState()
     val strings = rememberAppShellStrings()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(MainTab.Home) }
     val (showLogin, setShowLogin) = remember { mutableStateOf(false) }
@@ -126,15 +136,20 @@ private fun AuthenticatedShell() {
         if (isAuthenticated == true) setShowLogin(false)
     }
 
+    val density = LocalDensity.current
+    var bottomBarHeight by remember { mutableStateOf(0.dp) }
+    val bottomBarInset = if (imeVisible) 0.dp else bottomBarHeight
+    val hazeState = remember { HazeState() }
+
     Box(modifier = Modifier.fillMaxSize().dismissKeyboardOnTap()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        CompositionLocalProvider(LocalBottomBarInset provides bottomBarInset) {
             Box(
                 modifier =
                     Modifier
-                        .weight(1f)
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
-                        .consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Bottom)),
+                        .consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Bottom))
+                        .hazeSource(state = hazeState),
             ) {
                 val tabScreen =
                     when (selectedTab) {
@@ -152,15 +167,22 @@ private fun AuthenticatedShell() {
                     )
                 }
             }
+        }
 
-            if (!imeVisible) {
-                MatchBottomBar(
-                    selectedTab = MatchBottomBarTab.entries[selectedTab.index],
-                    onTabSelected = { tab -> setSelectedTab(tab.toMainTab()) },
-                    label = { tab -> strings.labelFor(tab) },
-                    showDot = { tab -> tab == MatchBottomBarTab.Activity },
-                )
-            }
+        if (!imeVisible && isBottomBarVisible) {
+            MatchBottomBar(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .onGloballyPositioned { coordinates ->
+                            bottomBarHeight = with(density) { coordinates.size.height.toDp() }
+                        },
+                selectedTab = MatchBottomBarTab.entries[selectedTab.index],
+                onTabSelected = { tab -> setSelectedTab(tab.toMainTab()) },
+                label = { tab -> strings.labelFor(tab) },
+                showDot = { tab -> tab == MatchBottomBarTab.Activity },
+                hazeState = hazeState,
+            )
         }
 
         if (showLogin) {

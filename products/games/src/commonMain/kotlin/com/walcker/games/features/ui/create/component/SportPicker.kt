@@ -1,29 +1,32 @@
 package com.walcker.games.features.ui.create.component
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.domain.shared.model.Sport
-import com.walcker.match.cedar.components.SportChip
+import com.walcker.games.features.ui.shared.common.SportBadge
 import com.walcker.match.cedar.tokens.CedarTokens
 
 @Composable
 internal fun SportPicker(
     selected: Sport?,
     enabled: Boolean,
+    mySports: Set<Sport>,
     onSelect: (Sport) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+    val orderedSports = Sport.entries.sortedByDescending { it in mySports }
+    LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
+        contentPadding = PaddingValues(horizontal = CedarTokens.spacing.lg),
     ) {
-        Sport.entries.forEach { sport ->
-            SportChip(
-                label = sport.label,
+        items(orderedSports, key = { it.name }) { sport ->
+            SportBadge(
+                sport = sport,
                 selected = selected == sport,
                 onClick = { onSelect(sport) },
                 enabled = enabled,

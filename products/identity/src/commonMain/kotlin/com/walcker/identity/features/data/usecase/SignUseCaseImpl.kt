@@ -22,7 +22,8 @@ internal class SignUseCaseImpl(
     override suspend fun signUp(
         email: String,
         password: String,
-    ): Result<UserSession> = authRepository.signUp(email = email, password = password)
+        displayName: String,
+    ): Result<UserSession> = authRepository.signUp(email = email, password = password, displayName = displayName)
 
     override suspend fun deleteAccount(): Result<Unit> = authRepository.deleteAccount()
 

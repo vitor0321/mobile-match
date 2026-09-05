@@ -3,12 +3,14 @@ package com.walcker.games.features.ui.home
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.data.home.preferences.GamesPreferences
+import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCase
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.isDiscoverable
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.analytics.CrashReporter
@@ -29,6 +31,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val MILLIS_PER_SECOND = 1000L
+private const val NEAREST_FALLBACK_RADIUS_KM = 20_000.0
+private const val NEAREST_FALLBACK_LIMIT = 20
 
 internal class GameListStepModel(
     private val repository: GameRepository,
@@ -37,6 +41,8 @@ internal class GameListStepModel(
     private val analytics: AnalyticsTracker,
     private val crashReporter: CrashReporter,
     private val homeViewCoordinator: HomeViewCoordinator,
+    private val sessionHolder: SessionHolder,
+    private val observeAvailability: ObserveAvailabilityUseCase,
 ) : ScreenModel {
     init {
         analytics.track(AnalyticsEvent.MatchListViewed(MatchListSource.HOME))
@@ -50,9 +56,34 @@ internal class GameListStepModel(
     private val _effects = Channel<GameListEffect>(Channel.BUFFERED)
     val effects: Flow<GameListEffect> = _effects.receiveAsFlow()
 
+    private val _isNearestFallback = MutableStateFlow(false)
+
     init {
         observePreferencesAndMatches()
+        observeMySports()
         refresh()
+    }
+
+    private fun observeMySports() {
+        screenModelScope.launch {
+            sessionHolder.currentUser.collect { session ->
+                if (session == null) {
+                    _state.update { it.copy(mySports = emptySet()) }
+                } else {
+                    observeAvailabilityOf(session.uid)
+                }
+            }
+        }
+    }
+
+    private fun observeAvailabilityOf(userId: String) {
+        screenModelScope.launch {
+            observeAvailability(userId).collect { result ->
+                result.onSuccess { availability ->
+                    _state.update { it.copy(mySports = availability.sports) }
+                }
+            }
+        }
     }
 
     fun onEvent(event: GameListEvents) {
@@ -63,6 +94,7 @@ internal class GameListStepModel(
             }
             is GameListEvents.SetRadius -> {
                 screenModelScope.launch {
+                    _isNearestFallback.value = false
                     preferences.setRadiusKm(event.radiusKm)
                     refresh()
                 }
@@ -82,26 +114,33 @@ internal class GameListStepModel(
             preferences.radiusKm,
             repository.observeMatches(),
             repository.observeHasMoreMatches(),
-        ) { sport, radius, games, hasMore ->
-            GamesUpdate(sport, radius, games, hasMore)
+            _isNearestFallback,
+        ) { sport, radius, games, hasMore, isFallback ->
+            GamesUpdate(sport, radius, games, hasMore, isFallback)
         }.onEach { update ->
             val nowSeconds =
                 kotlin.time.Clock.System
                     .now()
                     .toEpochMilliseconds() / MILLIS_PER_SECOND
             val filtered =
-                update.games
-                    .filter { game ->
-                        (update.sport == null || game.sport == update.sport) && game.isDiscoverable(nowSeconds)
-                    }.sortedBy { it.startsAtSeconds }
+                update.games.filter { game ->
+                    (update.sport == null || game.sport == update.sport) && game.isDiscoverable(nowSeconds)
+                }
+            val ordered =
+                if (update.isFallback) {
+                    filtered.take(NEAREST_FALLBACK_LIMIT)
+                } else {
+                    filtered.sortedBy { it.startsAtSeconds }
+                }
             _state.update {
                 it.copy(
                     strings = strings,
                     selectedSport = update.sport,
                     radiusKm = update.radius,
-                    games = filtered.toImmutableList(),
+                    games = ordered.toImmutableList(),
                     preferencesLoaded = true,
-                    hasMore = update.hasMore,
+                    hasMore = if (update.isFallback) false else update.hasMore,
+                    isShowingNearestFallback = update.isFallback,
                 )
             }
             homeViewCoordinator.markHomeDataReady()
@@ -111,11 +150,18 @@ internal class GameListStepModel(
     private fun refresh() {
         screenModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
+            val isFirstLaunch = preferences.lastSyncAt.first() == null
             val radiusKm = preferences.radiusKm.first()
             repository
                 .refresh(radiusKm)
                 .onSuccess {
-                    _state.update { it.copy(isLoading = false) }
+                    preferences.setLastSyncAt(kotlin.time.Clock.System.now().toEpochMilliseconds())
+                    val hasNearbyMatches = repository.observeMatches().first().isNotEmpty()
+                    if (isFirstLaunch && !hasNearbyMatches) {
+                        showNearestFallback()
+                    } else {
+                        _state.update { it.copy(isLoading = false) }
+                    }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
                     _state.update {
@@ -127,6 +173,18 @@ internal class GameListStepModel(
                     homeViewCoordinator.markHomeDataReady()
                 }
         }
+    }
+
+    private suspend fun showNearestFallback() {
+        repository
+            .refresh(NEAREST_FALLBACK_RADIUS_KM)
+            .onSuccess {
+                _isNearestFallback.value = true
+                _state.update { it.copy(isLoading = false) }
+            }.onFailure { error ->
+                crashReporter.recordException(error)
+                _state.update { it.copy(isLoading = false) }
+            }
     }
 
     private fun loadMore() {
@@ -157,5 +215,6 @@ internal class GameListStepModel(
         val radius: Double,
         val games: List<Game>,
         val hasMore: Boolean,
+        val isFallback: Boolean,
     )
 }

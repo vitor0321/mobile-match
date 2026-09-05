@@ -1,17 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Ícone da splash do sistema (Android 12+ e o compat do core-splashscreen).
 
-    `splash_icon_start.png` é uma arte full-bleed: o fundo azul-marinho e o logo
-    ocupam a moldura inteira, sem a margem de safe zone que um ícone adaptativo
-    reserva. O canvas do splash é de 108dp e o sistema recorta um círculo nos 2/3
-    centrais — sem recuo, o círculo cortaria o swoosh e as bolas nas bordas.
-
-    Por isso o `<inset>` de 16,7% por lado: encolhe a arte para dentro do círculo
-    (os 2/3 centrais ≈ 72dp de 108dp), deixando o logo inteiro visível. O que
-    sobra fora do círculo é preenchido pelo `windowSplashScreenBackground`, que
-    está alinhado ao mesmo azul-marinho do PNG para não deixar costura.
--->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/splash_icon_start"
     android:insetLeft="16.7%"

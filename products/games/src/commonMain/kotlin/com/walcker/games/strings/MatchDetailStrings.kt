@@ -24,6 +24,7 @@ internal data class MatchDetailStrings(
     val confirmedOf: (confirmed: Int, total: Int) -> String,
     val openSlotsRemaining: (Int) -> String,
     val noSlotsRemaining: String,
+    val slotsBadge: (Int) -> String,
     val confirmedSection: (Int) -> String,
     val waitlistSection: (Int) -> String,
     val confirmedTag: String,
@@ -33,6 +34,7 @@ internal data class MatchDetailStrings(
     val rateAction: String,
     val joinMatch: String,
     val joinWaitlist: String,
+    val joiningWaitlistLabel: String,
     val matchClosed: String,
     val leaveMatch: String,
     val cancelMatch: String,
@@ -66,6 +68,10 @@ internal data class MatchDetailStrings(
     val statusChangedToFinished: String,
     val statusChangedToCancelled: String,
     val unknownMatchTitle: String,
+    val openLocationTitle: String,
+    val openInGoogleMaps: String,
+    val openInWaze: String,
+    val openLocationCancel: String,
 )
 
 internal val matchDetailStringsEn =
@@ -93,6 +99,13 @@ internal val matchDetailStringsEn =
         confirmedOf = { confirmed, total -> "$confirmed / $total confirmed" },
         openSlotsRemaining = { n -> if (n == 1) "1 slot left" else "$n slots left" },
         noSlotsRemaining = "No slots left",
+        slotsBadge = { open ->
+            when (open) {
+                0 -> "Full"
+                1 -> "1 slot"
+                else -> "$open slots"
+            }
+        },
         confirmedSection = { n -> "Confirmed ($n)" },
         waitlistSection = { n -> "Waitlist ($n)" },
         confirmedTag = "Confirmed",
@@ -102,6 +115,7 @@ internal val matchDetailStringsEn =
         rateAction = "Rate",
         joinMatch = "Take my slot",
         joinWaitlist = "Join the waitlist",
+        joiningWaitlistLabel = "Joining the waitlist…",
         matchClosed = "Match is over",
         leaveMatch = "Leave",
         cancelMatch = "Cancel match",
@@ -136,6 +150,10 @@ internal val matchDetailStringsEn =
         statusChangedToFinished = "Match is over ✓",
         statusChangedToCancelled = "This match was cancelled ✕",
         unknownMatchTitle = "Match",
+        openLocationTitle = "Open location in",
+        openInGoogleMaps = "Google Maps",
+        openInWaze = "Waze",
+        openLocationCancel = "Cancel",
     )
 
 internal val matchDetailStringsPt =
@@ -163,6 +181,13 @@ internal val matchDetailStringsPt =
         confirmedOf = { confirmed, total -> "$confirmed / $total confirmados" },
         openSlotsRemaining = { n -> if (n == 1) "1 vaga restante" else "$n vagas restantes" },
         noSlotsRemaining = "Sem vagas",
+        slotsBadge = { open ->
+            when (open) {
+                0 -> "Lotado"
+                1 -> "1 vaga"
+                else -> "$open vagas"
+            }
+        },
         confirmedSection = { n -> "Confirmados ($n)" },
         waitlistSection = { n -> "Fila de espera ($n)" },
         confirmedTag = "Confirmado",
@@ -172,6 +197,7 @@ internal val matchDetailStringsPt =
         rateAction = "Avaliar",
         joinMatch = "Garantir minha vaga",
         joinWaitlist = "Entrar na fila de espera",
+        joiningWaitlistLabel = "Entrando na fila de espera…",
         matchClosed = "Partida encerrada",
         leaveMatch = "Sair",
         cancelMatch = "Cancelar partida",
@@ -206,4 +232,8 @@ internal val matchDetailStringsPt =
         statusChangedToFinished = "Partida encerrada ✓",
         statusChangedToCancelled = "Partida foi cancelada ✕",
         unknownMatchTitle = "Partida",
+        openLocationTitle = "Abrir localização em",
+        openInGoogleMaps = "Google Maps",
+        openInWaze = "Waze",
+        openLocationCancel = "Cancelar",
     )

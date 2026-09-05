@@ -40,6 +40,7 @@ import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.CedarSearchField
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 
 internal class PlayerSearchStep : Screen {
@@ -179,8 +180,10 @@ internal fun PlayerSearchContent(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding =
                             PaddingValues(
-                                horizontal = CedarTokens.spacing.lg,
-                                vertical = CedarTokens.spacing.xs,
+                                start = CedarTokens.spacing.lg,
+                                end = CedarTokens.spacing.lg,
+                                top = CedarTokens.spacing.xs,
+                                bottom = CedarTokens.spacing.xs + LocalBottomBarInset.current,
                             ),
                         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {

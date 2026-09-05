@@ -10,6 +10,7 @@ import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.ReportReason
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
 import com.walcker.games.features.domain.shared.model.canBeRatedBy
@@ -151,7 +152,8 @@ internal sealed interface MatchDetailEffect {
         val matchId: String,
         val venueName: String,
         val startsAtSeconds: Long,
-        val sportLabel: String,
+        val durationMin: Int,
+        val sport: Sport,
     ) : MatchDetailEffect
 
     data object RequireLogin : MatchDetailEffect
@@ -436,7 +438,8 @@ internal class MatchDetailStepModel(
                                     matchId = matchId,
                                     venueName = match.venueName,
                                     startsAtSeconds = match.startsAtSeconds,
-                                    sportLabel = match.sport.label,
+                                    durationMin = match.durationMin,
+                                    sport = match.sport,
                                 ),
                             )
                         }

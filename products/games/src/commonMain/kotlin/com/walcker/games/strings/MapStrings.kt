@@ -10,6 +10,12 @@ internal data class MapStrings(
     val retry: String,
     val closeContentDescription: String,
     val showListAction: String,
+    val previewDetailsAction: String,
+    val directionsContentDescription: String,
+    val openLocationTitle: String,
+    val openInGoogleMaps: String,
+    val openInWaze: String,
+    val openLocationCancel: String,
 )
 
 internal val mapStringsEn =
@@ -25,6 +31,12 @@ internal val mapStringsEn =
                 "until you allow location access.",
         retry = "Try again",
         closeContentDescription = "Close",
+        previewDetailsAction = "View details",
+        directionsContentDescription = "Get directions",
+        openLocationTitle = "Open location in",
+        openInGoogleMaps = "Google Maps",
+        openInWaze = "Waze",
+        openLocationCancel = "Cancel",
     )
 
 internal val mapStringsPt =
@@ -40,4 +52,10 @@ internal val mapStringsPt =
                 "fica vazia até você liberar a localização.",
         retry = "Tentar de novo",
         closeContentDescription = "Fechar",
+        previewDetailsAction = "Ver detalhes",
+        directionsContentDescription = "Traçar rota",
+        openLocationTitle = "Abrir localização em",
+        openInGoogleMaps = "Google Maps",
+        openInWaze = "Waze",
+        openLocationCancel = "Cancelar",
     )

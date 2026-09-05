@@ -21,4 +21,5 @@ internal val PtBrGamesStrings =
         matchDetail = matchDetailStringsPt,
         map = mapStringsPt,
         loginRequired = loginRequiredStringsPt,
+        about = aboutStringsPt,
     )

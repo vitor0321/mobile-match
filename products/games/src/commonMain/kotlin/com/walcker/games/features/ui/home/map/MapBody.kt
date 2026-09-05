@@ -1,6 +1,8 @@
 package com.walcker.games.features.ui.home.map
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,9 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.ui.home.map.component.LocationUnavailableCard
+import com.walcker.games.features.ui.home.map.component.MapMatchPreviewCard
 import com.walcker.games.features.ui.home.map.component.NearbyMatchesSheet
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarLoading
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,10 +32,13 @@ internal fun MapBody(
     state: MapState,
     onRefresh: () -> Unit,
     onRetryLocation: () -> Unit,
-    onPinClick: (String) -> Unit,
+    onPinSelected: (String) -> Unit,
+    onPreviewDismiss: () -> Unit,
+    onDetailsClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val strings = rememberGamesStrings().strings.map
+    val allStrings = rememberGamesStrings().strings
+    val strings = allStrings.map
     var showNearbySheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -44,7 +51,7 @@ internal fun MapBody(
             MatchMapView(
                 pins = state.pins,
                 camera = state.camera,
-                onPinClick = onPinClick,
+                onPinClick = onPinSelected,
                 onNearbyTap = { showNearbySheet = true },
                 nearbyCount = state.nearbyMatches.size,
                 hasLocationPermission = state.hasLocationPermission,
@@ -59,15 +66,31 @@ internal fun MapBody(
             )
         }
 
-        if (state.locationUnavailable) {
-            LocationUnavailableCard(
-                strings = strings,
-                onRetry = onRetryLocation,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(CedarTokens.spacing.md),
-            )
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(
+                        start = CedarTokens.spacing.md,
+                        end = CedarTokens.spacing.md,
+                        top = CedarTokens.spacing.md,
+                        bottom = LocalBottomBarInset.current + CedarTokens.spacing.sm,
+                    ),
+            verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+        ) {
+            if (state.locationUnavailable) {
+                LocationUnavailableCard(strings = strings, onRetry = onRetryLocation)
+            }
+            state.previewMatch?.let { preview ->
+                MapMatchPreviewCard(
+                    preview = preview,
+                    strings = strings,
+                    gameListStrings = allStrings.gameList,
+                    onDismiss = onPreviewDismiss,
+                    onDetailsClick = onDetailsClick,
+                )
+            }
         }
     }
 
@@ -83,7 +106,7 @@ internal fun MapBody(
                 matches = state.nearbyMatches,
                 onMatchTap = { matchId ->
                     showNearbySheet = false
-                    onPinClick(matchId)
+                    onDetailsClick(matchId)
                 },
                 modifier = Modifier.fillMaxWidth(),
             )

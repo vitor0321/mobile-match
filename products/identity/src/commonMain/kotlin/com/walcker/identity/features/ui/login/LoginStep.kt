@@ -1,33 +1,34 @@
 package com.walcker.identity.features.ui.login
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.identity.features.data.remote.isAppleSignInAvailable
 import com.walcker.identity.features.ui.common.AuthFormMessage
+import com.walcker.identity.features.ui.common.AuthLegalLink
 import com.walcker.identity.features.ui.common.AuthScaffold
+import com.walcker.identity.features.ui.common.SocialDivider
 import com.walcker.identity.strings.LocalIdentityStrings
 import com.walcker.identity.strings.WithIdentityStrings
 import com.walcker.match.cedar.PasswordOutlinedTextField
+import com.walcker.match.cedar.components.CedarIcons
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.tokens.CedarTokens
+
+private const val PRIVACY_POLICY_URL = "https://vitor0321.github.io/join-play-privacy-policy.html"
 
 internal class LoginStep : Screen {
     override val key: String get() = "login"
@@ -37,6 +38,7 @@ internal class LoginStep : Screen {
         WithIdentityStrings {
             val stepModel = koinScreenModel<LoginStepModel>()
             val state by stepModel.state.collectAsState()
+            val uriHandler = LocalUriHandler.current
 
             LoginEvents(stepModel = stepModel) { onEvent ->
                 LoginScreen(
@@ -49,6 +51,7 @@ internal class LoginStep : Screen {
                     onAppleSignIn = { onEvent(LoginInternalRoute.OnAppleSignInClicked) },
                     onSignUp = { onEvent(LoginInternalRoute.OnSignUpClicked) },
                     onForgotPassword = { onEvent(LoginInternalRoute.OnForgotPasswordClicked) },
+                    onOpenTerms = { uriHandler.openUri(PRIVACY_POLICY_URL) },
                     onBack = { onEvent(LoginInternalRoute.OnBackClicked) },
                 )
             }
@@ -68,6 +71,7 @@ internal fun LoginScreen(
     onBack: () -> Unit,
     isAppleSignInAvailable: Boolean = false,
     onAppleSignIn: () -> Unit = {},
+    onOpenTerms: () -> Unit = {},
 ) {
     val strings = LocalIdentityStrings.current.login
     val enabled = !state.isLoading
@@ -138,6 +142,8 @@ internal fun LoginScreen(
             text = strings.googleButton,
             onClick = onGoogleSignIn,
             enabled = enabled,
+            leadingIcon = CedarIcons.Google,
+            tintLeadingIcon = false,
         )
 
         if (isAppleSignInAvailable) {
@@ -145,6 +151,7 @@ internal fun LoginScreen(
                 text = strings.appleButton,
                 onClick = onAppleSignIn,
                 enabled = enabled,
+                leadingIcon = CedarIcons.Apple,
             )
         }
 
@@ -154,31 +161,10 @@ internal fun LoginScreen(
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
         )
-    }
-}
 
-@Composable
-private fun SocialDivider(
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-    ) {
-        HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outlineVariant,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outlineVariant,
+        AuthLegalLink(
+            label = strings.termsLabel,
+            onClick = onOpenTerms,
         )
     }
 }

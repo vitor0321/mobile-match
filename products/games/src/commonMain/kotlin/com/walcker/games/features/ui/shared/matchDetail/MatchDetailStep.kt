@@ -5,14 +5,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -33,6 +41,7 @@ import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
+import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
@@ -46,11 +55,13 @@ import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.ui.create.CreateMatchStep
 import com.walcker.games.features.ui.shared.common.LoginRequiredBottomSheet
+import com.walcker.games.features.ui.shared.common.icon
 import com.walcker.games.features.ui.shared.matchDetail.component.Banner
 import com.walcker.games.features.ui.shared.matchDetail.component.ConfirmDialog
+import com.walcker.games.features.ui.shared.matchDetail.component.IconInfoRow
 import com.walcker.games.features.ui.shared.matchDetail.component.JoinBar
-import com.walcker.games.features.ui.shared.matchDetail.component.LabelledValue
 import com.walcker.games.features.ui.shared.matchDetail.component.LoadingBlock
+import com.walcker.games.features.ui.shared.matchDetail.component.LocationAppDialog
 import com.walcker.games.features.ui.shared.matchDetail.component.ParticipantsList
 import com.walcker.games.features.ui.shared.matchDetail.component.StaticParticipantsList
 import com.walcker.games.features.ui.shared.matchDetail.component.StatusBadge
@@ -66,13 +77,16 @@ import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.CedarSplashLoadingAnimation
 import com.walcker.match.cedar.components.CedarTextButton
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.RatingStars
+import com.walcker.match.cedar.components.SlotBadge
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.analytics.CrashReporter
-import com.walcker.match.core.datetime.formatWhen
+import com.walcker.match.core.datetime.formatDayLabel
+import com.walcker.match.core.datetime.formatTimeRange
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.PromotionCoordinator
 import org.koin.compose.koinInject
@@ -89,13 +103,14 @@ internal class MatchDetailStep(
         MatchDetailScreenContent(
             matchId = matchId,
             onDismiss = { navigator.pop() },
-            onNavigateToConfirmation = { id, venueName, startsAtSeconds, sportLabel ->
+            onNavigateToConfirmation = { id, venueName, startsAtSeconds, durationMin, sport ->
                 navigator.replace(
                     MatchConfirmedStep(
                         matchId = id,
                         venueName = venueName,
                         startsAtSeconds = startsAtSeconds,
-                        sportLabel = sportLabel,
+                        durationMin = durationMin,
+                        sport = sport,
                     ),
                 )
             },
@@ -112,7 +127,8 @@ internal fun MatchDetailScreenContent(
         matchId: String,
         venueName: String,
         startsAtSeconds: Long,
-        sportLabel: String,
+        durationMin: Int,
+        sport: Sport,
     ) -> Unit,
     onEditMatch: (matchId: String) -> Unit = {},
 ) {
@@ -171,7 +187,8 @@ internal fun MatchDetailScreenContent(
                         effect.matchId,
                         effect.venueName,
                         effect.startsAtSeconds,
-                        effect.sportLabel,
+                        effect.durationMin,
+                        effect.sport,
                     )
 
                 MatchDetailEffect.RequireLogin -> showLoginSheet = true
@@ -212,7 +229,7 @@ internal fun MatchDetailContent(
 
     val match = state.match
     val confirmed = state.participants?.confirmedCount ?: match?.confirmedPlayers ?: 0
-    val total = state.participants?.totalSlots ?: match?.totalPlayers ?: 0
+    val total = match?.totalPlayers ?: state.participants?.totalSlots ?: 0
     val openSlots = (total - confirmed).coerceAtLeast(0)
     val isFull = match != null && (confirmed >= total || match.status == MatchStatus.FULL)
     val isClosed =
@@ -223,6 +240,14 @@ internal fun MatchDetailContent(
                     match.status == MatchStatus.CANCELLED
             )
     val isParticipant = state.currentUserId != null && state.currentUserId in (match?.participants ?: emptyList())
+
+    if (state.isJoining && isFull) {
+        CedarSplashLoadingAnimation(
+            contentDescription = detail.joiningWaitlistLabel,
+            modifier = modifier.fillMaxSize(),
+        )
+        return
+    }
 
     Column(
         modifier =
@@ -350,7 +375,7 @@ internal fun MatchDetailContent(
                     },
                 priceLabel = match.pricePerPlayer,
                 enabled = !isClosed && !state.isJoining,
-                isLoading = state.isJoining,
+                isLoading = state.isJoining && !isFull,
                 useAvailabilityTone = !isClosed && !isFull,
                 onClick = { onEvent(MatchDetailEvent.JoinMatch) },
             )
@@ -452,6 +477,9 @@ internal fun MatchDetailBody(
     isCancellingSeries: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    var showLocationChooser by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
+
     Column(
         modifier =
             modifier
@@ -462,104 +490,87 @@ internal fun MatchDetailBody(
                 ),
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs)) {
-            Text(
-                text = "${match.sport.label} · ${match.neighborhood}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+        ) {
             Text(
                 text = match.venueName,
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
             )
-            if (match.matchRatingCount > 0) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
-                ) {
-                    RatingStars(rating = match.matchRating.toFloat())
+            SlotBadge(label = detail.slotsBadge(openSlots), openSlots = openSlots)
+        }
+
+        if (match.matchRatingCount > 0) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+            ) {
+                RatingStars(rating = match.matchRating.toFloat())
+                Text(
+                    text = detail.ratingsCount(match.matchRatingCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        if (isClosed) {
+            StatusBadge(status = match.status, isMatchOver = isMatchOver, detail = detail)
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm)) {
+            IconInfoRow(
+                icon = Icons.Filled.CalendarMonth,
+                text = formatDayLabel(startsAtSeconds = match.startsAtSeconds),
+            )
+            IconInfoRow(
+                icon = Icons.Filled.Schedule,
+                text = "${formatTimeRange(match.startsAtSeconds, match.durationMin)} (${detail.durationValue(match.durationMin)})",
+            )
+            IconInfoRow(
+                icon = Icons.Filled.LocationOn,
+                text = "${match.neighborhood} · ${match.city}",
+                onClick = { showLocationChooser = true },
+            )
+            IconInfoRow(
+                icon = match.sport.icon(),
+                text = match.sport.label,
+            )
+            IconInfoRow(
+                icon = Icons.Filled.Payments,
+                text = match.pricePerPlayer ?: detail.freePrice,
+            )
+            IconInfoRow(
+                icon = Icons.Filled.Groups,
+                text = detail.confirmedOf(confirmed, total),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = detail.organizedBy(match.organizerName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (match.organizerRatingCount > 0) {
+                    RatingStars(rating = match.organizerRating.toFloat(), starSize = 12.dp)
                     Text(
-                        text = detail.ratingsCount(match.matchRatingCount),
-                        style = MaterialTheme.typography.bodySmall,
+                        text = detail.ratingsCount(match.organizerRatingCount),
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-            Text(
-                text = formatWhen(startsAtSeconds = match.startsAtSeconds),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = match.pricePerPlayer ?: detail.freePrice,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        StatusBadge(status = match.status, isMatchOver = isMatchOver, detail = detail)
-
-        Card(
-            shape = CedarTokens.radius.lgShape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(CedarTokens.spacing.md),
-                verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
-            ) {
-                Text(
-                    text = detail.confirmedOf(confirmed, total),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text =
-                        if (openSlots > 0) {
-                            detail.openSlotsRemaining(openSlots)
-                        } else {
-                            detail.noSlotsRemaining
-                        },
-                    style = MaterialTheme.typography.labelMedium,
-                    color =
-                        if (openSlots > 0) {
-                            CedarTokens.colors.availableText
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                )
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xl)) {
-            LabelledValue(
-                label = detail.durationLabel,
-                value = detail.durationValue(match.durationMin),
-            )
-            LabelledValue(
-                label = detail.priceLabel,
-                value = match.pricePerPlayer ?: detail.freePrice,
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
-        ) {
-            Text(
-                text = detail.organizedBy(match.organizerName),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (match.organizerRatingCount > 0) {
-                RatingStars(rating = match.organizerRating.toFloat(), starSize = 12.dp)
-                Text(
-                    text = detail.ratingsCount(match.organizerRatingCount),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
 
@@ -649,5 +660,23 @@ internal fun MatchDetailBody(
                 )
             }
         }
+    }
+
+    if (showLocationChooser) {
+        LocationAppDialog(
+            title = detail.openLocationTitle,
+            googleMapsLabel = detail.openInGoogleMaps,
+            wazeLabel = detail.openInWaze,
+            cancelLabel = detail.openLocationCancel,
+            onGoogleMaps = {
+                uriHandler.openUri("https://www.google.com/maps/search/?api=1&query=${match.lat},${match.lng}")
+                showLocationChooser = false
+            },
+            onWaze = {
+                uriHandler.openUri("https://waze.com/ul?ll=${match.lat},${match.lng}&navigate=yes")
+                showLocationChooser = false
+            },
+            onDismiss = { showLocationChooser = false },
+        )
     }
 }

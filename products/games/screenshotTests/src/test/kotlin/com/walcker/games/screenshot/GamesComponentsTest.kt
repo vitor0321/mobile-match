@@ -7,6 +7,8 @@ import app.cash.paparazzi.Paparazzi
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.ui.home.component.GameList
+import com.walcker.games.features.ui.home.map.component.MapMatchPreviewCard
+import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.myMatches.component.MyMatchCard
 import com.walcker.games.features.ui.playerProfile.component.AvailabilityCard
 import com.walcker.games.features.ui.shared.matchDetail.component.JoinBar
@@ -18,6 +20,8 @@ import com.walcker.games.features.ui.shared.playerSearch.component.PlayerSearchR
 import com.walcker.games.strings.PtBrGamesStrings
 import com.walcker.match.cedar.components.CedarAvailabilityButton
 import com.walcker.match.cedar.components.CedarPrimaryButton
+import com.walcker.match.cedar.components.MatchBottomBar
+import com.walcker.match.cedar.components.MatchBottomBarTab
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Rule
 import org.junit.Test
@@ -134,6 +138,28 @@ class GamesComponentsTest {
                 isLoading = true,
                 useAvailabilityTone = true,
                 onClick = {},
+            )
+        }
+
+    @Test
+    fun matchBottomBar_darkMode() =
+        snapshot(darkTheme = true) {
+            MatchBottomBar(
+                selectedTab = MatchBottomBarTab.Home,
+                onTabSelected = {},
+                label = { tab -> tab.name },
+            )
+        }
+
+    @Test
+    fun mapMatchPreviewCard_lightMode() =
+        snapshot {
+            MapMatchPreviewCard(
+                preview = MatchPreview(game = fakeGame(venueName = "Arena Itaparica"), distanceKm = 1.2),
+                strings = PtBrGamesStrings.map,
+                gameListStrings = PtBrGamesStrings.gameList,
+                onDismiss = {},
+                onDetailsClick = {},
             )
         }
 

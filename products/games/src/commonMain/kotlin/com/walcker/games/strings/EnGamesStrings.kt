@@ -21,4 +21,5 @@ internal val EnGamesStrings =
         matchDetail = matchDetailStringsEn,
         map = mapStringsEn,
         loginRequired = loginRequiredStringsEn,
+        about = aboutStringsEn,
     )

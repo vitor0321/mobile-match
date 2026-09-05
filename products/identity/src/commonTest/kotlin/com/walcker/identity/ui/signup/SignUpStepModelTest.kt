@@ -56,12 +56,14 @@ class SignUpStepModelTest {
 
     private fun buildModel(
         firebaseAuthSource: FakeFirebaseAuthSource = FakeFirebaseAuthSource(),
-    ): Pair<SignUpStepModel, FakeFirebaseAuthSource> {
+        googleAuthSource: FakeGoogleAuthSource = FakeGoogleAuthSource(),
+        appleAuthSource: FakeAppleAuthSource = FakeAppleAuthSource(),
+    ): Triple<SignUpStepModel, FakeFirebaseAuthSource, FakeGoogleAuthSource> {
         val authRepository =
             AuthRepositoryImpl(
                 firebaseAuthSource = firebaseAuthSource,
-                googleAuthSource = FakeGoogleAuthSource(),
-                appleAuthSource = FakeAppleAuthSource(),
+                googleAuthSource = googleAuthSource,
+                appleAuthSource = appleAuthSource,
             )
         val signUseCase = SignUseCaseImpl(authRepository = authRepository)
         val model =
@@ -72,12 +74,21 @@ class SignUpStepModelTest {
                 analytics = FakeAnalyticsTracker(),
                 crashReporter = FakeCrashReporter(),
             )
-        return model to firebaseAuthSource
+        return Triple(model, firebaseAuthSource, googleAuthSource)
+    }
+
+    @Test
+    fun `When full name changes should update state then name is stored`() {
+        val (model, _, _) = buildModel()
+
+        model.onEvent(SignUpInternalRoute.OnFullNameChanged("Jonathan Tomaz"))
+
+        assertEquals("Jonathan Tomaz", model.state.value.fullName)
     }
 
     @Test
     fun `When email changes should update state then email is stored`() {
-        val (model, _) = buildModel()
+        val (model, _, _) = buildModel()
 
         model.onEvent(SignUpInternalRoute.OnEmailChanged("user@match.app"))
 
@@ -86,7 +97,7 @@ class SignUpStepModelTest {
 
     @Test
     fun `When password changes should update state then password is stored`() {
-        val (model, _) = buildModel()
+        val (model, _, _) = buildModel()
 
         model.onEvent(SignUpInternalRoute.OnPasswordChanged("123456"))
 
@@ -95,7 +106,7 @@ class SignUpStepModelTest {
 
     @Test
     fun `When confirm password changes should update state then confirmation is stored`() {
-        val (model, _) = buildModel()
+        val (model, _, _) = buildModel()
 
         model.onEvent(SignUpInternalRoute.OnConfirmPasswordChanged("123456"))
 
@@ -105,20 +116,21 @@ class SignUpStepModelTest {
     @Test
     fun `When submit is clicked with blank fields should expose validation error then loading stays false`() =
         runTest(testDispatcher) {
-            val (model, _) = buildModel()
+            val (model, _, _) = buildModel()
 
             model.onEvent(SignUpInternalRoute.OnSubmitClicked)
             advanceUntilIdle()
 
-            assertEquals("Preencha e-mail, senha e confirmação de senha", model.state.value.error)
+            assertEquals("Preencha nome, e-mail, senha e confirmação de senha", model.state.value.error)
             assertFalse(model.state.value.isLoading)
         }
 
     @Test
     fun `When submit is clicked with different passwords should expose mismatch error then loading stays false`() =
         runTest(testDispatcher) {
-            val (model, _) = buildModel()
+            val (model, _, _) = buildModel()
 
+            model.onEvent(SignUpInternalRoute.OnFullNameChanged("Jonathan Tomaz"))
             model.onEvent(SignUpInternalRoute.OnEmailChanged("user@match.app"))
             model.onEvent(SignUpInternalRoute.OnPasswordChanged("123456"))
             model.onEvent(SignUpInternalRoute.OnConfirmPasswordChanged("654321"))
@@ -133,8 +145,9 @@ class SignUpStepModelTest {
     fun `When sign up succeeds should clear loading then source receives credentials`() =
         runTest(testDispatcher) {
             val firebaseSource = FakeFirebaseAuthSource(signUpResult = Result.success(userSession))
-            val (model, source) = buildModel(firebaseAuthSource = firebaseSource)
+            val (model, source, _) = buildModel(firebaseAuthSource = firebaseSource)
 
+            model.onEvent(SignUpInternalRoute.OnFullNameChanged("Jonathan Tomaz"))
             model.onEvent(SignUpInternalRoute.OnEmailChanged("user@match.app"))
             model.onEvent(SignUpInternalRoute.OnPasswordChanged("123456"))
             model.onEvent(SignUpInternalRoute.OnConfirmPasswordChanged("123456"))
@@ -142,6 +155,7 @@ class SignUpStepModelTest {
             advanceUntilIdle()
 
             assertEquals("user@match.app" to "123456", source.lastSignUpInput)
+            assertEquals("Jonathan Tomaz", source.lastSignUpDisplayName)
             assertFalse(model.state.value.isLoading)
             assertNull(model.state.value.error)
         }
@@ -150,8 +164,9 @@ class SignUpStepModelTest {
     fun `When sign up is submitted should trim email then normalized value is stored and sent`() =
         runTest(testDispatcher) {
             val firebaseSource = FakeFirebaseAuthSource(signUpResult = Result.success(userSession))
-            val (model, source) = buildModel(firebaseAuthSource = firebaseSource)
+            val (model, source, _) = buildModel(firebaseAuthSource = firebaseSource)
 
+            model.onEvent(SignUpInternalRoute.OnFullNameChanged("Jonathan Tomaz"))
             model.onEvent(SignUpInternalRoute.OnEmailChanged("  user@match.app  "))
             model.onEvent(SignUpInternalRoute.OnPasswordChanged("123456"))
             model.onEvent(SignUpInternalRoute.OnConfirmPasswordChanged("123456"))
@@ -169,8 +184,9 @@ class SignUpStepModelTest {
                 FakeFirebaseAuthSource(
                     signUpResult = Result.failure(IllegalStateException("Falha no cadastro")),
                 )
-            val (model, _) = buildModel(firebaseAuthSource = firebaseSource)
+            val (model, _, _) = buildModel(firebaseAuthSource = firebaseSource)
 
+            model.onEvent(SignUpInternalRoute.OnFullNameChanged("Jonathan Tomaz"))
             model.onEvent(SignUpInternalRoute.OnEmailChanged("user@match.app"))
             model.onEvent(SignUpInternalRoute.OnPasswordChanged("123456"))
             model.onEvent(SignUpInternalRoute.OnConfirmPasswordChanged("123456"))
@@ -183,7 +199,7 @@ class SignUpStepModelTest {
 
     @Test
     fun `When error is dismissed should clear error then state has no error`() {
-        val (model, _) = buildModel()
+        val (model, _, _) = buildModel()
 
         model.onEvent(SignUpInternalRoute.OnSubmitClicked)
         model.onEvent(SignUpInternalRoute.OnErrorDismissed)
@@ -195,7 +211,7 @@ class SignUpStepModelTest {
     fun `When session already exists should keep state stable then form remains idle`() =
         runTest(testDispatcher) {
             val firebaseSource = FakeFirebaseAuthSource(initialUser = userSession)
-            val (model, _) = buildModel(firebaseAuthSource = firebaseSource)
+            val (model, _, _) = buildModel(firebaseAuthSource = firebaseSource)
             advanceUntilIdle()
 
             assertFalse(model.state.value.isLoading)
@@ -204,5 +220,35 @@ class SignUpStepModelTest {
                 model.state.value.email
                     .isEmpty(),
             )
+        }
+
+    @Test
+    fun `When Google sign in succeeds should clear loading then source is called`() =
+        runTest(testDispatcher) {
+            val googleSource = FakeGoogleAuthSource(signInResult = Result.success(userSession))
+            val (model, _, source) = buildModel(googleAuthSource = googleSource)
+
+            model.onEvent(SignUpInternalRoute.OnGoogleSignInClicked)
+            advanceUntilIdle()
+
+            assertEquals(1, source.signInCallCount)
+            assertFalse(model.state.value.isLoading)
+            assertNull(model.state.value.error)
+        }
+
+    @Test
+    fun `When Google sign in fails should expose error then loading finishes`() =
+        runTest(testDispatcher) {
+            val googleSource =
+                FakeGoogleAuthSource(
+                    signInResult = Result.failure(IllegalStateException("Falha no Google")),
+                )
+            val (model, _, _) = buildModel(googleAuthSource = googleSource)
+
+            model.onEvent(SignUpInternalRoute.OnGoogleSignInClicked)
+            advanceUntilIdle()
+
+            assertEquals("Não foi possível entrar com Google", model.state.value.error)
+            assertFalse(model.state.value.isLoading)
         }
 }

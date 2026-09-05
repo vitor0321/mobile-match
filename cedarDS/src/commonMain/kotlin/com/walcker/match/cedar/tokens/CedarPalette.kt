@@ -68,4 +68,11 @@ internal object CedarPalette {
     val MapBaseDark: Color = Color(0xFF16233A)
     val MapLineDark: Color = Color(0xFF243248)
     val ImagePlaceholderDark: Color = Color(0xFF2B3B50)
+
+    val GoogleBlue: Color = Color(0xFF4285F4)
+    val GoogleGreen: Color = Color(0xFF34A853)
+    val GoogleYellow: Color = Color(0xFFFBBC05)
+    val GoogleRed: Color = Color(0xFFEA4335)
+
+    val WazeBlue: Color = Color(0xFF05C8F7)
 }

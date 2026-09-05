@@ -2,12 +2,9 @@ package com.walcker.games.features.ui.home.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -17,14 +14,15 @@ import androidx.compose.ui.Modifier
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.ui.home.GameListState
 import com.walcker.games.strings.GameListStrings
-import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
 
 @Composable
 internal fun FilterBar(
     strings: GameListStrings,
     selectedSport: Sport?,
+    mySports: Set<Sport>,
     radiusKm: Double,
+    isRadiusUnlimited: Boolean,
     onSelectSport: (Sport?) -> Unit,
     onRadiusChange: (Double) -> Unit,
 ) {
@@ -32,44 +30,40 @@ internal fun FilterBar(
         modifier = Modifier.padding(bottom = CedarTokens.spacing.xs),
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
     ) {
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
-            contentPadding = PaddingValues(horizontal = CedarTokens.spacing.lg),
-        ) {
-            item {
-                SportChip(
-                    label = strings.allSportsChip,
-                    selected = selectedSport == null,
-                    onClick = { onSelectSport(null) },
-                )
-            }
-            items(items = Sport.entries) { sport ->
-                SportChip(
-                    label = sport.label,
-                    selected = selectedSport == sport,
-                    onClick = { onSelectSport(sport) },
-                )
-            }
-        }
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = CedarTokens.spacing.lg),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        SportChipsRow(
+            strings = strings,
+            selectedSport = selectedSport,
+            mySports = mySports,
+            onSelectSport = onSelectSport,
+        )
+        if (isRadiusUnlimited) {
             Text(
-                text = strings.radiusLabel(radiusKm.toInt()),
+                text = strings.radiusUnlimitedLabel,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = CedarTokens.spacing.sm),
+                modifier = Modifier.padding(horizontal = CedarTokens.spacing.lg),
             )
-            Slider(
-                value = radiusKm.toFloat(),
-                onValueChange = { onRadiusChange(it.toDouble()) },
-                valueRange = GameListState.MIN_RADIUS_KM.toFloat()..GameListState.MAX_RADIUS_KM.toFloat(),
-                modifier = Modifier.weight(1f),
-            )
+        } else {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = CedarTokens.spacing.lg),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = strings.radiusLabel(radiusKm.toInt()),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = CedarTokens.spacing.sm),
+                )
+                Slider(
+                    value = radiusKm.toFloat(),
+                    onValueChange = { onRadiusChange(it.toDouble()) },
+                    valueRange = GameListState.MIN_RADIUS_KM.toFloat()..GameListState.MAX_RADIUS_KM.toFloat(),
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }

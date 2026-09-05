@@ -47,6 +47,7 @@ import com.walcker.match.cedar.components.CedarFilterRow
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.LoginCoordinator
 import org.koin.compose.koinInject
@@ -162,7 +163,11 @@ internal fun CreateMatchContent(
                     .consumeWindowInsets(padding)
                     .padding(padding)
                     .imePadding(),
-            contentPadding = PaddingValues(vertical = CedarTokens.spacing.md),
+            contentPadding =
+                PaddingValues(
+                    top = CedarTokens.spacing.md,
+                    bottom = CedarTokens.spacing.md + LocalBottomBarInset.current,
+                ),
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
         ) {
             item(key = "match-name") {
@@ -190,6 +195,7 @@ internal fun CreateMatchContent(
                     SportPicker(
                         selected = state.selectedSport,
                         enabled = enabled,
+                        mySports = state.mySports,
                         onSelect = { onEvent(CreateMatchEvents.SportSelected(it)) },
                     )
                 }

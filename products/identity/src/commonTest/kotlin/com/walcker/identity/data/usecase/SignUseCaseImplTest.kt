@@ -62,10 +62,11 @@ class SignUseCaseImplTest {
     fun `When signUp should delegate to authRepository and return result`() =
         runTest {
             authRepository.setSignUpResult(Result.success(userSession))
-            val result = useCase.signUp("user@match.app", "password123")
+            val result = useCase.signUp("user@match.app", "password123", "Match User")
 
             assertEquals(Result.success(userSession), result)
             assertEquals("user@match.app" to "password123", authRepository.lastSignUpInput)
+            assertEquals("Match User", authRepository.lastSignUpDisplayName)
         }
 
     @Test

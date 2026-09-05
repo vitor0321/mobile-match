@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -17,6 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,6 +94,7 @@ public fun CedarSecondaryButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     leadingIcon: ImageVector? = null,
+    tintLeadingIcon: Boolean = true,
     fillWidth: Boolean = true,
 ) {
     OutlinedButton(
@@ -108,7 +111,12 @@ public fun CedarSecondaryButton(
                 .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
                 .defaultMinSize(minHeight = ButtonHeight),
     ) {
-        ButtonContent(text = text, loading = loading, leadingIcon = leadingIcon)
+        ButtonContent(
+            text = text,
+            loading = loading,
+            leadingIcon = leadingIcon,
+            tintLeadingIcon = tintLeadingIcon,
+        )
     }
 }
 
@@ -140,6 +148,7 @@ private fun ButtonContent(
     text: String,
     loading: Boolean,
     leadingIcon: ImageVector?,
+    tintLeadingIcon: Boolean = true,
 ) {
     Crossfade(targetState = loading) { isLoading ->
         Box(contentAlignment = Alignment.Center) {
@@ -154,6 +163,7 @@ private fun ButtonContent(
                         Icon(
                             imageVector = leadingIcon,
                             contentDescription = null,
+                            tint = if (tintLeadingIcon) LocalContentColor.current else Color.Unspecified,
                             modifier = Modifier.size(IconSize),
                         )
                     }

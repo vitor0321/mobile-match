@@ -28,12 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.window.Dialog
 import com.walcker.games.features.domain.shared.model.Sport
+import com.walcker.games.features.ui.shared.common.AllSportsBadge
+import com.walcker.games.features.ui.shared.common.SportBadge
 import com.walcker.games.strings.SearchStrings
 import com.walcker.match.cedar.components.CedarFilterRow
 import com.walcker.match.cedar.components.CedarFilterSection
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarTextButton
-import com.walcker.match.cedar.components.SportChip
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.payments.currentDeviceCurrencyCode
 import com.walcker.match.core.payments.formatCurrencyCents
@@ -47,6 +48,7 @@ import kotlin.math.roundToInt
 internal fun SearchFiltersPanel(
     strings: SearchStrings,
     selectedSports: Set<Sport>,
+    mySports: Set<Sport>,
     startDateMs: Long?,
     endDateMs: Long?,
     minPrice: Float?,
@@ -80,17 +82,18 @@ internal fun SearchFiltersPanel(
         )
 
         CedarFilterSection(label = strings.filterSport) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md)) {
                 item {
-                    SportChip(
+                    AllSportsBadge(
                         label = strings.allSports,
                         selected = selectedSports.isEmpty(),
                         onClick = { onSportToggled(null) },
                     )
                 }
-                items(items = Sport.entries) { sport ->
-                    SportChip(
-                        label = sport.label,
+                val orderedSports = Sport.entries.sortedByDescending { it in mySports }
+                items(items = orderedSports, key = { it.name }) { sport ->
+                    SportBadge(
+                        sport = sport,
                         selected = sport in selectedSports,
                         onClick = { onSportToggled(sport) },
                     )

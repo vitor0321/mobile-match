@@ -22,6 +22,7 @@ import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.strings.GameListStrings
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSecondaryButton
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
 import kotlinx.collections.immutable.ImmutableList
@@ -64,8 +65,10 @@ internal fun GameList(
         modifier = Modifier.fillMaxSize(),
         contentPadding =
             PaddingValues(
-                horizontal = CedarTokens.spacing.lg,
-                vertical = CedarTokens.spacing.xs,
+                start = CedarTokens.spacing.lg,
+                end = CedarTokens.spacing.lg,
+                top = CedarTokens.spacing.xs,
+                bottom = CedarTokens.spacing.xs + LocalBottomBarInset.current,
             ),
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
     ) {
@@ -77,6 +80,7 @@ internal fun GameList(
                 priceLabel = game.pricePerPlayer?.let { strings.perPlayer(it) },
                 slotsLabel = strings.slotsBadge(game.openSlots),
                 openSlots = game.openSlots,
+                cityLabel = game.city,
                 onClick = { onClick(game.id) },
                 matchRating = game.matchRating.toFloat().takeIf { game.matchRatingCount > 0 },
                 matchRatingCountLabel =

@@ -325,16 +325,11 @@ internal class FirestoreGameSource(
                             .filter { !it.isConfirmed }
                             .sortedBy { it.positionInWaitlist ?: Int.MAX_VALUE }
 
-                    val totalSlots =
-                        snapshots
-                            .firstNotNullOfOrNull { it.getLong("totalSlots")?.toInt() }
-                            ?: confirmed.size
-
                     ParticipantsSummary(
                         confirmed = confirmed,
                         waitlist = waitlist,
                         confirmedCount = confirmed.size,
-                        totalSlots = totalSlots.coerceAtLeast(confirmed.size),
+                        totalSlots = confirmed.size,
                     )
                 }
             }

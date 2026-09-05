@@ -27,6 +27,7 @@ internal data class CreateMatchState(
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
     val isEditMode: Boolean = false,
+    val mySports: Set<Sport> = emptySet(),
 ) {
     val isFormValid: Boolean
         get() =

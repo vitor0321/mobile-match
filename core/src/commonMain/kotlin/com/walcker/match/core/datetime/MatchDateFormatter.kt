@@ -36,6 +36,45 @@ public fun formatWhen(
         timeZone = timeZone,
     )
 
+public fun formatDayLabel(
+    starts: Instant,
+    now: Instant = getCurrentTime(),
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): String {
+    val startLocal = starts.toLocalDateTime(timeZone)
+    val nowLocal = now.toLocalDateTime(timeZone)
+    val tomorrowLocal = now.plus(1, DateTimeUnit.DAY, timeZone).toLocalDateTime(timeZone)
+
+    return when {
+        startLocal.isSameDayAs(nowLocal) -> "Hoje"
+        startLocal.isSameDayAs(tomorrowLocal) -> "Amanhã"
+        else -> "${startLocal.dayOfMonth.pad2()}/${startLocal.monthNumber.pad2()}"
+    }
+}
+
+public fun formatDayLabel(
+    startsAtSeconds: Long,
+    now: Instant = getCurrentTime(),
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): String =
+    formatDayLabel(
+        starts = Instant.fromEpochSeconds(startsAtSeconds),
+        now = now,
+        timeZone = timeZone,
+    )
+
+public fun formatTimeRange(
+    startsAtSeconds: Long,
+    durationMin: Int,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): String {
+    val start = Instant.fromEpochSeconds(startsAtSeconds)
+    val end = start.plus(durationMin.toLong(), DateTimeUnit.MINUTE, timeZone)
+    val startLocal = start.toLocalDateTime(timeZone)
+    val endLocal = end.toLocalDateTime(timeZone)
+    return "${startLocal.hour.pad2()}:${startLocal.minute.pad2()} - ${endLocal.hour.pad2()}:${endLocal.minute.pad2()}"
+}
+
 internal expect fun getCurrentTime(): Instant
 
 private fun LocalDateTime.isSameDayAs(other: LocalDateTime): Boolean = year == other.year && monthNumber == other.monthNumber && dayOfMonth == other.dayOfMonth

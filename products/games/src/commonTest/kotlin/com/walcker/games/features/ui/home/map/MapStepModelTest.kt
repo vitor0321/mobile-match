@@ -126,6 +126,53 @@ class MapStepModelTest {
         }
 
     @Test
+    fun `previewMatch defaults to the nearest match`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val locationProvider =
+                FakeLocationProvider(locationResult = Result.success(Coordinates(lat = -23.55, lng = -46.63)))
+            val model = buildModel(repository, locationProvider)
+            advanceUntilIdle()
+
+            repository.emitMatches(listOf(futureGame("match-1"), futureGame("match-2")))
+            advanceUntilIdle()
+
+            assertEquals("match-1", model.state.value.previewMatch?.game?.id)
+        }
+
+    @Test
+    fun `selecting a pin overrides the preview`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository)
+            advanceUntilIdle()
+
+            repository.emitMatches(listOf(futureGame("match-1"), futureGame("match-2")))
+            advanceUntilIdle()
+
+            model.onPinSelected("match-2")
+
+            assertEquals("match-2", model.state.value.previewMatch?.game?.id)
+        }
+
+    @Test
+    fun `dismissing the preview hides it until a pin is selected again`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository)
+            advanceUntilIdle()
+
+            repository.emitMatches(listOf(futureGame("match-1")))
+            advanceUntilIdle()
+
+            model.onPreviewDismissed()
+            assertEquals(null, model.state.value.previewMatch)
+
+            model.onPinSelected("match-1")
+            assertEquals("match-1", model.state.value.previewMatch?.game?.id)
+        }
+
+    @Test
     fun `onRefresh toggles isRefreshing`() =
         runTest(testDispatcher) {
             val repository = FakeGameRepository()

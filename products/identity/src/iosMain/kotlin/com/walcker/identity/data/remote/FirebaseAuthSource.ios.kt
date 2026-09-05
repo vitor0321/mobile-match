@@ -57,12 +57,25 @@ internal class IosFirebaseAuthSource(
     override suspend fun signUp(
         email: String,
         password: String,
-    ): Result<UserSession> =
-        suspendCancellableCoroutine { continuation ->
-            auth.createUserWithEmail(email, password) { result, error ->
-                continuation.resume(result.toResult(error, stringsHolder))
+        displayName: String,
+    ): Result<UserSession> {
+        val creationResult =
+            suspendCancellableCoroutine { continuation ->
+                auth.createUserWithEmail(email, password) { result, error ->
+                    continuation.resume(result.toResult(error, stringsHolder))
+                }
+            }
+        val session = creationResult.getOrElse { return Result.failure(it) }
+        if (displayName.isBlank()) return Result.success(session)
+        val user = auth.currentUser() ?: return Result.success(session)
+        return suspendCancellableCoroutine { continuation ->
+            val changeRequest = user.profileChangeRequest()
+            changeRequest.setDisplayName(displayName)
+            changeRequest.commitChangesWithCompletion {
+                continuation.resume(Result.success(session.copy(displayName = displayName)))
             }
         }
+    }
 
     override suspend fun signOut(): Result<Unit> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth

@@ -9,7 +9,5 @@ internal val PtBrIdentityStrings =
         login = loginStringsPt,
         nativeAuth = nativeAuthStringsPt,
         signUp = signUpStringsPt,
-        profile = profileStringsPt,
-        paywall = paywallStringsPt,
         forgotPassword = forgotPasswordStringsPt,
     )

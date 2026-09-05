@@ -71,10 +71,11 @@ class AuthRepositoryImplTest {
     fun `When signUp should delegate to firebaseAuth and return result`() =
         runTest {
             firebaseAuth.setSignUpResult(Result.success(userSession))
-            val result = repository.signUp("user@match.app", "password123")
+            val result = repository.signUp("user@match.app", "password123", "Match User")
 
             assertEquals(Result.success(userSession), result)
             assertEquals("user@match.app" to "password123", firebaseAuth.lastSignUpInput)
+            assertEquals("Match User", firebaseAuth.lastSignUpDisplayName)
         }
 
     @Test

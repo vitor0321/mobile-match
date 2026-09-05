@@ -1,8 +1,5 @@
 package com.walcker.games.features.ui.home.map
 
-import android.R.attr.strokeWidth
-import android.R.attr.textSize
-import android.R.attr.typeface
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -11,7 +8,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
-import android.system.Os.close
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,6 +34,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.ui.home.map.model.MapPin
 import com.walcker.games.features.ui.shared.map.rememberGoogleMapStyleOptions
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
@@ -117,7 +114,7 @@ internal actual fun MatchMapView(
                 modifier =
                     Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(16.dp),
+                        .padding(end = 16.dp, bottom = LocalBottomBarInset.current + 16.dp),
             ) {
                 Text("$nearbyCount próximas")
             }

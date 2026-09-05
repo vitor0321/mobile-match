@@ -45,6 +45,15 @@ class GameListStepTest {
     fun empty_lightMode() = snapshot(GameListState(isLoading = false, preferencesLoaded = true), darkTheme = false)
 
     @Test
+    fun mapMode_lightMode() {
+        paparazzi.snapshot {
+            GamesSnapshotTheme(darkTheme = false) {
+                GameListContent(state = loadedState, onEvent = {}, showMap = true)
+            }
+        }
+    }
+
+    @Test
     fun error_lightMode() =
         snapshot(
             GameListState(isLoading = false, preferencesLoaded = true, errorMessage = "Não foi possível carregar as partidas."),

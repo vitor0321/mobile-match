@@ -1,18 +1,25 @@
 package com.walcker.games.features.ui.home
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,13 +27,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import com.walcker.games.features.ui.home.component.FilterBar
 import com.walcker.games.features.ui.home.component.GameList
 import com.walcker.games.features.ui.home.component.LoadingContent
+import com.walcker.games.features.ui.home.component.SportChipsRow
 import com.walcker.games.features.ui.home.map.MapBody
 import com.walcker.games.features.ui.home.map.MapStepModel
+import com.walcker.match.cedar.components.CedarHomeEmptyAnimation
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -35,6 +45,8 @@ import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.HomeViewCoordinator
 import com.walcker.match.navigator.MatchDetailCoordinator
 import org.koin.compose.koinInject
+
+private val EmptyStateAnimationSize = 240.dp
 
 internal class GameListStep : Screen {
     @Composable
@@ -73,7 +85,9 @@ internal class GameListStep : Screen {
                     state = mapState,
                     onRefresh = mapStepModel::onRefresh,
                     onRetryLocation = mapStepModel::onRetryLocation,
-                    onPinClick = { matchId -> deepLinkCoordinator.navigate(DeepLink.OpenMatch(matchId)) },
+                    onPinSelected = mapStepModel::onPinSelected,
+                    onPreviewDismiss = mapStepModel::onPreviewDismissed,
+                    onDetailsClick = { matchId -> deepLinkCoordinator.navigate(DeepLink.OpenMatch(matchId)) },
                     modifier = bodyModifier,
                 )
             },
@@ -98,6 +112,56 @@ internal fun GameListContent(
         containerColor = CedarTokens.colors.canvas,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
+        if (showMap) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+            ) {
+                mapBody(Modifier.fillMaxSize())
+
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(CedarTokens.spacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+                ) {
+                    if (state.preferencesLoaded) {
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = CedarTokens.radius.lgShape,
+                            color = MaterialTheme.colorScheme.surface,
+                            tonalElevation = CedarTokens.elevation.overlay,
+                        ) {
+                            SportChipsRow(
+                                strings = strings,
+                                selectedSport = state.selectedSport,
+                                mySports = state.mySports,
+                                onSelectSport = { onEvent(GameListEvents.SelectSport(it)) },
+                                modifier = Modifier.padding(vertical = CedarTokens.spacing.xs),
+                            )
+                        }
+                    }
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = CedarTokens.elevation.overlay,
+                    ) {
+                        IconButton(onClick = onToggleMap) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.List,
+                                contentDescription = strings.showListAction,
+                            )
+                        }
+                    }
+                }
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier =
                 Modifier
@@ -121,8 +185,8 @@ internal fun GameListContent(
                 )
                 IconButton(onClick = onToggleMap) {
                     Icon(
-                        imageVector = if (showMap) Icons.AutoMirrored.Filled.List else Icons.Filled.Map,
-                        contentDescription = if (showMap) strings.showListAction else strings.showMapAction,
+                        imageVector = Icons.Filled.Map,
+                        contentDescription = strings.showMapAction,
                     )
                 }
             }
@@ -131,15 +195,28 @@ internal fun GameListContent(
                 FilterBar(
                     strings = strings,
                     selectedSport = state.selectedSport,
+                    mySports = state.mySports,
                     radiusKm = state.radiusKm,
+                    isRadiusUnlimited = state.isShowingNearestFallback,
                     onSelectSport = { onEvent(GameListEvents.SelectSport(it)) },
                     onRadiusChange = { onEvent(GameListEvents.SetRadius(it)) },
                 )
             }
 
-            when {
-                showMap -> mapBody(Modifier.fillMaxSize())
+            if (state.isShowingNearestFallback && state.games.isNotEmpty()) {
+                Text(
+                    text = strings.nearestFallbackNotice,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier =
+                        Modifier.padding(
+                            horizontal = CedarTokens.spacing.lg,
+                            vertical = CedarTokens.spacing.xs,
+                        ),
+                )
+            }
 
+            when {
                 state.isLoading && state.games.isEmpty() ->
                     LoadingContent(
                         contentDescription = strings.loadingLabel,
@@ -155,6 +232,12 @@ internal fun GameListContent(
                 state.games.isEmpty() ->
                     EmptyState(
                         message = strings.emptyMessage,
+                        illustration = {
+                            CedarHomeEmptyAnimation(
+                                contentDescription = null,
+                                modifier = Modifier.size(EmptyStateAnimationSize),
+                            )
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
 

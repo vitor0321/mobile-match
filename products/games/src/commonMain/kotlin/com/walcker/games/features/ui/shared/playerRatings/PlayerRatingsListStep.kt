@@ -36,6 +36,7 @@ import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.EmptyState
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 import org.koin.core.parameter.parametersOf
 
@@ -163,8 +164,10 @@ internal fun PlayerRatingsContent(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding =
                             PaddingValues(
-                                horizontal = CedarTokens.spacing.lg,
-                                vertical = CedarTokens.spacing.md,
+                                start = CedarTokens.spacing.lg,
+                                end = CedarTokens.spacing.lg,
+                                top = CedarTokens.spacing.md,
+                                bottom = CedarTokens.spacing.md + LocalBottomBarInset.current,
                             ),
                         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
                     ) {
