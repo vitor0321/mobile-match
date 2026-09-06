@@ -19,7 +19,9 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -255,11 +257,38 @@ internal fun MatchDetailContent(
                 .fillMaxWidth()
                 .background(CedarTokens.colors.canvas),
     ) {
+        val shareLauncher = rememberShareLauncher()
+
         CedarTopBar(
             title = detail.title,
             onBack = onDismiss,
             backContentDescription = detail.dismissContentDescription,
             leadingIcon = Icons.Default.Close,
+            actions = {
+                if (match != null) {
+                    IconButton(
+                        onClick = {
+                            shareLauncher(
+                                detail.shareSubject(match.sport.label),
+                                detail.shareMessage(
+                                    match.sport.label,
+                                    formatDayLabel(match.startsAtSeconds),
+                                    formatTimeRange(match.startsAtSeconds, match.durationMin),
+                                    match.venueName,
+                                    match.address,
+                                    "https://vitor0321.github.io/match/?id=${match.id}",
+                                ),
+                            )
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = detail.shareContentDescription,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            },
         )
 
         Column(

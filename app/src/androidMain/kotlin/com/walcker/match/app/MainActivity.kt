@@ -76,16 +76,20 @@ internal class MainActivity :
             )
         }
 
-        handleNotificationIntent(intent)
+        handleIncomingIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleNotificationIntent(intent)
+        handleIncomingIntent(intent)
     }
 
-    private fun handleNotificationIntent(intent: Intent?) {
-        val matchId = intent?.getStringExtra(EXTRA_MATCH_ID) ?: return
+    private fun handleIncomingIntent(intent: Intent?) {
+        val matchId =
+            intent?.getStringExtra(EXTRA_MATCH_ID)
+                ?: intent?.data?.getQueryParameter("id")
+                ?: intent?.data?.lastPathSegment
+                ?: return
         deepLinkCoordinator.navigate(DeepLink.OpenMatch(matchId))
     }
 

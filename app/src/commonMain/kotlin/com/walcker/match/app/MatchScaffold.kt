@@ -115,10 +115,13 @@ private fun AuthenticatedShell() {
     }
 
     LaunchedEffect(deepLinkCoordinator) {
+        println("DEEPLINK_DEBUG AuthenticatedShell started collecting deepLinkCoordinator=$deepLinkCoordinator")
         deepLinkCoordinator.links.collect { link ->
+            println("DEEPLINK_DEBUG AuthenticatedShell received link=$link")
             when (link) {
                 is DeepLink.OpenMatch -> {
                     matchDetailCoordinator.open(link.matchId)
+                    println("DEEPLINK_DEBUG matchDetailCoordinator.open(${link.matchId}) called, coordinator=$matchDetailCoordinator")
                 }
             }
         }

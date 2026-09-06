@@ -32,11 +32,19 @@ internal class FirestoreAvailabilitySource(
     override suspend fun setAvailableSports(
         userId: String,
         sports: Set<Sport>,
-    ): Result<Unit> =
-        firestore.document(privatePath(userId)).set(
-            mapOf(FIELD_SPORTS to sports.map { it.name }),
-            merge = true,
-        )
+    ): Result<Unit> {
+        val sportNames = sports.map { it.name }
+
+        return firestore
+            .document(privatePath(userId))
+            .set(mapOf(FIELD_SPORTS to sportNames), merge = true)
+            .mapCatching {
+                firestore
+                    .document(profilePath(userId))
+                    .set(mapOf(FIELD_FAVORITE_SPORTS to sportNames), merge = true)
+                    .getOrThrow()
+            }
+    }
 
     private fun DocumentSnapshot?.toAvailability(): Availability {
         if (this == null) return Availability.Unavailable
@@ -57,8 +65,11 @@ internal class FirestoreAvailabilitySource(
     private companion object {
         fun privatePath(userId: String) = "profiles/$userId/private/data"
 
+        fun profilePath(userId: String) = "profiles/$userId"
+
         const val FIELD_IS_AVAILABLE = "isAvailable"
         const val FIELD_AVAILABLE_UNTIL = "availableUntil"
         const val FIELD_SPORTS = "availableSports"
+        const val FIELD_FAVORITE_SPORTS = "sports"
     }
 }

@@ -15,6 +15,7 @@ public class DeepLinkCoordinator {
     public val links: Flow<DeepLink> = channel.receiveAsFlow()
 
     public fun navigate(link: DeepLink) {
-        channel.trySend(link)
+        val result = channel.trySend(link)
+        println("DEEPLINK_DEBUG DeepLinkCoordinator.navigate link=$link result=$result")
     }
 }

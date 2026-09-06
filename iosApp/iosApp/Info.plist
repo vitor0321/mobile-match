@@ -23,6 +23,16 @@
 				<string>com.googleusercontent.apps.176387111716-ti3ljhb26v4apmdnihq9u85b13m0vnn6</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.walcker.match.joinplay</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>joinplay</string>
+			</array>
+		</dict>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Match needs your location to show matches near you on the map</string>

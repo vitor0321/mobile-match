@@ -72,6 +72,16 @@ internal data class MatchDetailStrings(
     val openInGoogleMaps: String,
     val openInWaze: String,
     val openLocationCancel: String,
+    val shareContentDescription: String,
+    val shareSubject: (sport: String) -> String,
+    val shareMessage: (
+        sport: String,
+        dayLabel: String,
+        timeRange: String,
+        venueName: String,
+        address: String,
+        joinLink: String,
+    ) -> String,
 )
 
 internal val matchDetailStringsEn =
@@ -154,6 +164,14 @@ internal val matchDetailStringsEn =
         openInGoogleMaps = "Google Maps",
         openInWaze = "Waze",
         openLocationCancel = "Cancel",
+        shareContentDescription = "Share match",
+        shareSubject = { sport -> "$sport match" },
+        shareMessage = { sport, dayLabel, timeRange, venueName, address, joinLink ->
+            "Want to play? Join this $sport match with me!\n\n" +
+                "📅 $dayLabel at $timeRange\n" +
+                "📍 $venueName, $address\n\n" +
+                "Tap to open in JoinPlay:\n$joinLink"
+        },
     )
 
 internal val matchDetailStringsPt =
@@ -236,4 +254,12 @@ internal val matchDetailStringsPt =
         openInGoogleMaps = "Google Maps",
         openInWaze = "Waze",
         openLocationCancel = "Cancelar",
+        shareContentDescription = "Compartilhar partida",
+        shareSubject = { sport -> "Partida de $sport" },
+        shareMessage = { sport, dayLabel, timeRange, venueName, address, joinLink ->
+            "Bora jogar? Entra nessa partida de $sport comigo!\n\n" +
+                "📅 $dayLabel às $timeRange\n" +
+                "📍 $venueName, $address\n\n" +
+                "Toque pra abrir no JoinPlay:\n$joinLink"
+        },
     )
