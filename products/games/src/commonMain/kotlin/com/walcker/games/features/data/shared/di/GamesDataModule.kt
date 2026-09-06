@@ -61,6 +61,8 @@ import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.MarkNotificationAsReadUseCase
 import com.walcker.games.features.domain.shared.usecase.MarkNotificationAsReadUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.ObserveHasUnreadNotificationsUseCase
+import com.walcker.games.features.domain.shared.usecase.ObserveHasUnreadNotificationsUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCase
@@ -109,6 +111,9 @@ internal val gamesDataModule =
         factory<CancelMatchSeriesUseCase> { CancelMatchSeriesUseCaseImpl(repository = get()) }
         factory<LeaveMatchUseCase> { LeaveMatchUseCaseImpl(repository = get()) }
         factory<GetNotificationHistoryUseCase> { GetNotificationHistoryUseCaseImpl(repository = get()) }
+        factory<ObserveHasUnreadNotificationsUseCase> {
+            ObserveHasUnreadNotificationsUseCaseImpl(repository = get(), sessionHolder = get())
+        }
         factory<GetGameByIdUseCase> { GetGameByIdUseCaseImpl(repository = get()) }
         factory<MarkNotificationAsReadUseCase> { MarkNotificationAsReadUseCaseImpl(repository = get()) }
         factory<DeleteNotificationUseCase> { DeleteNotificationUseCaseImpl(repository = get()) }

@@ -2,14 +2,19 @@ package com.walcker.games.fake
 
 import com.walcker.games.features.data.shared.model.NotificationHistoryItem
 import com.walcker.games.features.domain.shared.repository.NotificationRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 internal class FakeNotificationRepository(
     var historyResult: Result<List<NotificationHistoryItem>> = Result.success(emptyList()),
     var markAsReadResult: Result<Unit> = Result.success(Unit),
     var deleteResult: Result<Unit> = Result.success(Unit),
+    var hasUnreadFlow: Flow<Boolean> = flowOf(false),
 ) : NotificationRepository {
     val markAsReadCalls: MutableList<String> = mutableListOf()
     val deleteCalls: MutableList<String> = mutableListOf()
+
+    override fun observeHasUnread(userId: String): Flow<Boolean> = hasUnreadFlow
 
     override suspend fun getNotificationHistory(
         userId: String,

@@ -29,6 +29,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import com.walcker.games.features.ui.shared.matchDetail.MatchDetailBottomSheet
+import com.walcker.games.features.ui.shared.notifications.rememberHasUnreadNotifications
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.app.notifications.DeviceTokenRegistrar
 import com.walcker.match.app.strings.AppShellStrings
@@ -97,6 +98,7 @@ private fun AuthenticatedShell() {
     val deviceTokenRegistrar = koinInject<DeviceTokenRegistrar>()
     val bottomBarVisibility = koinInject<BottomBarVisibilityCoordinator>()
     val isBottomBarVisible by bottomBarVisibility.isVisible.collectAsState()
+    val hasUnreadNotifications by rememberHasUnreadNotifications()
     val strings = rememberAppShellStrings()
     val (selectedTab, setSelectedTab) = remember { mutableStateOf(MainTab.Home) }
     val (showLogin, setShowLogin) = remember { mutableStateOf(false) }
@@ -183,7 +185,7 @@ private fun AuthenticatedShell() {
                 selectedTab = MatchBottomBarTab.entries[selectedTab.index],
                 onTabSelected = { tab -> setSelectedTab(tab.toMainTab()) },
                 label = { tab -> strings.labelFor(tab) },
-                showDot = { tab -> tab == MatchBottomBarTab.Activity },
+                showDot = { tab -> tab == MatchBottomBarTab.Profile && hasUnreadNotifications },
                 hazeState = hazeState,
             )
         }
