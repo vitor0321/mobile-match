@@ -71,16 +71,18 @@ internal fun ParticipantRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RatingStars(rating = ratingSummary?.rating ?: 0f, starSize = 12.dp)
-                Text(
-                    text = ratingsCountLabel(ratingSummary?.ratingCount ?: 0),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (ratingSummary != null && ratingSummary.ratingCount > 0) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RatingStars(rating = ratingSummary.rating, starSize = 12.dp)
+                    Text(
+                        text = ratingsCountLabel(ratingSummary.ratingCount),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Text(
                 text = if (participant.hasPaid) "$statusLabel · $paidLabel" else statusLabel,
