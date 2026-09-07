@@ -446,7 +446,7 @@ describe("submitReport", () => {
   async function seedMatch(participants: string[]) {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), "matches", MATCH), {
-        organizerId: REPORTED,
+        organizerId: uid,
         status: "OPEN",
         startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
         totalSlots: 10,
@@ -509,14 +509,21 @@ describe("submitReport", () => {
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
 
-  it("rejects a reporter who did not play the match", async () => {
-    await seedMatch([REPORTED]);
+  it("rejects a caller who is not the organizer", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH), {
+        organizerId: "someone-else",
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        totalSlots: 10,
+        participants: [uid, REPORTED],
+      });
+    });
     const response = await call("submitReport", {
       matchId: MATCH,
       reportedUserId: REPORTED,
       reason: "no_show",
     });
-    // Not being able to report a stranger is the main anti-abuse anchor.
     expect(response.status).toBe(403);
     expect(await response.text()).toContain("PERMISSION_DENIED");
   });

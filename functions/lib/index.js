@@ -864,10 +864,11 @@ function parseSubmitMatchRatingPayload(value) {
 // ---------------------------------------------------------------------------
 // submitReport — Callable (invocada por products/games)
 //
-// Denunciar alguém com quem se jogou. Duas travas contra abuso, ambas
-// estruturais e não configuráveis:
-//   1. Denunciante e denunciado precisam estar na mesma partida. Não dá para
-//      denunciar um estranho.
+// Denunciar um jogador confirmado na própria partida. Duas travas contra
+// abuso, ambas estruturais e não configuráveis:
+//   1. Só o organizador da partida denuncia — mesma regra de
+//      submitPlayerRating. Denúncia deixou de ser peer-to-peer: agora vive
+//      dentro do mesmo fluxo de avaliar jogador, que já é organizer-only.
 //   2. O id do documento é {matchId}_{reporter}_{reported}, então uma pessoa
 //      conta no máximo uma vez por partida contra a mesma pessoa.
 //
@@ -892,12 +893,12 @@ exports.submitReport = (0, https_1.onCall)({ region: REGION }, async (request) =
         if (!matchSnap.exists) {
             throw new https_1.HttpsError("not-found", "Match not found.");
         }
+        if (matchSnap.data()?.organizerId !== uid) {
+            throw new https_1.HttpsError("permission-denied", "Only the organizer can report players in this match.");
+        }
         const participants = Array.isArray(matchSnap.data()?.participants)
             ? (matchSnap.data()?.participants).filter((x) => typeof x === "string")
             : [];
-        if (!participants.includes(uid)) {
-            throw new https_1.HttpsError("permission-denied", "Only participants can report in this match.");
-        }
         if (!participants.includes(reportedUserId)) {
             throw new https_1.HttpsError("failed-precondition", "The reported user did not play this match.");
         }
