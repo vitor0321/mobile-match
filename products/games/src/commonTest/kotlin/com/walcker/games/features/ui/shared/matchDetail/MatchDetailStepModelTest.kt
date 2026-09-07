@@ -379,7 +379,7 @@ class MatchDetailStepModelTest {
         }
 
     @Test
-    fun `a failed rating submission surfaces an error and keeps the sheet open`() =
+    fun `a failed rating submission surfaces an error and closes the sheet`() =
         runTest(testDispatcher) {
             val ratingRepository = FakeRatingRepository(submitResult = Result.failure(IllegalStateException("offline")))
             val model = buildModel(ratingRepository = ratingRepository)
@@ -392,7 +392,8 @@ class MatchDetailStepModelTest {
             val state = model.state.value
             assertEquals(stringsHolder.strings.ratings.submitError, state.ratingErrorMessage)
             assertFalse(state.isSubmittingRating)
-            assertTrue(state.showRatingSheet)
+            assertFalse(state.showRatingSheet)
+            assertNull(state.selectedPlayerForRating)
 
             model.onEvent(MatchDetailEvent.DismissRatingError)
             assertNull(model.state.value.ratingErrorMessage)

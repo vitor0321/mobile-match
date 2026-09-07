@@ -384,6 +384,8 @@ internal class MatchDetailStepModel(
                 _state.update {
                     it.copy(
                         isSubmittingRating = false,
+                        showRatingSheet = false,
+                        selectedPlayerForRating = null,
                         ratingErrorMessage = strings.submitError,
                     )
                 }
