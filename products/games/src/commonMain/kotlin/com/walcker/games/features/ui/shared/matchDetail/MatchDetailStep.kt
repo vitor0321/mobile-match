@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +56,7 @@ import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
+import com.walcker.games.features.domain.shared.usecase.SubmitOrganizerRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.ui.create.CreateMatchStep
@@ -141,6 +143,7 @@ internal fun MatchDetailScreenContent(
     val observeParticipants: ObserveParticipantsUseCase = koinInject()
     val submitRating: SubmitRatingUseCase = koinInject()
     val submitMatchRating: SubmitMatchRatingUseCase = koinInject()
+    val submitOrganizerRating: SubmitOrganizerRatingUseCase = koinInject()
     val submitReport: SubmitReportUseCase = koinInject()
     val playerRepository: PlayerRepository = koinInject()
     val ratingRepository: RatingRepository = koinInject()
@@ -168,6 +171,7 @@ internal fun MatchDetailScreenContent(
                 cancelMatchSeries = cancelSeries,
                 submitRating = submitRating,
                 submitMatchRating = submitMatchRating,
+                submitOrganizerRating = submitOrganizerRating,
                 submitReport = submitReport,
                 playerRepository = playerRepository,
                 ratingRepository = ratingRepository,
@@ -361,6 +365,9 @@ internal fun MatchDetailContent(
                         isClosed = isClosed,
                         canRate = state.canRate,
                         canRatePlayers = state.canRatePlayers,
+                        canRateOrganizer = state.canRateOrganizer,
+                        organizerRatingSummary = state.organizerRatingSummary,
+                        onRateOrganizer = { onEvent(MatchDetailEvent.OpenOrganizerRatingSheet) },
                         ratingSuccessMessage = state.ratingSuccessMessage,
                         ratingErrorMessage = state.ratingErrorMessage,
                         isMatchOver = state.isMatchOver,
@@ -445,6 +452,15 @@ internal fun MatchDetailContent(
         isLoading = state.isSubmittingMatchRating,
     )
 
+    OrganizerRatingBottomSheet(
+        isVisible = state.showOrganizerRatingSheet,
+        strings = detail,
+        starContentDescription = strings.ratings.starContentDescription,
+        onDismiss = { onEvent(MatchDetailEvent.CloseOrganizerRatingSheet) },
+        onSubmit = { rating -> onEvent(MatchDetailEvent.SubmitOrganizerRating(rating)) },
+        isLoading = state.isSubmittingOrganizerRating,
+    )
+
     if (state.showLeaveConfirmDialog) {
         ConfirmDialog(
             title = detail.leaveDialogTitle,
@@ -493,6 +509,9 @@ internal fun MatchDetailBody(
     isClosed: Boolean,
     canRate: Boolean,
     canRatePlayers: Boolean,
+    canRateOrganizer: Boolean,
+    organizerRatingSummary: PlayerRatingSummary?,
+    onRateOrganizer: () -> Unit,
     ratingSuccessMessage: String?,
     ratingErrorMessage: String?,
     isMatchOver: Boolean,
@@ -596,18 +615,34 @@ internal fun MatchDetailBody(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
-                Text(
-                    text = detail.organizedBy(match.organizerName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                if (match.organizerRatingCount > 0) {
-                    RatingStars(rating = match.organizerRating.toFloat(), starSize = 12.dp)
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = detail.ratingsCount(match.organizerRatingCount),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = detail.organizedBy(match.organizerName),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
+                    if (organizerRatingSummary != null && organizerRatingSummary.ratingCount > 0) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RatingStars(rating = organizerRatingSummary.rating, starSize = 12.dp)
+                            Text(
+                                text = detail.ratingsCount(organizerRatingSummary.ratingCount),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                if (canRateOrganizer) {
+                    IconButton(onClick = onRateOrganizer) {
+                        Icon(
+                            imageVector = Icons.Outlined.RateReview,
+                            contentDescription = detail.rateOrganizerAction,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
         }
