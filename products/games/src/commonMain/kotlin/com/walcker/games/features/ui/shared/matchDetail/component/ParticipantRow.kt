@@ -67,17 +67,11 @@ internal fun ParticipantRow(
                 overflow = TextOverflow.Ellipsis,
             )
             if (ratingSummary != null && ratingSummary.ratingCount > 0) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RatingStars(rating = ratingSummary.rating, starSize = 12.dp)
-                    Text(
-                        text = ratingsCountLabel(ratingSummary.ratingCount),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                RatingStars(
+                    rating = ratingSummary.rating,
+                    starSize = 12.dp,
+                    contentDescription = ratingsCountLabel(ratingSummary.ratingCount),
+                )
             }
             Text(
                 text = if (participant.hasPaid) "$statusLabel · $paidLabel" else statusLabel,
