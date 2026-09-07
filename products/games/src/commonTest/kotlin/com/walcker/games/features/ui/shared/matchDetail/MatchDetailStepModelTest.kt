@@ -358,7 +358,9 @@ class MatchDetailStepModelTest {
             advanceUntilIdle()
 
             model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = "Bom jogo"))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(rating = 5, comment = "Bom jogo", reportReason = null, reportDetails = ""),
+            )
             advanceUntilIdle()
 
             val state = model.state.value
@@ -375,7 +377,9 @@ class MatchDetailStepModelTest {
             advanceUntilIdle()
 
             model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = ""))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
+            )
             advanceUntilIdle()
 
             assertEquals(stringsHolder.strings.ratings.updated, model.state.value.ratingSuccessMessage)
@@ -389,7 +393,9 @@ class MatchDetailStepModelTest {
             advanceUntilIdle()
 
             model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = ""))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
+            )
             advanceUntilIdle()
 
             val state = model.state.value
@@ -444,48 +450,95 @@ class MatchDetailStepModelTest {
         }
 
     @Test
-    fun `submitting a report succeeds and closes the sheet`() =
+    fun `submitting a rating with a report reason also files the report`() =
         runTest(testDispatcher) {
             val reportRepository = FakeReportRepository(submitResult = Result.success(SubmitReportOutcome.Recorded))
-            val model = buildModel(reportRepository = reportRepository)
+            val ratingRepository =
+                FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Recorded(averageRating = 4.5f, ratingCount = 3)))
+            val model = buildModel(ratingRepository = ratingRepository, reportRepository = reportRepository)
             advanceUntilIdle()
 
-            model.onEvent(MatchDetailEvent.OpenReportSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitReport(reason = ReportReason.NO_SHOW, details = "Não apareceu"))
+            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(
+                    rating = 5,
+                    comment = "",
+                    reportReason = ReportReason.NO_SHOW,
+                    reportDetails = "Não apareceu",
+                ),
+            )
             advanceUntilIdle()
 
             val state = model.state.value
-            assertFalse(state.showReportSheet)
-            assertEquals(stringsHolder.strings.reports.success, state.successMessage)
+            assertFalse(state.showRatingSheet)
             assertEquals(listOf("player-2"), reportRepository.submitCalls)
+            assertEquals(
+                "${stringsHolder.strings.ratings.submitSuccess} ${stringsHolder.strings.reports.success}",
+                state.ratingSuccessMessage,
+            )
         }
 
     @Test
-    fun `reporting a player already reported in this match surfaces its own message`() =
+    fun `submitting a rating without a report reason never calls the report repository`() =
+        runTest(testDispatcher) {
+            val reportRepository = FakeReportRepository()
+            val model = buildModel(reportRepository = reportRepository)
+            advanceUntilIdle()
+
+            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
+            )
+            advanceUntilIdle()
+
+            assertEquals(emptyList<String>(), reportRepository.submitCalls)
+        }
+
+    @Test
+    fun `a report reason already reported still shows the rating's success message`() =
         runTest(testDispatcher) {
             val reportRepository = FakeReportRepository(submitResult = Result.success(SubmitReportOutcome.AlreadyReported))
             val model = buildModel(reportRepository = reportRepository)
             advanceUntilIdle()
 
-            model.onEvent(MatchDetailEvent.OpenReportSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitReport(reason = ReportReason.OTHER, details = ""))
+            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(
+                    rating = 5,
+                    comment = "",
+                    reportReason = ReportReason.OTHER,
+                    reportDetails = "",
+                ),
+            )
             advanceUntilIdle()
 
-            assertEquals(stringsHolder.strings.reports.alreadyReported, model.state.value.successMessage)
+            assertEquals(
+                "${stringsHolder.strings.ratings.submitSuccess} ${stringsHolder.strings.reports.alreadyReported}",
+                model.state.value.ratingSuccessMessage,
+            )
         }
 
     @Test
-    fun `a failed report submission surfaces an error`() =
+    fun `a failed report submission does not hide the rating's success message`() =
         runTest(testDispatcher) {
             val reportRepository = FakeReportRepository(submitResult = Result.failure(IllegalStateException("offline")))
             val model = buildModel(reportRepository = reportRepository)
             advanceUntilIdle()
 
-            model.onEvent(MatchDetailEvent.OpenReportSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitReport(reason = ReportReason.OTHER, details = ""))
+            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(
+                    rating = 5,
+                    comment = "",
+                    reportReason = ReportReason.OTHER,
+                    reportDetails = "",
+                ),
+            )
             advanceUntilIdle()
 
-            assertEquals(stringsHolder.strings.reports.error, model.state.value.reportErrorMessage)
+            val state = model.state.value
+            assertFalse(state.showRatingSheet)
+            assertEquals(stringsHolder.strings.ratings.submitSuccess, state.ratingSuccessMessage)
         }
 
     @Test
