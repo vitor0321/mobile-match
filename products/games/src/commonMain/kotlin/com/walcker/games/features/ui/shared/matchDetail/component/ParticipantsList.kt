@@ -42,7 +42,7 @@ internal fun ParticipantsList(
                     statusLabel = detail.confirmedTag,
                     paidLabel = detail.paidTag,
                     rateLabel = detail.rateAction,
-                    canRate = canRate,
+                    canRate = canRate && participant.userId != currentUserId,
                     canReport = participant.userId != currentUserId,
                     ratingSummary = participantRatings[participant.userId],
                     ratingsCountLabel = detail.ratingsCount,

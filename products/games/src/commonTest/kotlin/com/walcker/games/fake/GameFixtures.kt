@@ -12,6 +12,7 @@ internal fun game(
     participants: List<String> = emptyList(),
     confirmedPlayers: Int = 1,
     totalPlayers: Int = 10,
+    organizerId: String = "organizer-1",
 ): Game =
     Game(
         id = id,
@@ -29,7 +30,7 @@ internal fun game(
         totalPlayers = totalPlayers,
         pricePerPlayer = null,
         organizerName = "Organizador",
-        organizerId = "organizer-1",
+        organizerId = organizerId,
         organizerRating = 5.0,
         status = status,
         participants = participants,

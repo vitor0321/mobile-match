@@ -42,7 +42,7 @@ internal data class Game(
 
 internal fun Game.isDiscoverable(nowSeconds: Long): Boolean = status != MatchStatus.CANCELLED && !isOver(nowSeconds)
 
-internal fun Game.canBeRatedBy(
+internal fun Game.canBeRatedByParticipant(
     userId: String?,
     nowSeconds: Long,
 ): Boolean =
@@ -50,6 +50,11 @@ internal fun Game.canBeRatedBy(
         status != MatchStatus.CANCELLED &&
         userId != null &&
         userId in participants
+
+internal fun Game.canOrganizerRate(userId: String?): Boolean =
+    status != MatchStatus.CANCELLED &&
+        userId != null &&
+        userId == organizerId
 
 internal enum class MatchRole {
     ORGANIZER,

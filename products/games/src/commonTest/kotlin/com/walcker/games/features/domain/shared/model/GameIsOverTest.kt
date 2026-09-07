@@ -59,7 +59,7 @@ class GameIsOverTest {
     }
 }
 
-class GameCanBeRatedByTest {
+class GameCanBeRatedByParticipantTest {
     private val start = 1_000_000L
     private val end = start + 60 * 60
     private val player = "player-1"
@@ -76,40 +76,78 @@ class GameCanBeRatedByTest {
 
     @Test
     fun `libera para quem jogou depois que a partida acabou`() {
-        assertTrue(match().canBeRatedBy(userId = player, nowSeconds = end))
+        assertTrue(match().canBeRatedByParticipant(userId = player, nowSeconds = end))
     }
 
     @Test
     fun `nao libera enquanto a partida nao acabou`() {
-        assertFalse(match().canBeRatedBy(userId = player, nowSeconds = end - 1))
+        assertFalse(match().canBeRatedByParticipant(userId = player, nowSeconds = end - 1))
     }
 
     @Test
     fun `nao libera para quem nao jogou`() {
-        assertFalse(match().canBeRatedBy(userId = "estranho", nowSeconds = end))
+        assertFalse(match().canBeRatedByParticipant(userId = "estranho", nowSeconds = end))
     }
 
     @Test
     fun `nao libera sem sessao resolvida`() {
-        assertFalse(match().canBeRatedBy(userId = null, nowSeconds = end))
+        assertFalse(match().canBeRatedByParticipant(userId = null, nowSeconds = end))
     }
 
     @Test
     fun `nao libera em partida cancelada`() {
         val cancelled = match(status = MatchStatus.CANCELLED)
 
-        assertFalse(cancelled.canBeRatedBy(userId = player, nowSeconds = end))
+        assertFalse(cancelled.canBeRatedByParticipant(userId = player, nowSeconds = end))
     }
 
     @Test
     fun `status OPEN nao impede avaliar - e o caso normal`() {
         val stillOpen = match(status = MatchStatus.OPEN)
 
-        assertTrue(stillOpen.canBeRatedBy(userId = player, nowSeconds = end))
+        assertTrue(stillOpen.canBeRatedByParticipant(userId = player, nowSeconds = end))
     }
 
     @Test
     fun `status FULL tambem nao impede`() {
-        assertTrue(match(status = MatchStatus.FULL).canBeRatedBy(player, end))
+        assertTrue(match(status = MatchStatus.FULL).canBeRatedByParticipant(player, end))
+    }
+}
+
+class GameCanOrganizerRateTest {
+    private val organizer = "organizer-1"
+
+    private fun match(
+        status: MatchStatus = MatchStatus.OPEN,
+        organizerId: String = organizer,
+    ) = game(status = status, organizerId = organizerId)
+
+    @Test
+    fun `libera para o organizador`() {
+        assertTrue(match().canOrganizerRate(userId = organizer))
+    }
+
+    @Test
+    fun `nao libera para quem nao e organizador`() {
+        assertFalse(match().canOrganizerRate(userId = "outro-jogador"))
+    }
+
+    @Test
+    fun `nao libera sem sessao resolvida`() {
+        assertFalse(match().canOrganizerRate(userId = null))
+    }
+
+    @Test
+    fun `nao libera em partida cancelada, mesmo para o organizador`() {
+        val cancelled = match(status = MatchStatus.CANCELLED)
+
+        assertFalse(cancelled.canOrganizerRate(userId = organizer))
+    }
+
+    @Test
+    fun `libera antes da partida comecar - nao ha trava de tempo`() {
+        val future = game(startsAtSeconds = 999_999_999L, organizerId = organizer)
+
+        assertTrue(future.canOrganizerRate(userId = organizer))
     }
 }

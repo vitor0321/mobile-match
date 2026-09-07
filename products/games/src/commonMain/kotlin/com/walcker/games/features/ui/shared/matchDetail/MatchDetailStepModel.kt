@@ -12,7 +12,8 @@ import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
-import com.walcker.games.features.domain.shared.model.canBeRatedBy
+import com.walcker.games.features.domain.shared.model.canBeRatedByParticipant
+import com.walcker.games.features.domain.shared.model.canOrganizerRate
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
@@ -71,6 +72,7 @@ internal data class MatchDetailState(
     val reportErrorMessage: String? = null,
     val currentUserId: String? = null,
     val canRate: Boolean = false,
+    val canRatePlayers: Boolean = false,
     val isMatchOver: Boolean = false,
     val showMatchRatingSheet: Boolean = false,
     val isSubmittingMatchRating: Boolean = false,
@@ -194,11 +196,12 @@ internal class MatchDetailStepModel(
     private var viewTracked = false
 
     private fun MatchDetailState.withCanRate(): MatchDetailState {
-        val game = match ?: return copy(canRate = false, isMatchOver = false)
+        val game = match ?: return copy(canRate = false, canRatePlayers = false, isMatchOver = false)
         val now = nowSeconds()
         return copy(
             isMatchOver = game.isOver(now),
-            canRate = game.canBeRatedBy(userId = currentUserId, nowSeconds = now),
+            canRate = game.canBeRatedByParticipant(userId = currentUserId, nowSeconds = now),
+            canRatePlayers = game.canOrganizerRate(userId = currentUserId),
         )
     }
 

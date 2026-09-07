@@ -472,4 +472,50 @@ class MatchDetailStepModelTest {
             assertFalse(state.isMatchOver)
             assertFalse(state.canRate)
         }
+
+    @Test
+    fun `canRatePlayers is true for the organizer, independent of match timing`() =
+        runTest(testDispatcher) {
+            val myGame =
+                game(id = "match-1", startsAtSeconds = 100_000, durationMin = 60, status = MatchStatus.OPEN, organizerId = "user-1")
+                    .copy(participants = listOf("player-2"))
+            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
+            val model = buildModel(gameRepository = gameRepository, nowSeconds = { 5_000L })
+
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertFalse(state.isMatchOver)
+            assertTrue(state.canRatePlayers)
+        }
+
+    @Test
+    fun `canRatePlayers is false for a participant who is not the organizer`() =
+        runTest(testDispatcher) {
+            val myGame =
+                game(id = "match-1", organizerId = "someone-else")
+                    .copy(participants = listOf("user-1"))
+            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
+            val model = buildModel(gameRepository = gameRepository)
+
+            advanceUntilIdle()
+
+            assertFalse(model.state.value.canRatePlayers)
+        }
+
+    @Test
+    fun `canRate for the match itself is unaffected by canRatePlayers`() =
+        runTest(testDispatcher) {
+            val myGame =
+                game(id = "match-1", startsAtSeconds = 1_000, durationMin = 1, status = MatchStatus.OPEN, organizerId = "someone-else")
+                    .copy(participants = listOf("user-1"))
+            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
+            val model = buildModel(gameRepository = gameRepository, nowSeconds = { 5_000L })
+
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertTrue(state.canRate)
+            assertFalse(state.canRatePlayers)
+        }
 }
