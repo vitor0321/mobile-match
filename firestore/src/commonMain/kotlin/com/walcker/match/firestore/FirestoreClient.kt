@@ -86,9 +86,14 @@ public data class DocumentSnapshot(
 
     public fun getString(field: String): String? = get(field)
 
-    public fun getDouble(field: String): Double? = get(field)
+    // Firestore grava um valor íntegro (ex: a primeira nota de uma média,
+    // sempre inteira) como integerValue no wire format — o SDK nativo então
+    // desserializa isso como Long, não Double, mesmo o campo sendo
+    // conceitualmente um double. Um cast direto (as? Double) falha
+    // silenciosamente nesse caso; passar por Number cobre os dois.
+    public fun getDouble(field: String): Double? = (data[field] as? Number)?.toDouble()
 
-    public fun getLong(field: String): Long? = get(field)
+    public fun getLong(field: String): Long? = (data[field] as? Number)?.toLong()
 
     public fun getBoolean(field: String): Boolean? = get(field)
 
