@@ -16,6 +16,7 @@ import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.Participant
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.Rating
 import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
@@ -29,6 +30,7 @@ import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
+import com.walcker.games.features.domain.shared.usecase.SubmitOrganizerRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCaseImpl
 import com.walcker.games.strings.GamesStringsHolder
@@ -88,6 +90,7 @@ class MatchDetailStepModelTest {
         cancelMatchSeries = CancelMatchSeriesUseCaseImpl(gameRepository),
         submitRating = SubmitRatingUseCase(ratingRepository),
         submitMatchRating = SubmitMatchRatingUseCase(ratingRepository),
+        submitOrganizerRating = SubmitOrganizerRatingUseCase(ratingRepository),
         submitReport = SubmitReportUseCaseImpl(reportRepository),
         playerRepository = playerRepository,
         ratingRepository = ratingRepository,
@@ -397,6 +400,47 @@ class MatchDetailStepModelTest {
 
             model.onEvent(MatchDetailEvent.DismissRatingError)
             assertNull(model.state.value.ratingErrorMessage)
+        }
+
+    @Test
+    fun `submitting an organizer rating succeeds, refreshes the summary and closes the sheet`() =
+        runTest(testDispatcher) {
+            val playerRepository =
+                FakePlayerRepository(
+                    organizerRatingSummaryResult =
+                        Result.success(PlayerRatingSummary(rating = 4.5f, ratingCount = 3)),
+                )
+            val ratingRepository =
+                FakeRatingRepository(
+                    submitResult = Result.success(SubmitRatingOutcome.Recorded(averageRating = 4.5f, ratingCount = 3)),
+                )
+            val model = buildModel(ratingRepository = ratingRepository, playerRepository = playerRepository)
+            advanceUntilIdle()
+
+            model.onEvent(MatchDetailEvent.OpenOrganizerRatingSheet)
+            model.onEvent(MatchDetailEvent.SubmitOrganizerRating(rating = 5))
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertFalse(state.showOrganizerRatingSheet)
+            assertEquals(PlayerRatingSummary(rating = 4.5f, ratingCount = 3), state.organizerRatingSummary)
+            assertEquals(stringsHolder.strings.matchDetail.organizerRatingSubmitSuccess, state.successMessage)
+        }
+
+    @Test
+    fun `a failed organizer rating submission surfaces an error and closes the sheet`() =
+        runTest(testDispatcher) {
+            val ratingRepository = FakeRatingRepository(submitResult = Result.failure(IllegalStateException("offline")))
+            val model = buildModel(ratingRepository = ratingRepository)
+            advanceUntilIdle()
+
+            model.onEvent(MatchDetailEvent.OpenOrganizerRatingSheet)
+            model.onEvent(MatchDetailEvent.SubmitOrganizerRating(rating = 5))
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertFalse(state.showOrganizerRatingSheet)
+            assertEquals(stringsHolder.strings.matchDetail.organizerRatingSubmitError, state.errorMessage)
         }
 
     @Test

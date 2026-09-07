@@ -15,6 +15,7 @@ import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
 import com.walcker.games.features.domain.shared.model.canBeRatedByParticipant
 import com.walcker.games.features.domain.shared.model.canOrganizerRate
+import com.walcker.games.features.domain.shared.model.canRateOrganizer
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
 import com.walcker.games.features.domain.shared.repository.RatingRepository
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
@@ -25,6 +26,7 @@ import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
+import com.walcker.games.features.domain.shared.usecase.SubmitOrganizerRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.ui.shared.notifications.getCurrentTimeMillis
@@ -77,6 +79,10 @@ internal data class MatchDetailState(
     val currentUserId: String? = null,
     val canRate: Boolean = false,
     val canRatePlayers: Boolean = false,
+    val canRateOrganizer: Boolean = false,
+    val organizerRatingSummary: PlayerRatingSummary? = null,
+    val showOrganizerRatingSheet: Boolean = false,
+    val isSubmittingOrganizerRating: Boolean = false,
     val isMatchOver: Boolean = false,
     val showMatchRatingSheet: Boolean = false,
     val isSubmittingMatchRating: Boolean = false,
@@ -139,6 +145,14 @@ internal sealed interface MatchDetailEvent {
 
     data object DismissRatingSuccess : MatchDetailEvent
 
+    data object OpenOrganizerRatingSheet : MatchDetailEvent
+
+    data object CloseOrganizerRatingSheet : MatchDetailEvent
+
+    data class SubmitOrganizerRating(
+        val rating: Int,
+    ) : MatchDetailEvent
+
     data class OpenReportSheet(
         val userId: String,
         val displayName: String,
@@ -176,6 +190,7 @@ internal class MatchDetailStepModel(
     private val cancelMatchSeries: CancelMatchSeriesUseCase,
     private val submitRating: SubmitRatingUseCase,
     private val submitMatchRating: SubmitMatchRatingUseCase,
+    private val submitOrganizerRating: SubmitOrganizerRatingUseCase,
     private val submitReport: SubmitReportUseCase,
     private val playerRepository: PlayerRepository,
     private val ratingRepository: RatingRepository,
@@ -204,12 +219,19 @@ internal class MatchDetailStepModel(
     private var viewTracked = false
 
     private fun MatchDetailState.withCanRate(): MatchDetailState {
-        val game = match ?: return copy(canRate = false, canRatePlayers = false, isMatchOver = false)
+        val game =
+            match ?: return copy(
+                canRate = false,
+                canRatePlayers = false,
+                canRateOrganizer = false,
+                isMatchOver = false,
+            )
         val now = nowSeconds()
         return copy(
             isMatchOver = game.isOver(now),
             canRate = game.canBeRatedByParticipant(userId = currentUserId, nowSeconds = now),
             canRatePlayers = game.canOrganizerRate(userId = currentUserId),
+            canRateOrganizer = game.canRateOrganizer(userId = currentUserId),
         )
     }
 
@@ -286,6 +308,13 @@ internal class MatchDetailStepModel(
             MatchDetailEvent.DismissRatingSuccess -> {
                 _state.update { it.copy(ratingSuccessMessage = null) }
             }
+            MatchDetailEvent.OpenOrganizerRatingSheet -> {
+                _state.update { it.copy(showOrganizerRatingSheet = true) }
+            }
+            MatchDetailEvent.CloseOrganizerRatingSheet -> {
+                _state.update { it.copy(showOrganizerRatingSheet = false) }
+            }
+            is MatchDetailEvent.SubmitOrganizerRating -> submitOrganizerRatingAction(event.rating)
             is MatchDetailEvent.OpenReportSheet -> {
                 _state.update {
                     it.copy(
@@ -390,6 +419,43 @@ internal class MatchDetailStepModel(
                     )
                 }
             }
+        }
+    }
+
+    private fun loadOrganizerRatingSummary(organizerId: String) {
+        screenModelScope.launch {
+            playerRepository.getOrganizerRatingSummary(organizerId).onSuccess { summary ->
+                _state.update { it.copy(organizerRatingSummary = summary) }
+            }
+        }
+    }
+
+    private fun submitOrganizerRatingAction(rating: Int) {
+        val strings = stringsHolder.resolveStringsOrDefault().matchDetail
+        screenModelScope.launch {
+            _state.update { it.copy(isSubmittingOrganizerRating = true, errorMessage = null) }
+
+            submitOrganizerRating(matchId, rating)
+                .onSuccess {
+                    analytics.track(AnalyticsEvent.PlayerRated(rating))
+                    _state.value.match?.let { loadOrganizerRatingSummary(it.organizerId) }
+                    _state.update {
+                        it.copy(
+                            isSubmittingOrganizerRating = false,
+                            showOrganizerRatingSheet = false,
+                            successMessage = strings.organizerRatingSubmitSuccess,
+                        )
+                    }
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
+                    _state.update {
+                        it.copy(
+                            isSubmittingOrganizerRating = false,
+                            showOrganizerRatingSheet = false,
+                            errorMessage = strings.organizerRatingSubmitError,
+                        )
+                    }
+                }
         }
     }
 
@@ -616,6 +682,7 @@ internal class MatchDetailStepModel(
             result
                 .onSuccess { game ->
                     trackViewOnce(game)
+                    loadOrganizerRatingSummary(game.organizerId)
                     _state.update { it.copy(isLoading = false, match = game).withCanRate() }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
@@ -636,6 +703,7 @@ internal class MatchDetailStepModel(
                 .collect { result ->
                     result.onSuccess { game ->
                         trackViewOnce(game)
+                        loadOrganizerRatingSummary(game.organizerId)
                         detectStatusChange(game.status)
                         _state.update {
                             it
