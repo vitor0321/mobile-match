@@ -822,6 +822,141 @@ function roundTo(value: number, decimals: number): number {
   return Math.round(value * factor) / factor;
 }
 
+// ---------------------------------------------------------------------------
+// submitOrganizerRating — Callable (invocada por products/games)
+//
+// Irmã de submitPlayerRating, mas o sentido é invertido: quem avalia é o
+// PARTICIPANTE, o alvo é sempre o organizerId da própria partida. Nota
+// separada de profiles/{uid}.rating (habilidade como jogador) — vive em
+// profiles/{uid}.asOrganizerRating/.asOrganizerRatingCount, campos próprios,
+// pra não contaminar a nota que os organizadores usam pra escalar jogador.
+//
+// matches/{matchId}/organizerRatings/{raterUid} é o registro canônico — id só
+// do avaliador, porque o alvo já é fixo (um voto por participante por
+// partida). Sem espelho em profiles/{organizerId}/organizerRatings — não há
+// tela de "avaliações recebidas como organizador" hoje.
+//
+// Reenviar edita a nota em vez de ser ignorado, igual submitPlayerRating.
+// Retorna {status: "recorded" | "updated", averageRating, ratingCount}.
+// ---------------------------------------------------------------------------
+
+export const submitOrganizerRating = onCall(
+  {region: REGION},
+  async (request): Promise<SubmitOrganizerRatingResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+
+    const {matchId, rating} = parseSubmitOrganizerRatingPayload(request.data);
+
+    return db.runTransaction(async (txn) => {
+      await requireNotBlocked(txn, uid, Date.now());
+
+      const matchRef = db.doc(`matches/${matchId}`);
+      const ratingRef = db.doc(`matches/${matchId}/organizerRatings/${uid}`);
+
+      const [matchSnap, existingSnap] = await txn.getAll(matchRef, ratingRef);
+
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      const status = String(match.status ?? "OPEN");
+      if (status === "CANCELLED") {
+        throw new HttpsError("failed-precondition", "Cannot rate a cancelled match.");
+      }
+
+      const organizerId = String(match.organizerId ?? "");
+      if (uid === organizerId) {
+        throw new HttpsError("invalid-argument", "Organizer cannot rate themselves.");
+      }
+
+      const participants: string[] = Array.isArray(match.participants)
+        ? match.participants.filter((x): x is string => typeof x === "string")
+        : [];
+      if (!participants.includes(uid)) {
+        throw new HttpsError("permission-denied", "Only confirmed participants can rate the organizer.");
+      }
+
+      const organizerProfileRef = db.doc(`profiles/${organizerId}`);
+      const organizerProfileSnap = await txn.get(organizerProfileRef);
+      if (!organizerProfileSnap.exists) {
+        throw new HttpsError("not-found", "Organizer profile not found.");
+      }
+      const organizerProfile = organizerProfileSnap.data() ?? {};
+
+      const previousCount = Number(organizerProfile.asOrganizerRatingCount ?? 0);
+      const previousAverage = Number(organizerProfile.asOrganizerRating ?? 0);
+
+      const isEdit = existingSnap.exists;
+      const previousRatingValue = isEdit ? Number(existingSnap.data()?.rating ?? 0) : null;
+
+      const nextCount = isEdit ? previousCount : previousCount + 1;
+      const nextAverage = isEdit
+        ? roundTo(
+            (previousAverage * previousCount - (previousRatingValue as number) + rating) / previousCount,
+            RATING_AVERAGE_DECIMALS,
+          )
+        : nextRatingAverage(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
+
+      const now = Date.now();
+      txn.set(ratingRef, {
+        matchId,
+        organizerId,
+        raterUserId: uid,
+        rating,
+        createdAtMs: now,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      txn.update(organizerProfileRef, {
+        asOrganizerRating: nextAverage,
+        asOrganizerRatingCount: nextCount,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      const responseStatus: "recorded" | "updated" = isEdit ? "updated" : "recorded";
+      return {
+        status: responseStatus,
+        matchId,
+        organizerId,
+        averageRating: nextAverage,
+        ratingCount: nextCount,
+      };
+    });
+  },
+);
+
+interface SubmitOrganizerRatingResponse {
+  status: "recorded" | "updated";
+  matchId: string;
+  organizerId: string;
+  averageRating: number;
+  ratingCount: number;
+}
+
+interface SubmitOrganizerRatingPayload {
+  matchId: string;
+  rating: number;
+}
+
+function parseSubmitOrganizerRatingPayload(value: unknown): SubmitOrganizerRatingPayload {
+  const data = (value ?? {}) as Partial<SubmitOrganizerRatingPayload>;
+
+  if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+    throw new HttpsError("invalid-argument", "matchId is required.");
+  }
+  if (
+    typeof data.rating !== "number" ||
+    !Number.isInteger(data.rating) ||
+    data.rating < 1 ||
+    data.rating > 5
+  ) {
+    throw new HttpsError("invalid-argument", "rating must be an integer between 1 and 5.");
+  }
+
+  return {matchId: data.matchId, rating: data.rating};
+}
+
 interface SubmitPlayerRatingResponse {
   status: "recorded" | "updated";
   matchId: string;

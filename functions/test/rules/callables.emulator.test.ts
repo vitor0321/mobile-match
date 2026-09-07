@@ -327,6 +327,118 @@ describe("submitPlayerRating", () => {
   });
 });
 
+describe("submitOrganizerRating", () => {
+  const ORGANIZER = "organizer-to-rate";
+  const MATCH = "match-organizer-rating";
+
+  async function seedMatch(overrides: Record<string, unknown> = {}) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: ORGANIZER,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 2,
+        participants: [ORGANIZER, uid],
+        ...overrides,
+      });
+      await setDoc(doc(database, "profiles", ORGANIZER), {
+        fullName: "Organizador",
+        rating: 0,
+        ratingCount: 0,
+        asOrganizerRating: 0,
+        asOrganizerRatingCount: 0,
+      });
+    });
+  }
+
+  async function readOrganizerProfile() {
+    let snapshot: Awaited<ReturnType<typeof getDoc>> | undefined;
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      snapshot = await getDoc(doc(context.firestore(), "profiles", ORGANIZER));
+    });
+    return snapshot as Awaited<ReturnType<typeof getDoc>>;
+  }
+
+  it("rejects unauthenticated requests", async () => {
+    const response = await call("submitOrganizerRating", {matchId: MATCH, rating: 5}, null);
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects the organizer rating themselves", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH), {
+        organizerId: uid,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 1,
+        participants: [uid],
+      });
+    });
+    const response = await call("submitOrganizerRating", {matchId: MATCH, rating: 5});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("INVALID_ARGUMENT");
+  });
+
+  it("rejects a caller who is not a confirmed participant", async () => {
+    await seedMatch({participants: [ORGANIZER]});
+    const response = await call("submitOrganizerRating", {matchId: MATCH, rating: 5});
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("PERMISSION_DENIED");
+  });
+
+  it("rejects a cancelled match", async () => {
+    await seedMatch({status: "CANCELLED"});
+    const response = await call("submitOrganizerRating", {matchId: MATCH, rating: 5});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("rejects a star count outside 1..5", async () => {
+    await seedMatch();
+    for (const rating of [0, 6, 4.5]) {
+      const response = await call("submitOrganizerRating", {matchId: MATCH, rating});
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it("records a rating and updates the organizer's aggregate", async () => {
+    await seedMatch();
+    const response = await call("submitOrganizerRating", {matchId: MATCH, rating: 4});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({
+      result: {status: "recorded", averageRating: 4, ratingCount: 1},
+    });
+
+    const profile = await readOrganizerProfile();
+    expect(profile.data()).toMatchObject({asOrganizerRating: 4, asOrganizerRatingCount: 1});
+  });
+
+  it("resending edits the rating instead of inflating the count", async () => {
+    await seedMatch();
+    await call("submitOrganizerRating", {matchId: MATCH, rating: 4});
+    const response = await call("submitOrganizerRating", {matchId: MATCH, rating: 2});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({
+      result: {status: "updated", averageRating: 2, ratingCount: 1},
+    });
+
+    const profile = await readOrganizerProfile();
+    expect(profile.data()).toMatchObject({asOrganizerRating: 2, asOrganizerRatingCount: 1});
+  });
+
+  it("does not touch the player-skill rating fields", async () => {
+    await seedMatch();
+    await call("submitOrganizerRating", {matchId: MATCH, rating: 5});
+    const profile = await readOrganizerProfile();
+    expect(profile.data()).toMatchObject({rating: 0, ratingCount: 0});
+  });
+});
+
 describe("submitReport", () => {
   const REPORTED = "reported-player";
   const MATCH = "match-report";

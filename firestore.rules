@@ -259,6 +259,17 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if false;
       }
+
+      // Voto de "como foi o organizador", um por participante confirmado
+      // (id = uid do avaliador — o alvo é sempre o organizerId da própria
+      // partida). Gravado pela callable submitOrganizerRating, que também
+      // atualiza profiles/{organizerId}.asOrganizerRating na mesma transação.
+      // Nota separada da nota de jogador (profiles/{uid}.rating) — não mistura
+      // "qualidade como jogador" com "qualidade como organizador".
+      match /organizerRatings/{raterUid} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
     }
 
     // ---------------------------------------------------------------------

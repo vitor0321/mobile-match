@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendMatchReminders = exports.generateRecurringMatches = exports.cancelMatchSeries = exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitMatchRating = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
+exports.sendMatchReminders = exports.generateRecurringMatches = exports.cancelMatchSeries = exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitMatchRating = exports.submitOrganizerRating = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
 exports.requireEmptyPayload = requireEmptyPayload;
 exports.shouldCancelOnOrganizerDeletion = shouldCancelOnOrganizerDeletion;
 const app_1 = require("firebase-admin/app");
@@ -617,6 +617,101 @@ exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (requ
 function roundTo(value, decimals) {
     const factor = 10 ** decimals;
     return Math.round(value * factor) / factor;
+}
+// ---------------------------------------------------------------------------
+// submitOrganizerRating — Callable (invocada por products/games)
+//
+// Irmã de submitPlayerRating, mas o sentido é invertido: quem avalia é o
+// PARTICIPANTE, o alvo é sempre o organizerId da própria partida. Nota
+// separada de profiles/{uid}.rating (habilidade como jogador) — vive em
+// profiles/{uid}.asOrganizerRating/.asOrganizerRatingCount, campos próprios,
+// pra não contaminar a nota que os organizadores usam pra escalar jogador.
+//
+// matches/{matchId}/organizerRatings/{raterUid} é o registro canônico — id só
+// do avaliador, porque o alvo já é fixo (um voto por participante por
+// partida). Sem espelho em profiles/{organizerId}/organizerRatings — não há
+// tela de "avaliações recebidas como organizador" hoje.
+//
+// Reenviar edita a nota em vez de ser ignorado, igual submitPlayerRating.
+// Retorna {status: "recorded" | "updated", averageRating, ratingCount}.
+// ---------------------------------------------------------------------------
+exports.submitOrganizerRating = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const { matchId, rating } = parseSubmitOrganizerRatingPayload(request.data);
+    return db.runTransaction(async (txn) => {
+        await requireNotBlocked(txn, uid, Date.now());
+        const matchRef = db.doc(`matches/${matchId}`);
+        const ratingRef = db.doc(`matches/${matchId}/organizerRatings/${uid}`);
+        const [matchSnap, existingSnap] = await txn.getAll(matchRef, ratingRef);
+        if (!matchSnap.exists) {
+            throw new https_1.HttpsError("not-found", "Match not found.");
+        }
+        const match = matchSnap.data() ?? {};
+        const status = String(match.status ?? "OPEN");
+        if (status === "CANCELLED") {
+            throw new https_1.HttpsError("failed-precondition", "Cannot rate a cancelled match.");
+        }
+        const organizerId = String(match.organizerId ?? "");
+        if (uid === organizerId) {
+            throw new https_1.HttpsError("invalid-argument", "Organizer cannot rate themselves.");
+        }
+        const participants = Array.isArray(match.participants)
+            ? match.participants.filter((x) => typeof x === "string")
+            : [];
+        if (!participants.includes(uid)) {
+            throw new https_1.HttpsError("permission-denied", "Only confirmed participants can rate the organizer.");
+        }
+        const organizerProfileRef = db.doc(`profiles/${organizerId}`);
+        const organizerProfileSnap = await txn.get(organizerProfileRef);
+        if (!organizerProfileSnap.exists) {
+            throw new https_1.HttpsError("not-found", "Organizer profile not found.");
+        }
+        const organizerProfile = organizerProfileSnap.data() ?? {};
+        const previousCount = Number(organizerProfile.asOrganizerRatingCount ?? 0);
+        const previousAverage = Number(organizerProfile.asOrganizerRating ?? 0);
+        const isEdit = existingSnap.exists;
+        const previousRatingValue = isEdit ? Number(existingSnap.data()?.rating ?? 0) : null;
+        const nextCount = isEdit ? previousCount : previousCount + 1;
+        const nextAverage = isEdit
+            ? roundTo((previousAverage * previousCount - previousRatingValue + rating) / previousCount, RATING_AVERAGE_DECIMALS)
+            : (0, moderation_js_1.nextRatingAverage)(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
+        const now = Date.now();
+        txn.set(ratingRef, {
+            matchId,
+            organizerId,
+            raterUserId: uid,
+            rating,
+            createdAtMs: now,
+            createdAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        txn.update(organizerProfileRef, {
+            asOrganizerRating: nextAverage,
+            asOrganizerRatingCount: nextCount,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        const responseStatus = isEdit ? "updated" : "recorded";
+        return {
+            status: responseStatus,
+            matchId,
+            organizerId,
+            averageRating: nextAverage,
+            ratingCount: nextCount,
+        };
+    });
+});
+function parseSubmitOrganizerRatingPayload(value) {
+    const data = (value ?? {});
+    if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data.rating !== "number" ||
+        !Number.isInteger(data.rating) ||
+        data.rating < 1 ||
+        data.rating > 5) {
+        throw new https_1.HttpsError("invalid-argument", "rating must be an integer between 1 and 5.");
+    }
+    return { matchId: data.matchId, rating: data.rating };
 }
 function parseSubmitRatingPayload(value, uid) {
     const data = (value ?? {});
