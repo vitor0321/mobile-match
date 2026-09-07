@@ -7,12 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ internal fun ParticipantRow(
     statusLabel: String,
     paidLabel: String,
     rateLabel: String,
+    alreadyRated: Boolean,
     canRate: Boolean,
     canReport: Boolean,
     ratingSummary: PlayerRatingSummary?,
@@ -90,10 +92,14 @@ internal fun ParticipantRow(
         }
 
         if (canRate) {
-            TextButton(
+            IconButton(
                 onClick = { onRatePlayer(participant.userId, participant.displayName) },
             ) {
-                Text(text = rateLabel, style = MaterialTheme.typography.labelLarge)
+                Icon(
+                    imageVector = if (alreadyRated) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    contentDescription = rateLabel,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
 
