@@ -12,10 +12,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.walcker.match.cedar.tokens.CedarTokens
+import kotlinx.coroutines.delay
+
+private const val AUTO_DISMISS_MS = 5_000L
 
 @Composable
 internal fun Banner(
@@ -26,6 +31,12 @@ internal fun Banner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val currentOnDismiss = rememberUpdatedState(onDismiss)
+    LaunchedEffect(message) {
+        delay(AUTO_DISMISS_MS)
+        currentOnDismiss.value()
+    }
+
     Row(
         modifier =
             modifier
