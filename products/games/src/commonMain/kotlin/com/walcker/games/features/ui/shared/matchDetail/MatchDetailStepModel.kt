@@ -72,10 +72,6 @@ internal data class MatchDetailState(
     val isSubmittingRating: Boolean = false,
     val ratingErrorMessage: String? = null,
     val ratingSuccessMessage: String? = null,
-    val showReportSheet: Boolean = false,
-    val selectedPlayerForReport: Pair<String, String>? = null,
-    val isSubmittingReport: Boolean = false,
-    val reportErrorMessage: String? = null,
     val currentUserId: String? = null,
     val canRate: Boolean = false,
     val canRatePlayers: Boolean = false,
@@ -139,6 +135,8 @@ internal sealed interface MatchDetailEvent {
     data class SubmitRating(
         val rating: Int,
         val comment: String,
+        val reportReason: ReportReason?,
+        val reportDetails: String,
     ) : MatchDetailEvent
 
     data object DismissRatingError : MatchDetailEvent
@@ -152,20 +150,6 @@ internal sealed interface MatchDetailEvent {
     data class SubmitOrganizerRating(
         val rating: Int,
     ) : MatchDetailEvent
-
-    data class OpenReportSheet(
-        val userId: String,
-        val displayName: String,
-    ) : MatchDetailEvent
-
-    data object CloseReportSheet : MatchDetailEvent
-
-    data class SubmitReport(
-        val reason: ReportReason,
-        val details: String,
-    ) : MatchDetailEvent
-
-    data object DismissReportError : MatchDetailEvent
 }
 
 internal sealed interface MatchDetailEffect {
@@ -300,7 +284,7 @@ internal class MatchDetailStepModel(
                 }
             }
             is MatchDetailEvent.SubmitRating -> {
-                submitPlayerRating(event.rating, event.comment)
+                submitPlayerRating(event.rating, event.comment, event.reportReason, event.reportDetails)
             }
             is MatchDetailEvent.DismissRatingError -> {
                 _state.update { it.copy(ratingErrorMessage = null) }
@@ -315,74 +299,18 @@ internal class MatchDetailStepModel(
                 _state.update { it.copy(showOrganizerRatingSheet = false) }
             }
             is MatchDetailEvent.SubmitOrganizerRating -> submitOrganizerRatingAction(event.rating)
-            is MatchDetailEvent.OpenReportSheet -> {
-                _state.update {
-                    it.copy(
-                        showReportSheet = true,
-                        selectedPlayerForReport = event.userId to event.displayName,
-                        reportErrorMessage = null,
-                    )
-                }
-            }
-            is MatchDetailEvent.CloseReportSheet -> {
-                _state.update {
-                    it.copy(showReportSheet = false, selectedPlayerForReport = null)
-                }
-            }
-            is MatchDetailEvent.SubmitReport -> {
-                submitPlayerReport(event.reason, event.details)
-            }
-            is MatchDetailEvent.DismissReportError -> {
-                _state.update { it.copy(reportErrorMessage = null) }
-            }
-        }
-    }
-
-    private fun submitPlayerReport(
-        reason: ReportReason,
-        details: String,
-    ) {
-        val reportedUserId = _state.value.selectedPlayerForReport?.first ?: return
-        val strings = stringsHolder.resolveStringsOrDefault().reports
-
-        screenModelScope.launch {
-            _state.update { it.copy(isSubmittingReport = true, reportErrorMessage = null) }
-
-            submitReport(
-                matchId = matchId,
-                reportedUserId = reportedUserId,
-                reason = reason,
-                details = details,
-            ).onSuccess { outcome ->
-                analytics.track(AnalyticsEvent.PlayerReported(reason.name))
-                val message =
-                    when (outcome) {
-                        SubmitReportOutcome.Recorded -> strings.success
-                        SubmitReportOutcome.AlreadyReported -> strings.alreadyReported
-                    }
-                _state.update {
-                    it.copy(
-                        isSubmittingReport = false,
-                        showReportSheet = false,
-                        selectedPlayerForReport = null,
-                        successMessage = message,
-                    )
-                }
-            }.onFailure { error ->
-                crashReporter.recordException(error)
-                _state.update {
-                    it.copy(isSubmittingReport = false, reportErrorMessage = strings.error)
-                }
-            }
         }
     }
 
     private fun submitPlayerRating(
         rating: Int,
         comment: String,
+        reportReason: ReportReason?,
+        reportDetails: String,
     ) {
         val ratedUserId = _state.value.selectedPlayerForRating?.first ?: return
-        val strings = stringsHolder.resolveStringsOrDefault().ratings
+        val ratingStrings = stringsHolder.resolveStringsOrDefault().ratings
+        val reportStrings = stringsHolder.resolveStringsOrDefault().reports
 
         screenModelScope.launch {
             _state.update { it.copy(isSubmittingRating = true, ratingErrorMessage = null) }
@@ -394,12 +322,27 @@ internal class MatchDetailStepModel(
             ).onSuccess { outcome ->
                 analytics.track(AnalyticsEvent.PlayerRated(rating))
                 loadOrganizerRatingsGiven()
-                val message =
+
+                var message =
                     when (outcome) {
-                        is SubmitRatingOutcome.Recorded -> strings.submitSuccess
-                        is SubmitRatingOutcome.Updated -> strings.updated
-                        is SubmitRatingOutcome.AlreadyRated -> strings.updated
+                        is SubmitRatingOutcome.Recorded -> ratingStrings.submitSuccess
+                        is SubmitRatingOutcome.Updated -> ratingStrings.updated
+                        is SubmitRatingOutcome.AlreadyRated -> ratingStrings.updated
                     }
+
+                if (reportReason != null) {
+                    submitReport(matchId, ratedUserId, reportReason, reportDetails)
+                        .onSuccess { reportOutcome ->
+                            analytics.track(AnalyticsEvent.PlayerReported(reportReason.name))
+                            val reportMessage =
+                                when (reportOutcome) {
+                                    SubmitReportOutcome.Recorded -> reportStrings.success
+                                    SubmitReportOutcome.AlreadyReported -> reportStrings.alreadyReported
+                                }
+                            message = "$message $reportMessage"
+                        }.onFailure { error -> crashReporter.recordException(error) }
+                }
+
                 _state.update {
                     it.copy(
                         isSubmittingRating = false,
@@ -415,7 +358,7 @@ internal class MatchDetailStepModel(
                         isSubmittingRating = false,
                         showRatingSheet = false,
                         selectedPlayerForRating = null,
-                        ratingErrorMessage = strings.submitError,
+                        ratingErrorMessage = ratingStrings.submitError,
                     )
                 }
             }

@@ -407,9 +407,10 @@ internal fun MatchDetailContent(
         isVisible = state.showRatingSheet,
         playerName = state.selectedPlayerForRating?.second ?: "",
         strings = strings.ratings,
+        reportStrings = strings.reports,
         onDismiss = { onEvent(MatchDetailEvent.CloseRatingSheet) },
-        onSubmit = { rating, comment ->
-            onEvent(MatchDetailEvent.SubmitRating(rating, comment))
+        onSubmit = { rating, comment, reportReason, reportDetails ->
+            onEvent(MatchDetailEvent.SubmitRating(rating, comment, reportReason, reportDetails))
         },
         initialRating = state.existingRatingForSelectedPlayer?.rating ?: 5,
         initialComment = state.existingRatingForSelectedPlayer?.comment ?: "",
