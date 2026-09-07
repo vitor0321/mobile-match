@@ -34,8 +34,6 @@ import {
   levelForReporterCount,
   manualModerationState,
   nextRatingAverage,
-  parseRatingDimensions,
-  RATING_DIMENSIONS,
   requiresHumanReview,
   type ReportReason,
 } from "./moderation.js";
@@ -721,7 +719,7 @@ export const submitPlayerRating = onCall(
     const uid = request.auth?.uid;
     requireAuthentication(uid);
 
-      const {matchId, ratedUserId, rating, comment, dimensions} = parseSubmitRatingPayload(
+      const {matchId, ratedUserId, rating, comment} = parseSubmitRatingPayload(
       request.data,
       uid,
     );
@@ -792,27 +790,12 @@ export const submitPlayerRating = onCall(
         RATING_AVERAGE_DECIMALS,
       );
 
-      // Toda avaliação traz as quatro dimensões, então as contagens caminham
-      // juntas com ratingCount — não existe perfil com metade agregada.
-      const dimensionAggregates: Record<string, number> = {};
-      for (const dimension of RATING_DIMENSIONS) {
-        const key = `${dimension}Average`;
-
-        dimensionAggregates[key] = nextRatingAverage(
-          Number(ratedProfile[key] ?? 0),
-          previousCount,
-          dimensions[dimension],
-          RATING_AVERAGE_DECIMALS,
-        );
-      }
-
       const now = Date.now();
       const ratingDocument = {
         matchId,
         ratedUserId,
         raterUserId: uid,
         rating,
-        ...dimensions,
         comment,
         // Número, não Timestamp: atravessa o interop Android/iOS sem conversão e
         // serve direto como cursor startAfter na paginação de avaliações.
@@ -825,7 +808,6 @@ export const submitPlayerRating = onCall(
       txn.update(ratedProfileRef, {
         rating: nextAverage,
         ratingCount: nextCount,
-        ...dimensionAggregates,
         updatedAt: FieldValue.serverTimestamp(),
       });
 
@@ -853,7 +835,6 @@ interface SubmitRatingPayload {
   ratedUserId: string;
   rating: number;
   comment: string;
-  dimensions: Record<(typeof RATING_DIMENSIONS)[number], number>;
 }
 
 function parseSubmitRatingPayload(value: unknown, uid: string): SubmitRatingPayload {
@@ -879,22 +860,11 @@ function parseSubmitRatingPayload(value: unknown, uid: string): SubmitRatingPayl
     );
   }
 
-  const dimensions = parseRatingDimensions(
-    data as Record<string, unknown>,
-    (dimension) => {
-      throw new HttpsError(
-        "invalid-argument",
-        `${dimension} is required and must be an integer between 1 and 5.`,
-      );
-    },
-  );
-
   return {
     matchId: data.matchId,
     ratedUserId: data.ratedUserId,
     rating: data.rating,
     comment,
-    dimensions,
   };
 }
 

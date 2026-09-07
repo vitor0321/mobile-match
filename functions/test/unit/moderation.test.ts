@@ -12,7 +12,6 @@ import {
   isReportReason,
   manualModerationState,
   nextRatingAverage,
-  parseRatingDimensions,
   levelForReporterCount,
   requiresHumanReview,
 } from "../../src/moderation.js";
@@ -183,45 +182,5 @@ describe("nextRatingAverage", () => {
 
   it("contador corrompido não propaga lixo para a média", () => {
     expect(nextRatingAverage(5, -1, 2)).toBe(2);
-  });
-});
-
-describe("parseRatingDimensions", () => {
-  const boom = (dimension: string) => {
-    throw new Error(`invalid ${dimension}`);
-  };
-  const todas = {punctuality: 4, respect: 5, fairPlay: 3, behavior: 4};
-
-  it("devolve as quatro dimensões", () => {
-    expect(parseRatingDimensions({rating: 5, ...todas}, boom)).toEqual(todas);
-  });
-
-  it("exige todas — avaliação pela metade não existe", () => {
-    // Aceitar parcial deixaria perfis com metade das médias agregadas e a outra
-    // metade não, para sempre.
-    expect(() => parseRatingDimensions({rating: 5}, boom)).toThrow("invalid punctuality");
-    expect(() => parseRatingDimensions({...todas, respect: undefined}, boom)).toThrow(
-      "invalid respect",
-    );
-    expect(() => parseRatingDimensions({...todas, behavior: null}, boom)).toThrow(
-      "invalid behavior",
-    );
-  });
-
-  it("recusa valor fora de 1..5", () => {
-    expect(() => parseRatingDimensions({...todas, punctuality: 0}, boom)).toThrow(
-      "invalid punctuality",
-    );
-    expect(() => parseRatingDimensions({...todas, respect: 6}, boom)).toThrow("invalid respect");
-    expect(() => parseRatingDimensions({...todas, fairPlay: 4.5}, boom)).toThrow(
-      "invalid fairPlay",
-    );
-    expect(() => parseRatingDimensions({...todas, behavior: "ótimo"}, boom)).toThrow(
-      "invalid behavior",
-    );
-  });
-
-  it("ignora chaves que não são dimensão", () => {
-    expect(parseRatingDimensions({...todas, matchId: "m1", velocidade: 5}, boom)).toEqual(todas);
   });
 });

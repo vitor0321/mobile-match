@@ -147,18 +147,6 @@ export function manualModerationState(
 }
 
 /**
- * Dimensões de uma avaliação pós-partida, além da nota geral.
- *
- * Obrigatórias. Havia uma versão que as aceitava ausentes, para conviver com um
- * cliente anterior — que nunca existiu em produção. Manter o ramo opcional
- * significaria carregar para sempre duas formas de avaliação e um perfil onde
- * metade das dimensões tem contagem e a outra metade não.
- */
-export const RATING_DIMENSIONS = ["punctuality", "respect", "fairPlay", "behavior"] as const;
-
-export type RatingDimension = (typeof RATING_DIMENSIONS)[number];
-
-/**
  * Média corrente depois de somar uma nota.
  *
  * Perfis nascem com `rating: 0` e `ratingCount: 0`, então a matemática já dá o
@@ -181,27 +169,4 @@ export function nextRatingAverage(
   const factor = 10 ** decimals;
   return Math.round(((previousAverage * previousCount + value) / (previousCount + 1)) * factor) /
     factor;
-}
-
-/**
- * Lê e valida as quatro dimensões de um payload.
- *
- * Ausente e fora de 1..5 são o mesmo erro, e explícito: descartar em silêncio
- * gravaria uma avaliação pela metade e o cliente nunca saberia.
- */
-export function parseRatingDimensions(
-  payload: Record<string, unknown>,
-  onInvalid: (dimension: RatingDimension) => never,
-): Record<RatingDimension, number> {
-  const parsed = {} as Record<RatingDimension, number>;
-
-  for (const dimension of RATING_DIMENSIONS) {
-    const value = payload[dimension];
-    if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 5) {
-      onInvalid(dimension);
-    }
-    parsed[dimension] = value as number;
-  }
-
-  return parsed;
 }
