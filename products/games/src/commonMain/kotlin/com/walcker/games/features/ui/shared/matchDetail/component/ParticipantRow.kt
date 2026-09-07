@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -96,7 +96,7 @@ internal fun ParticipantRow(
                 onClick = { onRatePlayer(participant.userId, participant.displayName) },
             ) {
                 Icon(
-                    imageVector = if (alreadyRated) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    imageVector = if (alreadyRated) Icons.Filled.RateReview else Icons.Outlined.RateReview,
                     contentDescription = rateLabel,
                     tint = MaterialTheme.colorScheme.primary,
                 )
