@@ -69,6 +69,7 @@ internal data class MatchDetailState(
     val existingRatingForSelectedPlayer: Rating? = null,
     val isSubmittingRating: Boolean = false,
     val ratingErrorMessage: String? = null,
+    val ratingSuccessMessage: String? = null,
     val showReportSheet: Boolean = false,
     val selectedPlayerForReport: Pair<String, String>? = null,
     val isSubmittingReport: Boolean = false,
@@ -135,6 +136,8 @@ internal sealed interface MatchDetailEvent {
     ) : MatchDetailEvent
 
     data object DismissRatingError : MatchDetailEvent
+
+    data object DismissRatingSuccess : MatchDetailEvent
 
     data class OpenReportSheet(
         val userId: String,
@@ -280,6 +283,9 @@ internal class MatchDetailStepModel(
             is MatchDetailEvent.DismissRatingError -> {
                 _state.update { it.copy(ratingErrorMessage = null) }
             }
+            MatchDetailEvent.DismissRatingSuccess -> {
+                _state.update { it.copy(ratingSuccessMessage = null) }
+            }
             is MatchDetailEvent.OpenReportSheet -> {
                 _state.update {
                     it.copy(
@@ -370,7 +376,7 @@ internal class MatchDetailStepModel(
                         isSubmittingRating = false,
                         showRatingSheet = false,
                         selectedPlayerForRating = null,
-                        successMessage = message,
+                        ratingSuccessMessage = message,
                     )
                 }
             }.onFailure { error ->

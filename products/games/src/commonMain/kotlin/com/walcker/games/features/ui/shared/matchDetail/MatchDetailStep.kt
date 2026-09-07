@@ -329,15 +329,6 @@ internal fun MatchDetailContent(
                     onDismiss = { onEvent(MatchDetailEvent.DismissStatusChange) },
                 )
             }
-            state.ratingErrorMessage?.let { message ->
-                Banner(
-                    message = message,
-                    container = MaterialTheme.colorScheme.errorContainer,
-                    onContainer = MaterialTheme.colorScheme.onErrorContainer,
-                    dismissContentDescription = detail.dismissContentDescription,
-                    onDismiss = { onEvent(MatchDetailEvent.DismissRatingError) },
-                )
-            }
             state.reportErrorMessage?.let { message ->
                 Banner(
                     message = message,
@@ -370,6 +361,8 @@ internal fun MatchDetailContent(
                         isClosed = isClosed,
                         canRate = state.canRate,
                         canRatePlayers = state.canRatePlayers,
+                        ratingSuccessMessage = state.ratingSuccessMessage,
+                        ratingErrorMessage = state.ratingErrorMessage,
                         isMatchOver = state.isMatchOver,
                         isLeavingMatch = state.isLeavingMatch,
                         isCancellingMatch = state.isCancellingMatch,
@@ -385,6 +378,8 @@ internal fun MatchDetailContent(
                         onRatePlayer = { userId, displayName ->
                             onEvent(MatchDetailEvent.OpenRatingSheet(userId, displayName))
                         },
+                        onDismissRatingSuccess = { onEvent(MatchDetailEvent.DismissRatingSuccess) },
+                        onDismissRatingError = { onEvent(MatchDetailEvent.DismissRatingError) },
                         onRateMatch = { onEvent(MatchDetailEvent.OpenMatchRatingSheet) },
                         onLeaveMatch = { onEvent(MatchDetailEvent.RequestLeaveMatch) },
                         onCancelMatch = { onEvent(MatchDetailEvent.RequestCancelMatch) },
@@ -498,6 +493,8 @@ internal fun MatchDetailBody(
     isClosed: Boolean,
     canRate: Boolean,
     canRatePlayers: Boolean,
+    ratingSuccessMessage: String?,
+    ratingErrorMessage: String?,
     isMatchOver: Boolean,
     currentUserId: String?,
     isParticipant: Boolean,
@@ -506,6 +503,8 @@ internal fun MatchDetailBody(
     reportStrings: ReportStrings,
     onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
+    onDismissRatingSuccess: () -> Unit,
+    onDismissRatingError: () -> Unit,
     onRateMatch: () -> Unit,
     onLeaveMatch: () -> Unit,
     onCancelMatch: () -> Unit,
@@ -622,6 +621,25 @@ internal fun MatchDetailBody(
         }
 
         CedarSectionHeader(title = detail.participants)
+
+        ratingSuccessMessage?.let { message ->
+            Banner(
+                message = message,
+                container = CedarTokens.colors.availableContainer,
+                onContainer = CedarTokens.colors.availableText,
+                dismissContentDescription = detail.dismissContentDescription,
+                onDismiss = onDismissRatingSuccess,
+            )
+        }
+        ratingErrorMessage?.let { message ->
+            Banner(
+                message = message,
+                container = MaterialTheme.colorScheme.errorContainer,
+                onContainer = MaterialTheme.colorScheme.onErrorContainer,
+                dismissContentDescription = detail.dismissContentDescription,
+                onDismiss = onDismissRatingError,
+            )
+        }
 
         if (participants != null) {
             ParticipantsList(

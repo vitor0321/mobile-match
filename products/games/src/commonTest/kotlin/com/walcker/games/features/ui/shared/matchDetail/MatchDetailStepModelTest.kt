@@ -360,7 +360,7 @@ class MatchDetailStepModelTest {
 
             val state = model.state.value
             assertFalse(state.showRatingSheet)
-            assertEquals(stringsHolder.strings.ratings.submitSuccess, state.successMessage)
+            assertEquals(stringsHolder.strings.ratings.submitSuccess, state.ratingSuccessMessage)
             assertEquals(listOf("player-2"), ratingRepository.submitCalls)
         }
 
@@ -375,7 +375,7 @@ class MatchDetailStepModelTest {
             model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = ""))
             advanceUntilIdle()
 
-            assertEquals(stringsHolder.strings.ratings.updated, model.state.value.successMessage)
+            assertEquals(stringsHolder.strings.ratings.updated, model.state.value.ratingSuccessMessage)
         }
 
     @Test
