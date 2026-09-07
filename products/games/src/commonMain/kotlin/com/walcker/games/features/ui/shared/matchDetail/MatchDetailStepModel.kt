@@ -349,6 +349,15 @@ internal class MatchDetailStepModel(
                         showRatingSheet = false,
                         selectedPlayerForRating = null,
                         ratingSuccessMessage = message,
+                        participantRatings =
+                            it.participantRatings +
+                                (
+                                    ratedUserId to
+                                        PlayerRatingSummary(
+                                            rating = outcome.averageRating,
+                                            ratingCount = outcome.ratingCount,
+                                        )
+                                ),
                     )
                 }
             }.onFailure { error ->

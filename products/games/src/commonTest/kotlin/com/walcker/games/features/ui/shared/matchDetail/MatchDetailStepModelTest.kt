@@ -370,6 +370,26 @@ class MatchDetailStepModelTest {
         }
 
     @Test
+    fun `submitting a rating updates the participant's visible rating summary`() =
+        runTest(testDispatcher) {
+            val ratingRepository =
+                FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Recorded(averageRating = 4.5f, ratingCount = 3)))
+            val model = buildModel(ratingRepository = ratingRepository)
+            advanceUntilIdle()
+
+            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
+            model.onEvent(
+                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
+            )
+            advanceUntilIdle()
+
+            assertEquals(
+                PlayerRatingSummary(rating = 4.5f, ratingCount = 3),
+                model.state.value.participantRatings["player-2"],
+            )
+        }
+
+    @Test
     fun `editing a rating surfaces its own message`() =
         runTest(testDispatcher) {
             val ratingRepository = FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Updated(averageRating = 4f, ratingCount = 2)))
