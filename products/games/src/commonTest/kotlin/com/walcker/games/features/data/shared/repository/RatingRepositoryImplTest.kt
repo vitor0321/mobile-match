@@ -54,7 +54,7 @@ class RatingRepositoryImplTest {
     @Test
     fun `returns the outcome the source reports`() =
         runTest {
-            val outcome = SubmitRatingOutcome.AlreadyRated(averageRating = 4.2f, ratingCount = 5)
+            val outcome = SubmitRatingOutcome.Updated(averageRating = 4.2f, ratingCount = 5)
             val source = FakeRatingSource(submitResult = Result.success(outcome))
 
             val result =

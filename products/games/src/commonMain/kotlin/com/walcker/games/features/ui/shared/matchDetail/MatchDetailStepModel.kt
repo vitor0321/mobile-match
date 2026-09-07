@@ -352,7 +352,8 @@ internal class MatchDetailStepModel(
                 val message =
                     when (outcome) {
                         is SubmitRatingOutcome.Recorded -> strings.submitSuccess
-                        is SubmitRatingOutcome.AlreadyRated -> strings.alreadyRated
+                        is SubmitRatingOutcome.Updated -> strings.updated
+                        is SubmitRatingOutcome.AlreadyRated -> strings.updated
                     }
                 _state.update {
                     it.copy(
@@ -470,6 +471,7 @@ internal class MatchDetailStepModel(
                     val message =
                         when (outcome) {
                             is SubmitRatingOutcome.Recorded -> strings.matchRatingSubmitSuccess
+                            is SubmitRatingOutcome.Updated -> strings.matchRatingSubmitSuccess
                             is SubmitRatingOutcome.AlreadyRated -> strings.matchRatingAlreadyRated
                         }
                     _state.update {

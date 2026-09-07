@@ -2,7 +2,7 @@ package com.walcker.games.strings
 
 internal data class RatingStrings(
     val submitSuccess: String,
-    val alreadyRated: String,
+    val updated: String,
     val submitError: String,
     val formTitle: (playerName: String) -> String,
     val commentLabel: String,
@@ -17,7 +17,7 @@ internal data class RatingStrings(
 internal val ratingStringsEn =
     RatingStrings(
         submitSuccess = "Review sent. Thanks!",
-        alreadyRated = "You already reviewed this player for this match.",
+        updated = "Review updated!",
         submitError = "Could not send your review. Please try again.",
         formTitle = { playerName -> "Rate $playerName" },
         commentLabel = "Comment (optional)",
@@ -32,7 +32,7 @@ internal val ratingStringsEn =
 internal val ratingStringsPt =
     RatingStrings(
         submitSuccess = "Avaliação enviada. Valeu!",
-        alreadyRated = "Você já avaliou esse jogador nessa partida.",
+        updated = "Avaliação atualizada!",
         submitError = "Não foi possível enviar sua avaliação. Tente novamente.",
         formTitle = { playerName -> "Avaliar $playerName" },
         commentLabel = "Comentário (opcional)",

@@ -363,9 +363,9 @@ class MatchDetailStepModelTest {
         }
 
     @Test
-    fun `rating a player already rated in this match still surfaces its own message`() =
+    fun `editing a rating surfaces its own message`() =
         runTest(testDispatcher) {
-            val ratingRepository = FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.AlreadyRated(averageRating = 4f, ratingCount = 2)))
+            val ratingRepository = FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Updated(averageRating = 4f, ratingCount = 2)))
             val model = buildModel(ratingRepository = ratingRepository)
             advanceUntilIdle()
 
@@ -373,7 +373,7 @@ class MatchDetailStepModelTest {
             model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = ""))
             advanceUntilIdle()
 
-            assertEquals(stringsHolder.strings.ratings.alreadyRated, model.state.value.successMessage)
+            assertEquals(stringsHolder.strings.ratings.updated, model.state.value.successMessage)
         }
 
     @Test

@@ -45,6 +45,7 @@ internal class FirestoreRatingSource(
 
         return when (val status = this["status"]) {
             "recorded" -> SubmitRatingOutcome.Recorded(averageRating, ratingCount)
+            "updated" -> SubmitRatingOutcome.Updated(averageRating, ratingCount)
             "already_rated" -> SubmitRatingOutcome.AlreadyRated(averageRating, ratingCount)
             else -> throw IllegalStateException(
                 "Unexpected submitPlayerRating response status: $status",
