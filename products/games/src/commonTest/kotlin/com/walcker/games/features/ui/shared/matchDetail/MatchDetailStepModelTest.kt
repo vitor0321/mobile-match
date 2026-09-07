@@ -16,6 +16,7 @@ import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.Participant
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.games.features.domain.shared.model.Rating
 import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
@@ -89,6 +90,7 @@ class MatchDetailStepModelTest {
         submitMatchRating = SubmitMatchRatingUseCase(ratingRepository),
         submitReport = SubmitReportUseCaseImpl(reportRepository),
         playerRepository = playerRepository,
+        ratingRepository = ratingRepository,
         sessionHolder = sessionHolder,
         promotionCoordinator = promotionCoordinator,
         stringsHolder = stringsHolder,
@@ -517,5 +519,28 @@ class MatchDetailStepModelTest {
             val state = model.state.value
             assertTrue(state.canRate)
             assertFalse(state.canRatePlayers)
+        }
+
+    @Test
+    fun `loading the match fetches ratings the organizer already gave, keyed by rated player`() =
+        runTest(testDispatcher) {
+            val myGame = game(id = "match-1", organizerId = "user-1").copy(participants = listOf("player-2"))
+            val existing =
+                Rating(
+                    id = "user-1_player-2",
+                    matchId = "match-1",
+                    ratedUserId = "player-2",
+                    raterUserId = "user-1",
+                    rating = 3,
+                    comment = "",
+                    createdAtMs = 1_000L,
+                )
+            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
+            val ratingRepository = FakeRatingRepository(ratingsGivenForMatchResult = Result.success(listOf(existing)))
+            val model = buildModel(gameRepository = gameRepository, ratingRepository = ratingRepository)
+
+            advanceUntilIdle()
+
+            assertEquals(mapOf("player-2" to existing), model.state.value.organizerRatingsGiven)
         }
 }

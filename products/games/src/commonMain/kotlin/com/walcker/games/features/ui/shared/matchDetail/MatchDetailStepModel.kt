@@ -8,6 +8,7 @@ import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
+import com.walcker.games.features.domain.shared.model.Rating
 import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
@@ -15,6 +16,7 @@ import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
 import com.walcker.games.features.domain.shared.model.canBeRatedByParticipant
 import com.walcker.games.features.domain.shared.model.canOrganizerRate
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
+import com.walcker.games.features.domain.shared.repository.RatingRepository
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCase
@@ -64,6 +66,7 @@ internal data class MatchDetailState(
     val statusChangeMessage: String? = null,
     val showRatingSheet: Boolean = false,
     val selectedPlayerForRating: Pair<String, String>? = null,
+    val existingRatingForSelectedPlayer: Rating? = null,
     val isSubmittingRating: Boolean = false,
     val ratingErrorMessage: String? = null,
     val showReportSheet: Boolean = false,
@@ -77,6 +80,7 @@ internal data class MatchDetailState(
     val showMatchRatingSheet: Boolean = false,
     val isSubmittingMatchRating: Boolean = false,
     val participantRatings: Map<String, PlayerRatingSummary> = emptyMap(),
+    val organizerRatingsGiven: Map<String, Rating> = emptyMap(),
 )
 
 internal sealed interface MatchDetailEvent {
@@ -171,6 +175,7 @@ internal class MatchDetailStepModel(
     private val submitMatchRating: SubmitMatchRatingUseCase,
     private val submitReport: SubmitReportUseCase,
     private val playerRepository: PlayerRepository,
+    private val ratingRepository: RatingRepository,
     private val sessionHolder: SessionHolder,
     private val promotionCoordinator: PromotionCoordinator,
     private val stringsHolder: GamesStringsHolder,
@@ -260,12 +265,13 @@ internal class MatchDetailStepModel(
                     it.copy(
                         showRatingSheet = true,
                         selectedPlayerForRating = event.userId to event.displayName,
+                        existingRatingForSelectedPlayer = it.organizerRatingsGiven[event.userId],
                     )
                 }
             }
             MatchDetailEvent.CloseRatingSheet -> {
                 _state.update {
-                    it.copy(showRatingSheet = false, selectedPlayerForRating = null)
+                    it.copy(showRatingSheet = false, selectedPlayerForRating = null, existingRatingForSelectedPlayer = null)
                 }
             }
             is MatchDetailEvent.SubmitRating -> {
@@ -352,6 +358,7 @@ internal class MatchDetailStepModel(
                 comment = comment,
             ).onSuccess { outcome ->
                 analytics.track(AnalyticsEvent.PlayerRated(rating))
+                loadOrganizerRatingsGiven()
                 val message =
                     when (outcome) {
                         is SubmitRatingOutcome.Recorded -> strings.submitSuccess
@@ -637,6 +644,7 @@ internal class MatchDetailStepModel(
             if (currentUserId == null) {
                 currentUserId = sessionHolder.currentUser.first()?.uid
                 _state.update { it.copy(currentUserId = currentUserId).withCanRate() }
+                loadOrganizerRatingsGiven()
             }
 
             observeParticipants(matchId)
@@ -658,6 +666,17 @@ internal class MatchDetailStepModel(
         screenModelScope.launch {
             playerRepository.getPlayersRatingSummary(userIds).onSuccess { ratings ->
                 _state.update { it.copy(participantRatings = ratings) }
+            }
+        }
+    }
+
+    private fun loadOrganizerRatingsGiven() {
+        val organizerId = currentUserId ?: return
+        screenModelScope.launch {
+            ratingRepository.getRatingsGivenForMatch(matchId, organizerId).onSuccess { ratings ->
+                _state.update {
+                    it.copy(organizerRatingsGiven = ratings.associateBy { rating -> rating.ratedUserId })
+                }
             }
         }
     }

@@ -102,6 +102,20 @@ internal class FirestoreRatingSource(
                 .mapNotNull { snapshot -> snapshot.toRating() }
         }
 
+    override suspend fun getRatingsGivenForMatch(
+        matchId: String,
+        raterUserId: String,
+    ): Result<List<Rating>> =
+        runCatching {
+            firestore
+                .collection("matches/$matchId/ratings")
+                .query()
+                .where("raterUserId", "==", raterUserId)
+                .get()
+                .getOrThrow()
+                .mapNotNull { snapshot -> snapshot.toRating() }
+        }
+
     private fun FirestoreQueryBuilder.applySort(sort: RatingSort): FirestoreQueryBuilder {
         val primary = orderBy(sort.primaryField, if (sort.descending) DESCENDING else ASCENDING)
         return if (sort.primaryField == RATING_FIELD_CREATED_AT_MS) {

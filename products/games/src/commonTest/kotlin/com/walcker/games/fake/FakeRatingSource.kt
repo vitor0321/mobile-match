@@ -11,6 +11,7 @@ internal class FakeRatingSource(
         Result.success(SubmitRatingOutcome.Recorded(averageRating = 4.5f, ratingCount = 10)),
     var userRatingsResult: Result<List<Rating>> = Result.success(emptyList()),
     var matchLocationRatingsResult: Result<List<Rating>> = Result.success(emptyList()),
+    var ratingsGivenForMatchResult: Result<List<Rating>> = Result.success(emptyList()),
 ) : RatingSource {
     var submitCallCount: Int = 0
         private set
@@ -49,4 +50,9 @@ internal class FakeRatingSource(
         matchId: String,
         limit: Int,
     ): Result<List<Rating>> = matchLocationRatingsResult
+
+    override suspend fun getRatingsGivenForMatch(
+        matchId: String,
+        raterUserId: String,
+    ): Result<List<Rating>> = ratingsGivenForMatchResult
 }

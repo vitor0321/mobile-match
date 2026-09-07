@@ -29,11 +29,13 @@ internal fun RatingForm(
     playerName: String,
     strings: RatingStrings,
     onSubmit: (rating: Int, comment: String) -> Unit,
+    initialRating: Int = 5,
+    initialComment: String = "",
     isLoading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    var rating by remember { mutableStateOf(5) }
-    var comment by remember { mutableStateOf("") }
+    var rating by remember(initialRating) { mutableStateOf(initialRating) }
+    var comment by remember(initialComment) { mutableStateOf(initialComment) }
 
     Column(
         modifier =

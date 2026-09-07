@@ -3,6 +3,7 @@ package com.walcker.games.features.data.shared.repository
 import com.walcker.games.fake.FakeRatingSource
 import com.walcker.games.fake.playerDetails
 import com.walcker.games.features.data.shared.cache.InMemoryPlayerCache
+import com.walcker.games.features.domain.shared.model.Rating
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -76,5 +77,25 @@ class RatingRepositoryImplTest {
             val repo = repository(source)
             assertTrue(repo.getUserRatings("player-1").isSuccess)
             assertTrue(repo.getMatchLocationRatings("match-1").isSuccess)
+        }
+
+    @Test
+    fun `getRatingsGivenForMatch passes through to the source`() =
+        runTest {
+            val existing =
+                Rating(
+                    id = "organizer-1_player-2",
+                    matchId = "match-1",
+                    ratedUserId = "player-2",
+                    raterUserId = "organizer-1",
+                    rating = 4,
+                    comment = "",
+                    createdAtMs = 1_000L,
+                )
+            val source = FakeRatingSource(ratingsGivenForMatchResult = Result.success(listOf(existing)))
+
+            val result = repository(source).getRatingsGivenForMatch(matchId = "match-1", raterUserId = "organizer-1")
+
+            assertEquals(listOf(existing), result.getOrThrow())
         }
 }

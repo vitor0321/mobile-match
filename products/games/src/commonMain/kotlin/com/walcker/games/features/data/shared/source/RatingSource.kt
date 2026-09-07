@@ -34,4 +34,9 @@ internal interface RatingSource {
         matchId: String,
         limit: Int,
     ): Result<List<Rating>>
+
+    suspend fun getRatingsGivenForMatch(
+        matchId: String,
+        raterUserId: String,
+    ): Result<List<Rating>>
 }

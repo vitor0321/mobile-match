@@ -25,4 +25,9 @@ internal interface RatingRepository {
         matchId: String,
         limit: Int = 10,
     ): Result<List<Rating>>
+
+    suspend fun getRatingsGivenForMatch(
+        matchId: String,
+        raterUserId: String,
+    ): Result<List<Rating>>
 }

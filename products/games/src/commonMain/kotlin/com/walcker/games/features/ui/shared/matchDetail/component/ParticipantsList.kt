@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
+import com.walcker.games.features.domain.shared.model.Rating
 import com.walcker.games.strings.MatchDetailStrings
 import com.walcker.games.strings.ReportStrings
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -19,6 +20,7 @@ internal fun ParticipantsList(
     participants: ParticipantsSummary,
     detail: MatchDetailStrings,
     canRate: Boolean,
+    organizerRatingsGiven: Map<String, Rating>,
     currentUserId: String?,
     participantRatings: Map<String, PlayerRatingSummary>,
     reportStrings: ReportStrings,
@@ -37,11 +39,12 @@ internal fun ParticipantsList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             participants.confirmed.forEach { participant ->
+                val alreadyRated = organizerRatingsGiven.containsKey(participant.userId)
                 ParticipantRow(
                     participant = participant,
                     statusLabel = detail.confirmedTag,
                     paidLabel = detail.paidTag,
-                    rateLabel = detail.rateAction,
+                    rateLabel = if (alreadyRated) detail.editRatingAction else detail.rateAction,
                     canRate = canRate && participant.userId != currentUserId,
                     canReport = participant.userId != currentUserId,
                     ratingSummary = participantRatings[participant.userId],

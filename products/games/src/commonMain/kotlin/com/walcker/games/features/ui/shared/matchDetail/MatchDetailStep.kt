@@ -41,10 +41,12 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.games.features.domain.shared.model.Rating
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
+import com.walcker.games.features.domain.shared.repository.RatingRepository
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCase
@@ -141,6 +143,7 @@ internal fun MatchDetailScreenContent(
     val submitMatchRating: SubmitMatchRatingUseCase = koinInject()
     val submitReport: SubmitReportUseCase = koinInject()
     val playerRepository: PlayerRepository = koinInject()
+    val ratingRepository: RatingRepository = koinInject()
     val sessionHolder: SessionHolder = koinInject()
     val promotionCoordinator: PromotionCoordinator = koinInject()
     val stringsHolder: GamesStringsHolder = koinInject()
@@ -167,6 +170,7 @@ internal fun MatchDetailScreenContent(
                 submitMatchRating = submitMatchRating,
                 submitReport = submitReport,
                 playerRepository = playerRepository,
+                ratingRepository = ratingRepository,
                 sessionHolder = sessionHolder,
                 promotionCoordinator = promotionCoordinator,
                 stringsHolder = stringsHolder,
@@ -373,6 +377,7 @@ internal fun MatchDetailContent(
                         currentUserId = state.currentUserId,
                         isParticipant = isParticipant,
                         participantRatings = state.participantRatings,
+                        organizerRatingsGiven = state.organizerRatingsGiven,
                         reportStrings = strings.reports,
                         onReportPlayer = { userId, displayName ->
                             onEvent(MatchDetailEvent.OpenReportSheet(userId, displayName))
@@ -431,6 +436,8 @@ internal fun MatchDetailContent(
         onSubmit = { rating, comment ->
             onEvent(MatchDetailEvent.SubmitRating(rating, comment))
         },
+        initialRating = state.existingRatingForSelectedPlayer?.rating ?: 5,
+        initialComment = state.existingRatingForSelectedPlayer?.comment ?: "",
         isLoading = state.isSubmittingRating,
     )
 
@@ -495,6 +502,7 @@ internal fun MatchDetailBody(
     currentUserId: String?,
     isParticipant: Boolean,
     participantRatings: Map<String, PlayerRatingSummary>,
+    organizerRatingsGiven: Map<String, Rating>,
     reportStrings: ReportStrings,
     onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
@@ -622,6 +630,7 @@ internal fun MatchDetailBody(
                 canRate = canRatePlayers,
                 currentUserId = currentUserId,
                 participantRatings = participantRatings,
+                organizerRatingsGiven = organizerRatingsGiven,
                 reportStrings = reportStrings,
                 onReportPlayer = onReportPlayer,
                 onRatePlayer = onRatePlayer,

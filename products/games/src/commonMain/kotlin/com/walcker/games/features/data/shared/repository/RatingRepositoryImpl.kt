@@ -34,4 +34,9 @@ internal class RatingRepositoryImpl(
         matchId: String,
         limit: Int,
     ): Result<List<Rating>> = ratingSource.getMatchLocationRatings(matchId, limit)
+
+    override suspend fun getRatingsGivenForMatch(
+        matchId: String,
+        raterUserId: String,
+    ): Result<List<Rating>> = ratingSource.getRatingsGivenForMatch(matchId, raterUserId)
 }

@@ -18,6 +18,8 @@ internal fun RatingBottomSheet(
     strings: RatingStrings,
     onDismiss: () -> Unit,
     onSubmit: (rating: Int, comment: String) -> Unit,
+    initialRating: Int = 5,
+    initialComment: String = "",
     isLoading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -34,6 +36,8 @@ internal fun RatingBottomSheet(
                 playerName = playerName,
                 strings = strings,
                 onSubmit = onSubmit,
+                initialRating = initialRating,
+                initialComment = initialComment,
                 isLoading = isLoading,
                 modifier = modifier,
             )
