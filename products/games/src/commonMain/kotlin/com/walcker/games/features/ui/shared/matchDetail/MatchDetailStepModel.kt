@@ -384,8 +384,9 @@ internal class MatchDetailStepModel(
 
     private fun submitOrganizerRatingAction(rating: Int) {
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
+        val ratingStrings = stringsHolder.resolveStringsOrDefault().ratings
         screenModelScope.launch {
-            _state.update { it.copy(isSubmittingOrganizerRating = true, errorMessage = null) }
+            _state.update { it.copy(isSubmittingOrganizerRating = true, ratingErrorMessage = null) }
 
             submitOrganizerRating(matchId, rating)
                 .onSuccess {
@@ -404,7 +405,7 @@ internal class MatchDetailStepModel(
                         it.copy(
                             isSubmittingOrganizerRating = false,
                             showOrganizerRatingSheet = false,
-                            errorMessage = strings.organizerRatingSubmitError,
+                            ratingErrorMessage = ratingStrings.submitError,
                         )
                     }
                 }

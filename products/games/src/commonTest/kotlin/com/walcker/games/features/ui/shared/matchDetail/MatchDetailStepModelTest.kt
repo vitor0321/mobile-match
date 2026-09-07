@@ -466,7 +466,8 @@ class MatchDetailStepModelTest {
 
             val state = model.state.value
             assertFalse(state.showOrganizerRatingSheet)
-            assertEquals(stringsHolder.strings.matchDetail.organizerRatingSubmitError, state.errorMessage)
+            assertEquals(stringsHolder.strings.ratings.submitError, state.ratingErrorMessage)
+            assertNull(state.errorMessage)
         }
 
     @Test
