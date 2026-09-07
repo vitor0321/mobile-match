@@ -61,9 +61,7 @@ import com.walcker.match.cedar.components.CedarStat
 import com.walcker.match.cedar.components.CedarStatRow
 import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.components.MatchCard
-import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
-import com.walcker.match.core.format.formatDecimal
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.MainTab
 import com.walcker.match.navigator.MatchDetailCoordinator
@@ -277,46 +275,31 @@ internal fun PlayerProfileContent(
                     name = state.userName,
                     email = state.userEmail,
                     fallbackName = strings.fallbackAccountName,
+                    averageRating = state.averageRating,
+                    totalRatings = state.totalRatings,
+                    ratingsCountLabel = strings.ratingsCount,
+                    ratingContentDescription = strings.ratingContentDescription,
                 )
             }
 
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm)) {
-                    CedarStatRow(
-                        stats =
-                            persistentListOf(
-                                CedarStat(
-                                    value = (state.matchesOrganized + state.matchesParticipated).toString(),
-                                    label = strings.statsMatches,
-                                ),
-                                CedarStat(
-                                    value = state.matchesParticipated.toString(),
-                                    label = strings.statsParticipated,
-                                ),
-                                CedarStat(
-                                    value = state.totalRatings.toString(),
-                                    label = strings.statsReviews,
-                                ),
+                CedarStatRow(
+                    stats =
+                        persistentListOf(
+                            CedarStat(
+                                value = (state.matchesOrganized + state.matchesParticipated).toString(),
+                                label = strings.statsMatches,
                             ),
-                    )
-                    if (state.totalRatings > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RatingStars(
-                                rating = state.averageRating,
-                                contentDescription = strings.ratingContentDescription(state.averageRating),
-                            )
-                            Text(
-                                text = "${formatDecimal(state.averageRating, 1)} (${strings.ratingsCount(state.totalRatings)})",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
+                            CedarStat(
+                                value = state.matchesParticipated.toString(),
+                                label = strings.statsParticipated,
+                            ),
+                            CedarStat(
+                                value = state.totalRatings.toString(),
+                                label = strings.statsReviews,
+                            ),
+                        ),
+                )
             }
 
             item {

@@ -657,6 +657,8 @@ internal fun MatchDetailBody(
             StaticParticipantsList(
                 participantIds = match.participants,
                 organizerName = match.organizerName,
+                organizerRating = match.organizerRating,
+                organizerRatingCount = match.organizerRatingCount,
                 detail = detail,
             )
         }
