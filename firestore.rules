@@ -242,9 +242,11 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Avaliações da partida — registro canônico, id `{raterUid}_{ratedUid}`.
-      // Gravadas pela callable submitPlayerRating, que recalcula a média do
-      // avaliado na mesma transação. Reputação nunca vem do cliente.
+      // Avaliações da partida — registro canônico, id `{organizerId}_{ratedUid}`.
+      // Só o organizador avalia, só quem está confirmado na própria partida
+      // (regra aplicada na callable, não aqui — ver submitPlayerRating em
+      // functions/src/index.ts). Reenviar edita a nota em vez de ser
+      // ignorado. Reputação nunca vem do cliente.
       match /ratings/{ratingId} {
         allow read: if isSignedIn();
         allow write: if false;

@@ -751,14 +751,14 @@ export const submitPlayerRating = onCall(
       if (status === "CANCELLED") {
         throw new HttpsError("failed-precondition", "Cannot rate a cancelled match.");
       }
-      requireMatchIsOver(match);
+
+      if (match.organizerId !== uid) {
+        throw new HttpsError("permission-denied", "Only the organizer can rate players in this match.");
+      }
 
       const participants: string[] = Array.isArray(match.participants)
         ? match.participants.filter((x): x is string => typeof x === "string")
         : [];
-      if (!participants.includes(uid)) {
-        throw new HttpsError("permission-denied", "Only participants can rate this match.");
-      }
       if (!participants.includes(ratedUserId)) {
         throw new HttpsError("failed-precondition", "The rated user did not play this match.");
       }
@@ -771,24 +771,18 @@ export const submitPlayerRating = onCall(
       const previousCount = Number(ratedProfile.ratingCount ?? 0);
       const previousAverage = Number(ratedProfile.rating ?? 0);
 
-      // Idempotente, como joinMatch/cancelMatch: reenviar não infla a média.
-      if (existingSnap.exists) {
-        return {
-          status: "already_rated" as const,
-          matchId,
-          ratedUserId,
-          averageRating: previousAverage,
-          ratingCount: previousCount,
-        };
-      }
+      // Reenviar edita a nota em vez de ser ignorado: recalcula a média
+      // trocando o valor antigo pelo novo, sem inflar a contagem.
+      const isEdit = existingSnap.exists;
+      const previousRatingValue = isEdit ? Number(existingSnap.data()?.rating ?? 0) : null;
 
-      const nextCount = previousCount + 1;
-      const nextAverage = nextRatingAverage(
-        previousAverage,
-        previousCount,
-        rating,
-        RATING_AVERAGE_DECIMALS,
-      );
+      const nextCount = isEdit ? previousCount : previousCount + 1;
+      const nextAverage = isEdit
+        ? roundTo(
+            (previousAverage * previousCount - (previousRatingValue as number) + rating) / previousCount,
+            RATING_AVERAGE_DECIMALS,
+          )
+        : nextRatingAverage(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
 
       const now = Date.now();
       const ratingDocument = {
@@ -811,8 +805,9 @@ export const submitPlayerRating = onCall(
         updatedAt: FieldValue.serverTimestamp(),
       });
 
+      const responseStatus: "recorded" | "updated" = isEdit ? "updated" : "recorded";
       return {
-        status: "recorded" as const,
+        status: responseStatus,
         matchId,
         ratedUserId,
         averageRating: nextAverage,
@@ -822,8 +817,13 @@ export const submitPlayerRating = onCall(
   },
 );
 
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
 interface SubmitPlayerRatingResponse {
-  status: "recorded" | "already_rated";
+  status: "recorded" | "updated";
   matchId: string;
   ratedUserId: string;
   averageRating: number;

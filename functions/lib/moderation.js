@@ -5,7 +5,7 @@
 // `ModerationLevel.kt`. Os identificadores abaixo são o contrato: mudá-los
 // invalida denúncias já gravadas, então só adicione, nunca renomeie.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RATING_DIMENSIONS = exports.MODERATION_LEVELS = exports.DAY_IN_MILLIS = exports.REPORT_WINDOW_DAYS = exports.SUSPENSION_DAYS = exports.REVIEW_THRESHOLD = exports.SUSPENSION_THRESHOLD = exports.WARNING_THRESHOLD = exports.MAX_REPORT_DETAILS_LENGTH = exports.REPORT_REASONS = void 0;
+exports.MODERATION_LEVELS = exports.DAY_IN_MILLIS = exports.REPORT_WINDOW_DAYS = exports.SUSPENSION_DAYS = exports.REVIEW_THRESHOLD = exports.SUSPENSION_THRESHOLD = exports.WARNING_THRESHOLD = exports.MAX_REPORT_DETAILS_LENGTH = exports.REPORT_REASONS = void 0;
 exports.isReportReason = isReportReason;
 exports.levelForReporterCount = levelForReporterCount;
 exports.requiresHumanReview = requiresHumanReview;
@@ -14,7 +14,6 @@ exports.blockedError = blockedError;
 exports.isModerationLevel = isModerationLevel;
 exports.manualModerationState = manualModerationState;
 exports.nextRatingAverage = nextRatingAverage;
-exports.parseRatingDimensions = parseRatingDimensions;
 const https_1 = require("firebase-functions/v2/https");
 /**
  * Os dez motivos de denúncia.
@@ -126,15 +125,6 @@ function manualModerationState(level, days, nowMs) {
     };
 }
 /**
- * Dimensões de uma avaliação pós-partida, além da nota geral.
- *
- * Obrigatórias. Havia uma versão que as aceitava ausentes, para conviver com um
- * cliente anterior — que nunca existiu em produção. Manter o ramo opcional
- * significaria carregar para sempre duas formas de avaliação e um perfil onde
- * metade das dimensões tem contagem e a outra metade não.
- */
-exports.RATING_DIMENSIONS = ["punctuality", "respect", "fairPlay", "behavior"];
-/**
  * Média corrente depois de somar uma nota.
  *
  * Perfis nascem com `rating: 0` e `ratingCount: 0`, então a matemática já dá o
@@ -152,21 +142,4 @@ function nextRatingAverage(previousAverage, previousCount, value, decimals = 2) 
     const factor = 10 ** decimals;
     return Math.round(((previousAverage * previousCount + value) / (previousCount + 1)) * factor) /
         factor;
-}
-/**
- * Lê e valida as quatro dimensões de um payload.
- *
- * Ausente e fora de 1..5 são o mesmo erro, e explícito: descartar em silêncio
- * gravaria uma avaliação pela metade e o cliente nunca saberia.
- */
-function parseRatingDimensions(payload, onInvalid) {
-    const parsed = {};
-    for (const dimension of exports.RATING_DIMENSIONS) {
-        const value = payload[dimension];
-        if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 5) {
-            onInvalid(dimension);
-        }
-        parsed[dimension] = value;
-    }
-    return parsed;
 }

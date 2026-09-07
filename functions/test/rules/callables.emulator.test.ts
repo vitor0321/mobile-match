@@ -140,17 +140,18 @@ describe("submitPlayerRating", () => {
   const MATCH = "match-rating";
 
   /**
-   * A match that already ended, with the caller and [RATED] on the roster —
-   * the only shape in which a rating is allowed.
+   * A match with the caller as organizer and [RATED] confirmed — the only
+   * shape in which the organizer-only rule allows a rating. No time
+   * constraint: rating is allowed as soon as the player is confirmed, not
+   * just after the match ends.
    */
-  async function seedFinishedMatch(overrides: Record<string, unknown> = {}) {
+  async function seedMatch(overrides: Record<string, unknown> = {}) {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
-      const startedTwoHoursAgo = Math.floor(Date.now() / 1000) - 2 * 60 * 60;
       await setDoc(doc(database, "matches", MATCH), {
-        organizerId: RATED,
+        organizerId: uid,
         status: "OPEN",
-        startsAtSeconds: startedTwoHoursAgo,
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
         durationMin: 60,
         totalSlots: 10,
         confirmedCount: 2,
@@ -165,91 +166,81 @@ describe("submitPlayerRating", () => {
     });
   }
 
-  function readProfile() {
-    return testEnvironment.withSecurityRulesDisabled((context) =>
-      getDoc(doc(context.firestore(), "profiles", RATED)),
-    );
+  async function readProfile() {
+    let snapshot: Awaited<ReturnType<typeof getDoc>> | undefined;
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      snapshot = await getDoc(doc(context.firestore(), "profiles", RATED));
+    });
+    return snapshot as Awaited<ReturnType<typeof getDoc>>;
   }
 
   it("rejects unauthenticated requests", async () => {
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5}, null);
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5}, null);
     expect(response.status).toBe(401);
   });
 
   it("rejects rating yourself", async () => {
-    await seedFinishedMatch();
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: uid, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
+    await seedMatch();
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: uid, rating: 5});
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
 
   it("rejects a star count outside 1..5", async () => {
-    await seedFinishedMatch();
+    await seedMatch();
     for (const rating of [0, 6, 4.5]) {
-      // Com as dimensões válidas, um 400 aqui só pode ser da nota geral.
-      const response = await call("submitPlayerRating", {
-        matchId: MATCH,
-        ratedUserId: RATED,
-        rating,
-        punctuality: 5,
-        respect: 5,
-        fairPlay: 5,
-        behavior: 5,
-      });
+      const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating});
       expect(response.status).toBe(400);
       expect(await response.text()).toContain("INVALID_ARGUMENT");
     }
   });
 
   it("rejects a comment longer than the limit", async () => {
-    await seedFinishedMatch();
+    await seedMatch();
     const response = await call("submitPlayerRating", {
       matchId: MATCH,
       ratedUserId: RATED,
       rating: 5,
-      punctuality: 5, respect: 5, fairPlay: 5, behavior: 5,
       comment: "x".repeat(501),
     });
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("INVALID_ARGUMENT");
   });
 
-  it("rejects a match that has not finished yet", async () => {
-    await seedFinishedMatch({startsAtSeconds: Math.floor(Date.now() / 1000) + 3600});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
-    expect(response.status).toBe(400);
-    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  it("allows rating before the match has started", async () => {
+    await seedMatch({startsAtSeconds: Math.floor(Date.now() / 1000) + 7200});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
+    expect(response.ok).toBe(true);
   });
 
   it("rejects a cancelled match", async () => {
-    await seedFinishedMatch({status: "CANCELLED"});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
+    await seedMatch({status: "CANCELLED"});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
 
-  it("rejects a caller who did not play the match", async () => {
-    await seedFinishedMatch({participants: [RATED]});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
+  it("rejects a caller who is not the organizer", async () => {
+    await seedMatch({organizerId: "someone-else", participants: [uid, RATED]});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
     expect(response.status).toBe(403);
     expect(await response.text()).toContain("PERMISSION_DENIED");
   });
 
   it("rejects rating someone who did not play the match", async () => {
-    await seedFinishedMatch({participants: [uid]});
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
+    await seedMatch({participants: [uid]});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("FAILED_PRECONDITION");
   });
 
   it("writes both copies and replaces the seed average on the first rating", async () => {
-    await seedFinishedMatch();
+    await seedMatch();
 
     const response = await call("submitPlayerRating", {
       matchId: MATCH,
       ratedUserId: RATED,
       rating: 4,
-      punctuality: 5, respect: 5, fairPlay: 5, behavior: 5,
       comment: "  Jogou bem  ",
     });
     expect(response.ok).toBe(true);
@@ -281,7 +272,7 @@ describe("submitPlayerRating", () => {
   });
 
   it("averages against the existing count", async () => {
-    await seedFinishedMatch();
+    await seedMatch();
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), "profiles", RATED), {
         fullName: "Avaliado",
@@ -290,24 +281,49 @@ describe("submitPlayerRating", () => {
       });
     });
 
-    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 3, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
+    const response = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 3});
     expect(response.ok).toBe(true);
     // (5*3 + 3) / 4 = 4.5
     expect(await response.json()).toMatchObject({result: {averageRating: 4.5, ratingCount: 4}});
   });
 
-  it("is idempotent — resending does not inflate the average", async () => {
-    await seedFinishedMatch();
+  it("resubmitting updates the average instead of ignoring the new value", async () => {
+    await seedMatch();
 
-    expect((await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 4, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5})).ok).toBe(true);
+    const first = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 4});
+    expect(first.ok).toBe(true);
+    expect(await first.json()).toMatchObject({result: {status: "recorded", averageRating: 4, ratingCount: 1}});
 
-    const second = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 1, punctuality: 5, respect: 5, fairPlay: 5, behavior: 5});
+    const second = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 2});
     expect(second.ok).toBe(true);
-    expect(await second.json()).toMatchObject({
-      result: {status: "already_rated", averageRating: 4, ratingCount: 1},
+    expect(await second.json()).toMatchObject({result: {status: "updated", averageRating: 2, ratingCount: 1}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const ratingId = `${uid}_${RATED}`;
+      const canonical = await getDoc(doc(context.firestore(), "matches", MATCH, "ratings", ratingId));
+      expect(canonical.data()).toMatchObject({rating: 2});
     });
 
-    expect((await readProfile()).data()).toMatchObject({rating: 4, ratingCount: 1});
+    expect((await readProfile()).data()).toMatchObject({rating: 2, ratingCount: 1});
+  });
+
+  it("editing does not change the count when other players were also rated", async () => {
+    await seedMatch({participants: [uid, RATED, "third-player"]});
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "profiles", RATED), {fullName: "Avaliado", rating: 3, ratingCount: 2});
+    });
+
+    // A média já tem 2 votos de outras pessoas; esta é a primeira vez que
+    // este organizador avalia este jogador — deve incrementar a contagem.
+    const first = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 5});
+    expect(await first.json()).toMatchObject({result: {status: "recorded", averageRating: 3.67, ratingCount: 3}});
+
+    // Editar não deve incrementar de novo. A base agora é a média já
+    // arredondada gravada pela primeira chamada (3.67), não a semente
+    // original (3) — a recontagem sempre parte do que está persistido.
+    const second = await call("submitPlayerRating", {matchId: MATCH, ratedUserId: RATED, rating: 1});
+    // (3.67*3 - 5 + 1) / 3 = 2.3366... arredonda para 2.34
+    expect(await second.json()).toMatchObject({result: {status: "updated", averageRating: 2.34, ratingCount: 3}});
   });
 });
 
@@ -1211,124 +1227,5 @@ describe("deleteAccount — limpeza completa", () => {
     expect((await call("deleteAccount", {})).ok).toBe(true);
     // O token ainda é válido por um tempo; repetir não pode explodir.
     expect((await call("deleteAccount", {})).ok).toBe(true);
-  });
-});
-
-describe("submitPlayerRating — dimensões", () => {
-  const RATED = "avaliado-dim";
-  const MATCH = "m-dimensoes";
-  const TODAS = {punctuality: 5, respect: 5, fairPlay: 3, behavior: 4};
-
-  async function seedFinished() {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      const database = context.firestore();
-      await setDoc(doc(database, "matches", MATCH), {
-        organizerId: RATED,
-        status: "OPEN",
-        startsAtSeconds: Math.floor(Date.now() / 1_000) - 7_200,
-        durationMin: 60,
-        totalSlots: 10,
-        participants: [uid, RATED],
-      });
-      await setDoc(doc(database, "profiles", RATED), {
-        fullName: "Avaliado",
-        rating: 0,
-        ratingCount: 0,
-      });
-    });
-  }
-
-  function readProfile() {
-    return testEnvironment.withSecurityRulesDisabled((context) =>
-      getDoc(doc(context.firestore(), "profiles", RATED)),
-    );
-  }
-
-  it("grava as quatro dimensões e agrega cada uma", async () => {
-    await seedFinished();
-
-    const response = await call("submitPlayerRating", {
-      matchId: MATCH,
-      ratedUserId: RATED,
-      rating: 4,
-      ...TODAS,
-    });
-    expect(response.ok).toBe(true);
-
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      const stored = await getDoc(
-        doc(context.firestore(), "matches", MATCH, "ratings", `${uid}_${RATED}`),
-      );
-      expect(stored.data()).toMatchObject({rating: 4, ...TODAS});
-    });
-
-    // Uma contagem só: as dimensões caminham com ratingCount, porque toda
-    // avaliação traz as quatro.
-    expect((await readProfile()).data()).toMatchObject({
-      rating: 4,
-      ratingCount: 1,
-      punctualityAverage: 5,
-      fairPlayAverage: 3,
-      behaviorAverage: 4,
-    });
-  });
-
-  it("a primeira nota vira a média, sem semente atrapalhando", async () => {
-    await seedFinished();
-
-    await call("submitPlayerRating", {
-      matchId: MATCH,
-      ratedUserId: RATED,
-      rating: 1,
-      punctuality: 1,
-      respect: 1,
-      fairPlay: 1,
-      behavior: 1,
-    });
-
-    // Perfil nasce com rating 0: a primeira nota 1 fica 1, não 3.
-    expect((await readProfile()).data()).toMatchObject({rating: 1, punctualityAverage: 1});
-  });
-
-  it("recusa avaliação sem as dimensões", async () => {
-    await seedFinished();
-
-    const response = await call("submitPlayerRating", {
-      matchId: MATCH,
-      ratedUserId: RATED,
-      rating: 4,
-    });
-
-    expect(response.status).toBe(400);
-    expect(await response.text()).toContain("INVALID_ARGUMENT");
-  });
-
-  it("recusa avaliação pela metade", async () => {
-    await seedFinished();
-
-    const response = await call("submitPlayerRating", {
-      matchId: MATCH,
-      ratedUserId: RATED,
-      rating: 4,
-      punctuality: 5,
-    });
-
-    expect(response.status).toBe(400);
-  });
-
-  it("recusa dimensão fora de 1..5", async () => {
-    await seedFinished();
-
-    for (const invalida of [{punctuality: 0}, {respect: 6}, {fairPlay: 4.5}, {behavior: "bom"}]) {
-      const response = await call("submitPlayerRating", {
-        matchId: MATCH,
-        ratedUserId: RATED,
-        rating: 4,
-        ...TODAS,
-        ...invalida,
-      });
-      expect(response.status).toBe(400);
-      expect(await response.text()).toContain("INVALID_ARGUMENT");
-    }
   });
 });

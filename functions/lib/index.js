@@ -542,7 +542,7 @@ const RATING_AVERAGE_DECIMALS = 2;
 exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (request) => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
-    const { matchId, ratedUserId, rating, comment, dimensions } = parseSubmitRatingPayload(request.data, uid);
+    const { matchId, ratedUserId, rating, comment } = parseSubmitRatingPayload(request.data, uid);
     return db.runTransaction(async (txn) => {
         // Uma conta restrita não mexe na reputação de ninguém.
         await requireNotBlocked(txn, uid, Date.now());
@@ -562,13 +562,12 @@ exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (requ
         if (status === "CANCELLED") {
             throw new https_1.HttpsError("failed-precondition", "Cannot rate a cancelled match.");
         }
-        requireMatchIsOver(match);
+        if (match.organizerId !== uid) {
+            throw new https_1.HttpsError("permission-denied", "Only the organizer can rate players in this match.");
+        }
         const participants = Array.isArray(match.participants)
             ? match.participants.filter((x) => typeof x === "string")
             : [];
-        if (!participants.includes(uid)) {
-            throw new https_1.HttpsError("permission-denied", "Only participants can rate this match.");
-        }
         if (!participants.includes(ratedUserId)) {
             throw new https_1.HttpsError("failed-precondition", "The rated user did not play this match.");
         }
@@ -578,32 +577,20 @@ exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (requ
         const ratedProfile = ratedProfileSnap.data() ?? {};
         const previousCount = Number(ratedProfile.ratingCount ?? 0);
         const previousAverage = Number(ratedProfile.rating ?? 0);
-        // Idempotente, como joinMatch/cancelMatch: reenviar não infla a média.
-        if (existingSnap.exists) {
-            return {
-                status: "already_rated",
-                matchId,
-                ratedUserId,
-                averageRating: previousAverage,
-                ratingCount: previousCount,
-            };
-        }
-        const nextCount = previousCount + 1;
-        const nextAverage = (0, moderation_js_1.nextRatingAverage)(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
-        // Toda avaliação traz as quatro dimensões, então as contagens caminham
-        // juntas com ratingCount — não existe perfil com metade agregada.
-        const dimensionAggregates = {};
-        for (const dimension of moderation_js_1.RATING_DIMENSIONS) {
-            const key = `${dimension}Average`;
-            dimensionAggregates[key] = (0, moderation_js_1.nextRatingAverage)(Number(ratedProfile[key] ?? 0), previousCount, dimensions[dimension], RATING_AVERAGE_DECIMALS);
-        }
+        // Reenviar edita a nota em vez de ser ignorado: recalcula a média
+        // trocando o valor antigo pelo novo, sem inflar a contagem.
+        const isEdit = existingSnap.exists;
+        const previousRatingValue = isEdit ? Number(existingSnap.data()?.rating ?? 0) : null;
+        const nextCount = isEdit ? previousCount : previousCount + 1;
+        const nextAverage = isEdit
+            ? roundTo((previousAverage * previousCount - previousRatingValue + rating) / previousCount, RATING_AVERAGE_DECIMALS)
+            : (0, moderation_js_1.nextRatingAverage)(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
         const now = Date.now();
         const ratingDocument = {
             matchId,
             ratedUserId,
             raterUserId: uid,
             rating,
-            ...dimensions,
             comment,
             // Número, não Timestamp: atravessa o interop Android/iOS sem conversão e
             // serve direto como cursor startAfter na paginação de avaliações.
@@ -615,11 +602,11 @@ exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (requ
         txn.update(ratedProfileRef, {
             rating: nextAverage,
             ratingCount: nextCount,
-            ...dimensionAggregates,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         });
+        const responseStatus = isEdit ? "updated" : "recorded";
         return {
-            status: "recorded",
+            status: responseStatus,
             matchId,
             ratedUserId,
             averageRating: nextAverage,
@@ -627,6 +614,10 @@ exports.submitPlayerRating = (0, https_1.onCall)({ region: REGION }, async (requ
         };
     });
 });
+function roundTo(value, decimals) {
+    const factor = 10 ** decimals;
+    return Math.round(value * factor) / factor;
+}
 function parseSubmitRatingPayload(value, uid) {
     const data = (value ?? {});
     if (typeof data.matchId !== "string" || data.matchId.length === 0) {
@@ -645,15 +636,11 @@ function parseSubmitRatingPayload(value, uid) {
     if (comment.length > MAX_RATING_COMMENT_LENGTH) {
         throw new https_1.HttpsError("invalid-argument", `comment must be at most ${MAX_RATING_COMMENT_LENGTH} characters.`);
     }
-    const dimensions = (0, moderation_js_1.parseRatingDimensions)(data, (dimension) => {
-        throw new https_1.HttpsError("invalid-argument", `${dimension} is required and must be an integer between 1 and 5.`);
-    });
     return {
         matchId: data.matchId,
         ratedUserId: data.ratedUserId,
         rating: data.rating,
         comment,
-        dimensions,
     };
 }
 /**
