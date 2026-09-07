@@ -12,7 +12,6 @@ import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.Rating
 import com.walcker.games.strings.MatchDetailStrings
-import com.walcker.games.strings.ReportStrings
 import com.walcker.match.cedar.tokens.CedarTokens
 
 @Composable
@@ -23,8 +22,6 @@ internal fun ParticipantsList(
     organizerRatingsGiven: Map<String, Rating>,
     currentUserId: String?,
     participantRatings: Map<String, PlayerRatingSummary>,
-    reportStrings: ReportStrings,
-    onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -47,11 +44,8 @@ internal fun ParticipantsList(
                     rateLabel = if (alreadyRated) detail.editRatingAction else detail.rateAction,
                     alreadyRated = alreadyRated,
                     canRate = canRate && participant.userId != currentUserId,
-                    canReport = participant.userId != currentUserId,
                     ratingSummary = participantRatings[participant.userId],
                     ratingsCountLabel = detail.ratingsCount,
-                    reportStrings = reportStrings,
-                    onReportPlayer = onReportPlayer,
                     onRatePlayer = onRatePlayer,
                 )
             }
@@ -72,11 +66,8 @@ internal fun ParticipantsList(
                     rateLabel = detail.rateAction,
                     alreadyRated = false,
                     canRate = false,
-                    canReport = participant.userId != currentUserId,
                     ratingSummary = participantRatings[participant.userId],
                     ratingsCountLabel = detail.ratingsCount,
-                    reportStrings = reportStrings,
-                    onReportPlayer = onReportPlayer,
                     onRatePlayer = onRatePlayer,
                 )
             }

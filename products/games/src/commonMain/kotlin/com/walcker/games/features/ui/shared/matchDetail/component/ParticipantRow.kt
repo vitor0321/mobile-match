@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RateReview
-import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,7 +20,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.Participant
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
-import com.walcker.games.strings.ReportStrings
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.components.RatingStars
@@ -35,11 +33,8 @@ internal fun ParticipantRow(
     rateLabel: String,
     alreadyRated: Boolean,
     canRate: Boolean,
-    canReport: Boolean,
     ratingSummary: PlayerRatingSummary?,
     ratingsCountLabel: (Int) -> String,
-    reportStrings: ReportStrings,
-    onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -99,18 +94,6 @@ internal fun ParticipantRow(
                     imageVector = if (alreadyRated) Icons.Filled.RateReview else Icons.Outlined.RateReview,
                     contentDescription = rateLabel,
                     tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        if (canReport) {
-            IconButton(
-                onClick = { onReportPlayer(participant.userId, participant.displayName) },
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Flag,
-                    contentDescription = reportStrings.reportAction,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

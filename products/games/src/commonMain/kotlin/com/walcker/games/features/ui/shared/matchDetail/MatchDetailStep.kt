@@ -72,11 +72,9 @@ import com.walcker.games.features.ui.shared.matchDetail.component.ParticipantsLi
 import com.walcker.games.features.ui.shared.matchDetail.component.StaticParticipantsList
 import com.walcker.games.features.ui.shared.matchDetail.component.StatusBadge
 import com.walcker.games.features.ui.shared.ratings.RatingBottomSheet
-import com.walcker.games.features.ui.shared.reports.ReportBottomSheet
 import com.walcker.games.strings.GamesStrings
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.MatchDetailStrings
-import com.walcker.games.strings.ReportStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarTopBar
@@ -333,16 +331,6 @@ internal fun MatchDetailContent(
                     onDismiss = { onEvent(MatchDetailEvent.DismissStatusChange) },
                 )
             }
-            state.reportErrorMessage?.let { message ->
-                Banner(
-                    message = message,
-                    container = MaterialTheme.colorScheme.errorContainer,
-                    onContainer = MaterialTheme.colorScheme.onErrorContainer,
-                    dismissContentDescription = detail.dismissContentDescription,
-                    onDismiss = { onEvent(MatchDetailEvent.DismissReportError) },
-                )
-            }
-
             when {
                 state.isLoading -> LoadingBlock(contentDescription = detail.loadingLabel)
 
@@ -378,10 +366,6 @@ internal fun MatchDetailContent(
                         isParticipant = isParticipant,
                         participantRatings = state.participantRatings,
                         organizerRatingsGiven = state.organizerRatingsGiven,
-                        reportStrings = strings.reports,
-                        onReportPlayer = { userId, displayName ->
-                            onEvent(MatchDetailEvent.OpenReportSheet(userId, displayName))
-                        },
                         onRatePlayer = { userId, displayName ->
                             onEvent(MatchDetailEvent.OpenRatingSheet(userId, displayName))
                         },
@@ -418,17 +402,6 @@ internal fun MatchDetailContent(
             )
         }
     }
-
-    ReportBottomSheet(
-        isVisible = state.showReportSheet,
-        playerName = state.selectedPlayerForReport?.second ?: "",
-        strings = strings.reports,
-        isSubmitting = state.isSubmittingReport,
-        onDismiss = { onEvent(MatchDetailEvent.CloseReportSheet) },
-        onSubmit = { reason, details ->
-            onEvent(MatchDetailEvent.SubmitReport(reason, details))
-        },
-    )
 
     RatingBottomSheet(
         isVisible = state.showRatingSheet,
@@ -519,8 +492,6 @@ internal fun MatchDetailBody(
     isParticipant: Boolean,
     participantRatings: Map<String, PlayerRatingSummary>,
     organizerRatingsGiven: Map<String, Rating>,
-    reportStrings: ReportStrings,
-    onReportPlayer: (userId: String, displayName: String) -> Unit,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     onDismissRatingSuccess: () -> Unit,
     onDismissRatingError: () -> Unit,
@@ -684,8 +655,6 @@ internal fun MatchDetailBody(
                 currentUserId = currentUserId,
                 participantRatings = participantRatings,
                 organizerRatingsGiven = organizerRatingsGiven,
-                reportStrings = reportStrings,
-                onReportPlayer = onReportPlayer,
                 onRatePlayer = onRatePlayer,
             )
         } else {
