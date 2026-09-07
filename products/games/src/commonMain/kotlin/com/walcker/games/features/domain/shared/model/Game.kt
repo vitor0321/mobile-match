@@ -56,6 +56,12 @@ internal fun Game.canOrganizerRate(userId: String?): Boolean =
         userId != null &&
         userId == organizerId
 
+internal fun Game.canRateOrganizer(userId: String?): Boolean =
+    status != MatchStatus.CANCELLED &&
+        userId != null &&
+        userId != organizerId &&
+        userId in participants
+
 internal enum class MatchRole {
     ORGANIZER,
     PARTICIPANT,

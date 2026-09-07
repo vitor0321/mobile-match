@@ -15,6 +15,8 @@ internal interface PlayerSource {
 
     suspend fun getPlayersRatingSummary(userIds: List<String>): Result<Map<String, PlayerRatingSummary>>
 
+    suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?>
+
     suspend fun getPlayerRatings(
         userId: String,
         limit: Int = 20,

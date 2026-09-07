@@ -86,6 +86,22 @@ internal class FirestorePlayerSource(
         return PlayerRatingSummary(rating = rating, ratingCount = count)
     }
 
+    override suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?> =
+        runCatching {
+            firestore
+                .document("$PROFILES_COLLECTION/$organizerId")
+                .get()
+                .getOrNull()
+                ?.toOrganizerRatingSummary()
+        }
+
+    private fun DocumentSnapshot.toOrganizerRatingSummary(): PlayerRatingSummary? {
+        val count = (getLong(FIELD_ORGANIZER_RATING_COUNT) ?: 0L).toInt()
+        if (count <= 0) return null
+        val rating = getDouble(FIELD_ORGANIZER_RATING)?.toFloat() ?: return null
+        return PlayerRatingSummary(rating = rating, ratingCount = count)
+    }
+
     override suspend fun getPlayerRatings(
         userId: String,
         limit: Int,
@@ -156,6 +172,8 @@ internal class FirestorePlayerSource(
         const val FIELD_AVATAR_URL = "avatarUrl"
         const val FIELD_RATING = "rating"
         const val FIELD_RATING_COUNT = "ratingCount"
+        const val FIELD_ORGANIZER_RATING = "asOrganizerRating"
+        const val FIELD_ORGANIZER_RATING_COUNT = "asOrganizerRatingCount"
         const val FIELD_SPORTS = "sports"
         const val FIELD_CITY = "city"
         const val FIELD_NEIGHBORHOOD = "neighborhood"

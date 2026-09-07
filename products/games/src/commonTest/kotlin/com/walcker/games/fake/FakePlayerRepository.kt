@@ -15,6 +15,7 @@ internal class FakePlayerRepository(
     var searchResult: Result<PlayerSearchResults> = Result.success(PlayerSearchResults.Empty),
     var detailsResult: Result<PlayerDetails> = Result.success(playerDetails()),
     var ratingSummaryResult: Result<Map<String, PlayerRatingSummary>> = Result.success(emptyMap()),
+    var organizerRatingSummaryResult: Result<PlayerRatingSummary?> = Result.success(null),
     var ratingPages: Map<String?, Result<RatingsPage>> =
         mapOf(null to Result.success(RatingsPage.Empty)),
 ) : PlayerRepository {
@@ -41,6 +42,9 @@ internal class FakePlayerRepository(
     override suspend fun getPlayersRatingSummary(
         userIds: List<String>,
     ): Result<Map<String, PlayerRatingSummary>> = ratingSummaryResult
+
+    override suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?> =
+        organizerRatingSummaryResult
 
     override suspend fun getPlayerRatings(
         userId: String,

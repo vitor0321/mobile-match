@@ -151,3 +151,40 @@ class GameCanOrganizerRateTest {
         assertTrue(future.canOrganizerRate(userId = organizer))
     }
 }
+
+class GameCanRateOrganizerTest {
+    private val organizer = "organizer-1"
+    private val participant = "player-2"
+
+    private fun match(
+        status: MatchStatus = MatchStatus.OPEN,
+        participants: List<String> = listOf(organizer, participant),
+    ) = game(status = status, organizerId = organizer, participants = participants)
+
+    @Test
+    fun `libera para participante confirmado que nao e o organizador`() {
+        assertTrue(match().canRateOrganizer(userId = participant))
+    }
+
+    @Test
+    fun `nao libera para o proprio organizador`() {
+        assertFalse(match().canRateOrganizer(userId = organizer))
+    }
+
+    @Test
+    fun `nao libera para quem nao esta confirmado na partida`() {
+        assertFalse(match().canRateOrganizer(userId = "estranho"))
+    }
+
+    @Test
+    fun `nao libera sem sessao resolvida`() {
+        assertFalse(match().canRateOrganizer(userId = null))
+    }
+
+    @Test
+    fun `nao libera em partida cancelada`() {
+        val cancelled = match(status = MatchStatus.CANCELLED)
+
+        assertFalse(cancelled.canRateOrganizer(userId = participant))
+    }
+}
