@@ -27,7 +27,6 @@ internal fun PlayerDetailsDto.toDomain(): PlayerDetails =
         city = city,
         neighborhood = neighborhood,
         memberSinceMs = createdAtMs,
-        dimensionAverages = dimensionAverages,
     )
 
 private fun List<String>.toSports(): List<Sport> =

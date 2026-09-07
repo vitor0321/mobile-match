@@ -1,9 +1,7 @@
 package com.walcker.games.features.data.shared.source
 
-import com.walcker.games.features.domain.shared.model.DimensionAverage
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
-import com.walcker.games.features.domain.shared.model.RatingDimension
 import com.walcker.games.features.domain.shared.model.RatingSort
 import com.walcker.games.features.domain.shared.model.RatingsPage
 
@@ -53,5 +51,4 @@ internal data class PlayerDetailsDto(
     val city: String?,
     val neighborhood: String?,
     val createdAtMs: Long,
-    val dimensionAverages: Map<RatingDimension, DimensionAverage> = emptyMap(),
 )

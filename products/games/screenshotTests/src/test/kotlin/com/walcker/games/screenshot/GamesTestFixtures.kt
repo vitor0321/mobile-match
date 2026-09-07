@@ -3,7 +3,6 @@
 package com.walcker.games.screenshot
 
 import com.walcker.games.features.data.shared.model.NotificationHistoryItem
-import com.walcker.games.features.domain.shared.model.DimensionAverage
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.MatchStatus
@@ -12,7 +11,6 @@ import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerDetails
 import com.walcker.games.features.domain.shared.model.PlayerSearchResult
 import com.walcker.games.features.domain.shared.model.Rating
-import com.walcker.games.features.domain.shared.model.RatingDimension
 import com.walcker.games.features.domain.shared.model.RatingDistribution
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.repository.MyMatch
@@ -135,7 +133,6 @@ internal fun fakePlayerDetails(
     favoriteSports: List<Sport> = listOf(Sport.FUTSAL, Sport.FUTEBOL),
     city: String? = "São Paulo",
     neighborhood: String? = "Centro",
-    dimensionAverages: Map<RatingDimension, DimensionAverage> = emptyMap(),
 ): PlayerDetails =
     PlayerDetails(
         userId = userId,
@@ -147,7 +144,6 @@ internal fun fakePlayerDetails(
         city = city,
         neighborhood = neighborhood,
         memberSinceMs = 1_700_000_000_000L,
-        dimensionAverages = dimensionAverages,
     )
 
 internal fun fakeRatingDistribution(counts: List<Int> = listOf(1, 1, 2, 3, 5)): RatingDistribution = RatingDistribution(counts = counts)

@@ -8,5 +8,4 @@ internal data class Rating(
     val rating: Int,
     val comment: String,
     val createdAtMs: Long,
-    val dimensions: RatingDimensions = RatingDimensions.None,
 )

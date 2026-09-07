@@ -3,7 +3,6 @@ package com.walcker.games.features.data.shared.repository
 import com.walcker.games.fake.FakeRatingSource
 import com.walcker.games.fake.playerDetails
 import com.walcker.games.features.data.shared.cache.InMemoryPlayerCache
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -30,7 +29,6 @@ class RatingRepositoryImplTest {
                 ratedUserId = "player-2",
                 rating = 5,
                 comment = "",
-                dimensions = RatingDimensions.None,
             )
 
             assertNull(cache.details("player-2"))
@@ -48,7 +46,6 @@ class RatingRepositoryImplTest {
                 ratedUserId = "player-2",
                 rating = 5,
                 comment = "",
-                dimensions = RatingDimensions.None,
             )
 
             assertNotNull(cache.details("player-2"))
@@ -66,7 +63,6 @@ class RatingRepositoryImplTest {
                     ratedUserId = "player-2",
                     rating = 4,
                     comment = "",
-                    dimensions = RatingDimensions.None,
                 )
 
             assertEquals(outcome, result.getOrThrow())

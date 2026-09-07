@@ -4,8 +4,6 @@ package com.walcker.games.screenshot
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
-import com.walcker.games.features.domain.shared.model.DimensionAverage
-import com.walcker.games.features.domain.shared.model.RatingDimension
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsContent
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsState
 import com.walcker.games.strings.PtBrGamesStrings
@@ -17,16 +15,7 @@ class PlayerDetailsStepTest {
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    private val player =
-        fakePlayerDetails(
-            dimensionAverages =
-                mapOf(
-                    RatingDimension.PUNCTUALITY to DimensionAverage(average = 4.5f, count = 10),
-                    RatingDimension.RESPECT to DimensionAverage(average = 4.8f, count = 10),
-                    RatingDimension.FAIR_PLAY to DimensionAverage(average = 4.2f, count = 10),
-                    RatingDimension.BEHAVIOR to DimensionAverage(average = 4.9f, count = 10),
-                ),
-        )
+    private val player = fakePlayerDetails()
 
     private val loadedState =
         PlayerDetailsState(

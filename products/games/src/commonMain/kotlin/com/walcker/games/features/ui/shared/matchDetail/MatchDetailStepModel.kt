@@ -8,7 +8,6 @@ import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
@@ -127,7 +126,6 @@ internal sealed interface MatchDetailEvent {
     data class SubmitRating(
         val rating: Int,
         val comment: String,
-        val dimensions: RatingDimensions,
     ) : MatchDetailEvent
 
     data object DismissRatingError : MatchDetailEvent
@@ -268,7 +266,7 @@ internal class MatchDetailStepModel(
                 }
             }
             is MatchDetailEvent.SubmitRating -> {
-                submitPlayerRating(event.rating, event.comment, event.dimensions)
+                submitPlayerRating(event.rating, event.comment)
             }
             is MatchDetailEvent.DismissRatingError -> {
                 _state.update { it.copy(ratingErrorMessage = null) }
@@ -338,7 +336,6 @@ internal class MatchDetailStepModel(
     private fun submitPlayerRating(
         rating: Int,
         comment: String,
-        dimensions: RatingDimensions,
     ) {
         val ratedUserId = _state.value.selectedPlayerForRating?.first ?: return
         val strings = stringsHolder.resolveStringsOrDefault().ratings
@@ -350,7 +347,6 @@ internal class MatchDetailStepModel(
                 ratedUserId = ratedUserId,
                 rating = rating,
                 comment = comment,
-                dimensions = dimensions,
             ).onSuccess { outcome ->
                 analytics.track(AnalyticsEvent.PlayerRated(rating))
                 val message =

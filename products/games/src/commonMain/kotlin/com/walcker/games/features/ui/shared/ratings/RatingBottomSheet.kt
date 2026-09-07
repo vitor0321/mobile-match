@@ -6,7 +6,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.ui.shared.ratings.component.RatingForm
 import com.walcker.games.strings.RatingStrings
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -18,7 +17,7 @@ internal fun RatingBottomSheet(
     playerName: String,
     strings: RatingStrings,
     onDismiss: () -> Unit,
-    onSubmit: (rating: Int, comment: String, dimensions: RatingDimensions) -> Unit,
+    onSubmit: (rating: Int, comment: String) -> Unit,
     isLoading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {

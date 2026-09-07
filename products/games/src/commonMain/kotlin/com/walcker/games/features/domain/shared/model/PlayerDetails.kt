@@ -10,5 +10,4 @@ internal data class PlayerDetails(
     val city: String?,
     val neighborhood: String?,
     val memberSinceMs: Long,
-    val dimensionAverages: Map<RatingDimension, DimensionAverage> = emptyMap(),
 )

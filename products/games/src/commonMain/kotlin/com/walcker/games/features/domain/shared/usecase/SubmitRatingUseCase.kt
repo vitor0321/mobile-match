@@ -1,6 +1,5 @@
 package com.walcker.games.features.domain.shared.usecase
 
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.shared.repository.RatingRepository
 
@@ -12,8 +11,7 @@ internal class SubmitRatingUseCase(
         ratedUserId: String,
         rating: Int,
         comment: String,
-        dimensions: RatingDimensions,
-    ): Result<SubmitRatingOutcome> = ratingRepository.submitPlayerRating(matchId, ratedUserId, rating, comment, dimensions)
+    ): Result<SubmitRatingOutcome> = ratingRepository.submitPlayerRating(matchId, ratedUserId, rating, comment)
 }
 
 internal class SubmitMatchRatingUseCase(

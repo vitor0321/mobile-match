@@ -427,8 +427,8 @@ internal fun MatchDetailContent(
         playerName = state.selectedPlayerForRating?.second ?: "",
         strings = strings.ratings,
         onDismiss = { onEvent(MatchDetailEvent.CloseRatingSheet) },
-        onSubmit = { rating, comment, dimensions ->
-            onEvent(MatchDetailEvent.SubmitRating(rating, comment, dimensions))
+        onSubmit = { rating, comment ->
+            onEvent(MatchDetailEvent.SubmitRating(rating, comment))
         },
         isLoading = state.isSubmittingRating,
     )

@@ -15,8 +15,6 @@ internal data class PlayerDetailsStrings(
     val memberSince: (String) -> String,
     val ratingValue: (Float) -> String,
     val ratingAccessibility: (Float) -> String,
-    val dimensionsTitle: String,
-    val dimensionCount: (Int) -> String,
 )
 
 internal val playerDetailsStringsEn =
@@ -35,8 +33,6 @@ internal val playerDetailsStringsEn =
         ratingAccessibility = { value ->
             "Rated ${formatDecimal(value = value, decimals = 1, decimalSeparator = '.')} out of 5"
         },
-        dimensionsTitle = "Breakdown",
-        dimensionCount = { count -> if (count == 1) "1 answer" else "$count answers" },
     )
 
 internal val playerDetailsStringsPt =
@@ -55,6 +51,4 @@ internal val playerDetailsStringsPt =
         ratingAccessibility = { value ->
             "Nota ${formatDecimal(value = value, decimals = 1, decimalSeparator = ',')} de 5"
         },
-        dimensionsTitle = "Em detalhe",
-        dimensionCount = { count -> if (count == 1) "1 resposta" else "$count respostas" },
     )

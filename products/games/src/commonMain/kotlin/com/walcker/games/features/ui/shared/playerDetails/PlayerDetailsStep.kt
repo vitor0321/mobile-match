@@ -28,7 +28,6 @@ import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.domain.shared.model.PlayerDetails
-import com.walcker.games.features.ui.shared.playerDetails.component.DimensionAveragesCard
 import com.walcker.games.features.ui.shared.playerDetails.component.LoadingContent
 import com.walcker.games.features.ui.shared.playerDetails.component.PlayerHeader
 import com.walcker.games.features.ui.shared.playerDetails.component.RatingCard
@@ -162,16 +161,6 @@ internal fun PlayerDetailsContent(
                     averageLabel = strings.ratingValue(distribution.average),
                     totalLabel = strings.ratingsCount(distribution.total),
                     distribution = counts,
-                )
-            }
-        }
-
-        if (player.dimensionAverages.isNotEmpty()) {
-            item(key = "dimensions") {
-                DimensionAveragesCard(
-                    averages = player.dimensionAverages,
-                    strings = strings,
-                    ratingStrings = ratingStrings,
                 )
             }
         }

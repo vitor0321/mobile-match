@@ -1,7 +1,6 @@
 package com.walcker.games.features.data.shared.source
 
 import com.walcker.games.features.domain.shared.model.Rating
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.RatingSort
 import com.walcker.games.features.domain.shared.model.RatingsPage
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
@@ -12,7 +11,6 @@ internal interface RatingSource {
         ratedUserId: String,
         rating: Int,
         comment: String,
-        dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome>
 
     suspend fun submitMatchRating(

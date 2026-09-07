@@ -41,6 +41,5 @@ class PlayerMappersTest {
         assertEquals(dto.city, details.city)
         assertEquals(dto.neighborhood, details.neighborhood)
         assertEquals(dto.createdAtMs, details.memberSinceMs)
-        assertEquals(dto.dimensionAverages, details.dimensionAverages)
     }
 }

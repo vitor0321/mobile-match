@@ -1,10 +1,8 @@
 package com.walcker.games.features.data.shared.source
 
-import com.walcker.games.features.domain.shared.model.DimensionAverage
 import com.walcker.games.features.domain.shared.model.PROFILE_FIELD_IS_BANNED
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
-import com.walcker.games.features.domain.shared.model.RatingDimension
 import com.walcker.games.features.domain.shared.model.RatingSort
 import com.walcker.games.features.domain.shared.model.RatingsPage
 import com.walcker.match.firestore.DocumentSnapshot
@@ -101,17 +99,6 @@ internal class FirestorePlayerSource(
             cursor = cursor,
         )
 
-    private fun DocumentSnapshot.readDimensionAverages(): Map<RatingDimension, DimensionAverage> {
-        val count = (getLong(FIELD_RATING_COUNT) ?: 0L).toInt()
-        if (count <= 0) return emptyMap()
-
-        return RatingDimension.entries
-            .mapNotNull { dimension ->
-                val average = getDouble(dimension.averageField)?.toFloat() ?: return@mapNotNull null
-                dimension to DimensionAverage(average = average, count = count)
-            }.toMap()
-    }
-
     private fun PlayerSearchResultDto.matches(filters: PlayerSearchFilters): Boolean {
         val query = filters.query.trim()
         if (query.isNotEmpty() && !fullName.contains(query, ignoreCase = true)) return false
@@ -153,7 +140,6 @@ internal class FirestorePlayerSource(
                 city = getString(FIELD_CITY),
                 neighborhood = getString(FIELD_NEIGHBORHOOD),
                 createdAtMs = getTimestamp(FIELD_CREATED_AT) ?: 0L,
-                dimensionAverages = readDimensionAverages(),
             )
         } catch (e: Exception) {
             null

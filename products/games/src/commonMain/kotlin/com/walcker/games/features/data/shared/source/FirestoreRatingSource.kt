@@ -2,8 +2,6 @@ package com.walcker.games.features.data.shared.source
 
 import com.walcker.games.features.domain.shared.model.RATING_FIELD_CREATED_AT_MS
 import com.walcker.games.features.domain.shared.model.Rating
-import com.walcker.games.features.domain.shared.model.RatingDimension
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.RatingSort
 import com.walcker.games.features.domain.shared.model.RatingsPage
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
@@ -19,20 +17,16 @@ internal class FirestoreRatingSource(
         ratedUserId: String,
         rating: Int,
         comment: String,
-        dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome> =
         firestore
             .callFunction(
                 SUBMIT_RATING_FUNCTION,
-                buildMap {
-                    put("matchId", matchId)
-                    put("ratedUserId", ratedUserId)
-                    put("rating", rating)
-                    put("comment", comment)
-                    dimensions.answers.forEach { (dimension, stars) ->
-                        put(dimension.wireName, stars)
-                    }
-                },
+                mapOf(
+                    "matchId" to matchId,
+                    "ratedUserId" to ratedUserId,
+                    "rating" to rating,
+                    "comment" to comment,
+                ),
             ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
 
     override suspend fun submitMatchRating(
@@ -137,21 +131,10 @@ internal class FirestoreRatingSource(
                     getLong(RATING_FIELD_CREATED_AT_MS)
                         ?: getTimestamp(LEGACY_CREATED_AT_FIELD)
                         ?: 0L,
-                dimensions = readDimensions(),
             )
         } catch (e: Exception) {
             null
         }
-
-    private fun DocumentSnapshot.readDimensions(): RatingDimensions =
-        RatingDimensions(
-            answers =
-                RatingDimension.entries
-                    .mapNotNull { dimension ->
-                        val stars = getLong(dimension.wireName)?.toInt()
-                        if (stars != null && stars in RatingDimensions.VALID_RANGE) dimension to stars else null
-                    }.toMap(),
-        )
 
     private companion object {
         const val SUBMIT_RATING_FUNCTION = "submitPlayerRating"

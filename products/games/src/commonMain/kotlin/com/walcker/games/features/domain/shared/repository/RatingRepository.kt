@@ -1,7 +1,6 @@
 package com.walcker.games.features.domain.shared.repository
 
 import com.walcker.games.features.domain.shared.model.Rating
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 
 internal interface RatingRepository {
@@ -10,7 +9,6 @@ internal interface RatingRepository {
         ratedUserId: String,
         rating: Int,
         comment: String,
-        dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome>
 
     suspend fun submitMatchRating(

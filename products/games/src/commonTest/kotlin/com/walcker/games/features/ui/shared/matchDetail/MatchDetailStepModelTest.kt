@@ -16,7 +16,6 @@ import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.Participant
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
@@ -354,7 +353,7 @@ class MatchDetailStepModelTest {
             advanceUntilIdle()
 
             model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = "Bom jogo", dimensions = RatingDimensions.None))
+            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = "Bom jogo"))
             advanceUntilIdle()
 
             val state = model.state.value
@@ -371,7 +370,7 @@ class MatchDetailStepModelTest {
             advanceUntilIdle()
 
             model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = "", dimensions = RatingDimensions.None))
+            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = ""))
             advanceUntilIdle()
 
             assertEquals(stringsHolder.strings.ratings.alreadyRated, model.state.value.successMessage)
@@ -385,7 +384,7 @@ class MatchDetailStepModelTest {
             advanceUntilIdle()
 
             model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = "", dimensions = RatingDimensions.None))
+            model.onEvent(MatchDetailEvent.SubmitRating(rating = 5, comment = ""))
             advanceUntilIdle()
 
             val state = model.state.value

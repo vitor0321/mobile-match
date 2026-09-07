@@ -3,7 +3,6 @@ package com.walcker.games.features.data.shared.repository
 import com.walcker.games.features.data.shared.cache.InMemoryPlayerCache
 import com.walcker.games.features.data.shared.source.RatingSource
 import com.walcker.games.features.domain.shared.model.Rating
-import com.walcker.games.features.domain.shared.model.RatingDimensions
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.games.features.domain.shared.repository.RatingRepository
 
@@ -16,10 +15,9 @@ internal class RatingRepositoryImpl(
         ratedUserId: String,
         rating: Int,
         comment: String,
-        dimensions: RatingDimensions,
     ): Result<SubmitRatingOutcome> =
         ratingSource
-            .submitPlayerRating(matchId, ratedUserId, rating, comment, dimensions)
+            .submitPlayerRating(matchId, ratedUserId, rating, comment)
             .onSuccess { playerCache.invalidatePlayer(ratedUserId) }
 
     override suspend fun submitMatchRating(
