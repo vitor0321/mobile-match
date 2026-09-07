@@ -70,6 +70,7 @@ import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCa
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCase
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
+import com.walcker.games.features.domain.shared.usecase.SubmitOrganizerRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCaseImpl
@@ -124,6 +125,7 @@ internal val gamesDataModule =
         factory<SubmitReportUseCase> { SubmitReportUseCaseImpl(repository = get()) }
         factory { SubmitRatingUseCase(ratingRepository = get()) }
         factory { SubmitMatchRatingUseCase(ratingRepository = get()) }
+        factory { SubmitOrganizerRatingUseCase(ratingRepository = get()) }
         factory { GetUserRatingsUseCase(ratingRepository = get()) }
 
         single<PlayerSource> {

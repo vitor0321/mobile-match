@@ -16,6 +16,11 @@ internal interface RatingRepository {
         rating: Int,
     ): Result<SubmitRatingOutcome>
 
+    suspend fun submitOrganizerRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome>
+
     suspend fun getUserRatings(
         userId: String,
         limit: Int = 50,

@@ -25,6 +25,11 @@ internal class RatingRepositoryImpl(
         rating: Int,
     ): Result<SubmitRatingOutcome> = ratingSource.submitMatchRating(matchId, rating)
 
+    override suspend fun submitOrganizerRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> = ratingSource.submitOrganizerRating(matchId, rating)
+
     override suspend fun getUserRatings(
         userId: String,
         limit: Int,
