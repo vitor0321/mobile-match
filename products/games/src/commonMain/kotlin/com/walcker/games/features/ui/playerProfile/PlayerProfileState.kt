@@ -15,6 +15,8 @@ internal data class PlayerProfileState(
     val ratings: List<Rating> = emptyList(),
     val averageRating: Float = 0f,
     val totalRatings: Int = 0,
+    val organizerAverageRating: Float = 0f,
+    val organizerTotalRatings: Int = 0,
     val errorMessage: String? = null,
     val isAvailable: Boolean = false,
     val isUpdatingAvailability: Boolean = false,

@@ -277,6 +277,10 @@ internal fun PlayerProfileContent(
                     fallbackName = strings.fallbackAccountName,
                     averageRating = state.averageRating,
                     totalRatings = state.totalRatings,
+                    organizerAverageRating = state.organizerAverageRating,
+                    organizerTotalRatings = state.organizerTotalRatings,
+                    asPlayerLabel = strings.asPlayerLabel,
+                    asOrganizerLabel = strings.asOrganizerLabel,
                     ratingsCountLabel = strings.ratingsCount,
                     ratingContentDescription = strings.ratingContentDescription,
                 )

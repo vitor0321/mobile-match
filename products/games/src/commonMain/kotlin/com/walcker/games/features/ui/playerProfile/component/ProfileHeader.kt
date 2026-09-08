@@ -15,7 +15,6 @@ import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
-import com.walcker.match.core.format.formatDecimal
 
 @Composable
 internal fun ProfileHeader(
@@ -24,6 +23,10 @@ internal fun ProfileHeader(
     fallbackName: String,
     averageRating: Float,
     totalRatings: Int,
+    organizerAverageRating: Float,
+    organizerTotalRatings: Int,
+    asPlayerLabel: String,
+    asOrganizerLabel: String,
     ratingsCountLabel: (Int) -> String,
     ratingContentDescription: (Float) -> String,
     modifier: Modifier = Modifier,
@@ -44,20 +47,19 @@ internal fun ProfileHeader(
             overflow = TextOverflow.Ellipsis,
         )
         if (totalRatings > 0) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RatingStars(
-                    rating = averageRating,
-                    contentDescription = ratingContentDescription(averageRating),
-                )
-                Text(
-                    text = "${formatDecimal(averageRating, 1)} (${ratingsCountLabel(totalRatings)})",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            RatingSummaryRow(
+                label = asPlayerLabel,
+                rating = averageRating,
+                contentDescription = "${ratingContentDescription(averageRating)} — ${ratingsCountLabel(totalRatings)}",
+            )
+        }
+        if (organizerTotalRatings > 0) {
+            RatingSummaryRow(
+                label = asOrganizerLabel,
+                rating = organizerAverageRating,
+                contentDescription =
+                    "${ratingContentDescription(organizerAverageRating)} — ${ratingsCountLabel(organizerTotalRatings)}",
+            )
         }
         if (email != null && email != displayName) {
             Text(
@@ -69,5 +71,27 @@ internal fun ProfileHeader(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+@Composable
+private fun RatingSummaryRow(
+    label: String,
+    rating: Float,
+    contentDescription: String,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        RatingStars(
+            rating = rating,
+            contentDescription = contentDescription,
+        )
     }
 }

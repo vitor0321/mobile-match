@@ -49,4 +49,11 @@ class PlayerProfileStepTest {
 
     @Test
     fun loading_lightMode() = snapshot(PlayerProfileState(isLoading = true), darkTheme = false)
+
+    @Test
+    fun organizerAndPlayerRatings_lightMode() =
+        snapshot(
+            loadedState.copy(organizerAverageRating = 3.8f, organizerTotalRatings = 4),
+            darkTheme = false,
+        )
 }

@@ -8,6 +8,7 @@ import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSport
 import com.walcker.games.features.domain.shared.error.GamesError
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.Sport
+import com.walcker.games.features.domain.shared.repository.PlayerRepository
 import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
 import com.walcker.games.strings.GamesStringsHolder
@@ -36,6 +37,7 @@ internal class PlayerProfileStepModel(
     private val sessionHolder: SessionHolder,
     private val getMyMatches: GetMyMatchesUseCase,
     private val getUserRatings: GetUserRatingsUseCase,
+    private val playerRepository: PlayerRepository,
     private val stringsHolder: GamesStringsHolder,
     private val logoutService: LogoutService,
     private val observeAvailability: ObserveAvailabilityUseCase,
@@ -76,6 +78,8 @@ internal class PlayerProfileStepModel(
                             ratings = emptyList(),
                             averageRating = 0f,
                             totalRatings = 0,
+                            organizerAverageRating = 0f,
+                            organizerTotalRatings = 0,
                             isAvailable = false,
                             availableUntilMs = null,
                             availableSports = emptySet(),
@@ -230,6 +234,7 @@ internal class PlayerProfileStepModel(
 
             val matchesResult = getMyMatches(userId, nowSeconds)
             val ratingsResult = getUserRatings(userId, limit = 50)
+            val organizerRatingSummary = playerRepository.getOrganizerRatingSummary(userId).getOrNull()
 
             matchesResult
                 .onSuccess { result ->
@@ -256,6 +261,8 @@ internal class PlayerProfileStepModel(
                                     ratings = ratings,
                                     averageRating = avgRating,
                                     totalRatings = ratings.size,
+                                    organizerAverageRating = organizerRatingSummary?.rating ?: 0f,
+                                    organizerTotalRatings = organizerRatingSummary?.ratingCount ?: 0,
                                 )
                             }
                         }.onFailure { error ->
@@ -268,6 +275,8 @@ internal class PlayerProfileStepModel(
                                     matchesParticipated = participated,
                                     nextMatch = nextMatch,
                                     errorMessage = message,
+                                    organizerAverageRating = organizerRatingSummary?.rating ?: 0f,
+                                    organizerTotalRatings = organizerRatingSummary?.ratingCount ?: 0,
                                 )
                             }
                         }

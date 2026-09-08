@@ -6,6 +6,7 @@ import com.walcker.games.fake.FakeAvailabilityRepository
 import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeLogoutService
+import com.walcker.games.fake.FakePlayerRepository
 import com.walcker.games.fake.FakeRatingRepository
 import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
@@ -55,6 +56,7 @@ class PlayerProfileStepModelTest {
     private fun buildModel(
         gameRepository: FakeGameRepository = FakeGameRepository(),
         ratingRepository: FakeRatingRepository = FakeRatingRepository(),
+        playerRepository: FakePlayerRepository = FakePlayerRepository(),
         availabilityRepository: FakeAvailabilityRepository = FakeAvailabilityRepository(),
         sessionHolder: FakeSessionHolder = FakeSessionHolder(),
         logoutService: FakeLogoutService = FakeLogoutService(),
@@ -62,6 +64,7 @@ class PlayerProfileStepModelTest {
         sessionHolder = sessionHolder,
         getMyMatches = GetMyMatchesUseCaseImpl(gameRepository),
         getUserRatings = GetUserRatingsUseCase(ratingRepository),
+        playerRepository = playerRepository,
         stringsHolder = stringsHolder,
         logoutService = logoutService,
         observeAvailability = ObserveAvailabilityUseCaseImpl(availabilityRepository),

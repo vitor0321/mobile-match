@@ -85,6 +85,7 @@ internal val gamesUiModule =
                 sessionHolder = get(),
                 getMyMatches = get(),
                 getUserRatings = get(),
+                playerRepository = get(),
                 stringsHolder = get(),
                 logoutService = get(),
                 observeAvailability = get(),
