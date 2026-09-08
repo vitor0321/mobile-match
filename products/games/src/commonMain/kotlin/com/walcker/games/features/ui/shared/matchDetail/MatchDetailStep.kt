@@ -324,6 +324,15 @@ internal fun MatchDetailContent(
                     onDismiss = { onEvent(MatchDetailEvent.DismissSuccess) },
                 )
             }
+            state.actionErrorMessage?.let { message ->
+                Banner(
+                    message = message,
+                    container = MaterialTheme.colorScheme.errorContainer,
+                    onContainer = MaterialTheme.colorScheme.onErrorContainer,
+                    dismissContentDescription = detail.dismissContentDescription,
+                    onDismiss = { onEvent(MatchDetailEvent.DismissActionError) },
+                )
+            }
             state.statusChangeMessage?.let { message ->
                 Banner(
                     message = message,
@@ -718,18 +727,33 @@ internal fun MatchDetailBody(
             }
         }
 
-        if (isOrganizer && !isParticipant) {
-            if (isJoining) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CedarLoading(contentDescription = detail.participateAction, size = ActionLoadingSize)
+        if (isOrganizer) {
+            if (isParticipant) {
+                if (isLeavingMatch) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CedarLoading(contentDescription = detail.leaveMatch, size = ActionLoadingSize)
+                    }
+                } else {
+                    CedarSecondaryButton(
+                        text = detail.leaveMatch,
+                        onClick = onLeaveMatch,
+                        enabled = !isClosed,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             } else {
-                CedarPrimaryButton(
-                    text = detail.participateAction,
-                    onClick = onJoinMatch,
-                    enabled = !isClosed,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (isJoining) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CedarLoading(contentDescription = detail.participateAction, size = ActionLoadingSize)
+                    }
+                } else {
+                    CedarPrimaryButton(
+                        text = detail.participateAction,
+                        onClick = onJoinMatch,
+                        enabled = !isClosed,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 

@@ -55,6 +55,7 @@ internal data class MatchDetailState(
     val participants: ParticipantsSummary? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
+    val actionErrorMessage: String? = null,
     val justPromoted: Boolean = false,
     val isJoining: Boolean = false,
     val joinOutcome: JoinMatchOutcome? = null,
@@ -104,6 +105,8 @@ internal sealed interface MatchDetailEvent {
     ) : MatchDetailEvent
 
     data object DismissSuccess : MatchDetailEvent
+
+    data object DismissActionError : MatchDetailEvent
 
     data object DismissStatusChange : MatchDetailEvent
 
@@ -244,6 +247,9 @@ internal class MatchDetailStepModel(
             is MatchDetailEvent.SubmitMatchRating -> submitMatchRatingAction(event.rating)
             MatchDetailEvent.DismissSuccess -> {
                 _state.update { it.copy(successMessage = null, joinOutcome = null) }
+            }
+            MatchDetailEvent.DismissActionError -> {
+                _state.update { it.copy(actionErrorMessage = null) }
             }
             MatchDetailEvent.DismissStatusChange -> {
                 _state.update { it.copy(statusChangeMessage = null) }
@@ -436,7 +442,7 @@ internal class MatchDetailStepModel(
                 return@launch
             }
 
-            _state.update { it.copy(isJoining = true, errorMessage = null) }
+            _state.update { it.copy(isJoining = true, actionErrorMessage = null) }
             analytics.track(AnalyticsEvent.MatchJoinAttempted(sport))
 
             joinGame(matchId)
@@ -486,7 +492,7 @@ internal class MatchDetailStepModel(
                     _state.update {
                         it.copy(
                             isJoining = false,
-                            errorMessage = strings.joinError,
+                            actionErrorMessage = strings.joinError,
                         )
                     }
                 }
@@ -500,7 +506,7 @@ internal class MatchDetailStepModel(
                 ?.name ?: UNKNOWN_SPORT
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
-            _state.update { it.copy(isSubmittingMatchRating = true, errorMessage = null) }
+            _state.update { it.copy(isSubmittingMatchRating = true, actionErrorMessage = null) }
 
             submitMatchRating(matchId, rating)
                 .onSuccess { outcome ->
@@ -523,7 +529,7 @@ internal class MatchDetailStepModel(
                     _state.update {
                         it.copy(
                             isSubmittingMatchRating = false,
-                            errorMessage = strings.matchRatingSubmitError,
+                            actionErrorMessage = strings.matchRatingSubmitError,
                         )
                     }
                 }
@@ -537,7 +543,7 @@ internal class MatchDetailStepModel(
                 ?.name ?: UNKNOWN_SPORT
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
-            _state.update { it.copy(isLeavingMatch = true, showLeaveConfirmDialog = false, errorMessage = null) }
+            _state.update { it.copy(isLeavingMatch = true, showLeaveConfirmDialog = false, actionErrorMessage = null) }
 
             leaveMatch(matchId)
                 .onSuccess {
@@ -553,7 +559,7 @@ internal class MatchDetailStepModel(
                     _state.update {
                         it.copy(
                             isLeavingMatch = false,
-                            errorMessage = strings.leaveError,
+                            actionErrorMessage = strings.leaveError,
                         )
                     }
                 }
@@ -568,7 +574,7 @@ internal class MatchDetailStepModel(
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
             _state.update {
-                it.copy(isCancellingSeries = true, showCancelSeriesConfirmDialog = false, errorMessage = null)
+                it.copy(isCancellingSeries = true, showCancelSeriesConfirmDialog = false, actionErrorMessage = null)
             }
 
             cancelMatchSeries(matchId)
@@ -585,7 +591,7 @@ internal class MatchDetailStepModel(
                     _state.update {
                         it.copy(
                             isCancellingSeries = false,
-                            errorMessage = strings.cancelSeriesError,
+                            actionErrorMessage = strings.cancelSeriesError,
                         )
                     }
                 }
@@ -599,7 +605,7 @@ internal class MatchDetailStepModel(
                 ?.name ?: UNKNOWN_SPORT
         val strings = stringsHolder.resolveStringsOrDefault().matchDetail
         screenModelScope.launch {
-            _state.update { it.copy(isCancellingMatch = true, showCancelConfirmDialog = false, errorMessage = null) }
+            _state.update { it.copy(isCancellingMatch = true, showCancelConfirmDialog = false, actionErrorMessage = null) }
 
             cancelMatch(matchId)
                 .onSuccess { outcome ->
@@ -620,7 +626,7 @@ internal class MatchDetailStepModel(
                     _state.update {
                         it.copy(
                             isCancellingMatch = false,
-                            errorMessage = strings.cancelError,
+                            actionErrorMessage = strings.cancelError,
                         )
                     }
                 }

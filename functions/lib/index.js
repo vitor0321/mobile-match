@@ -433,6 +433,11 @@ exports.joinMatch = (0, https_1.onCall)({ region: REGION }, async (request) => {
 // e **promove automaticamente o primeiro da fila (FIFO)** — regra B3 do plano
 // de migração (substitui o trigger `promote_waitlist()` do Postgres).
 //
+// O organizador também pode sair — ele só entra em `participants` se quiser,
+// pelo mesmo joinMatch de qualquer outro jogador (ver createMatch no client:
+// participants nasce vazio). Sair não cancela a partida nem tira o cargo de
+// organizador, só libera a vaga de jogador que ele mesmo pegou.
+//
 // Retorna {matchId, promotedUserId?} — promotedUserId é o uid que subiu da
 // fila, se houver, para que o app possa mostrar o banner localmente.
 // ---------------------------------------------------------------------------
@@ -454,10 +459,6 @@ exports.leaveMatch = (0, https_1.onCall)({ region: REGION }, async (request) => 
         const status = String(match.status ?? "OPEN");
         if (status === "CANCELLED" || status === "FINISHED") {
             throw new https_1.HttpsError("failed-precondition", `Cannot leave match in status ${status}.`);
-        }
-        // Organizer cannot leave — must cancel instead.
-        if (match.organizerId === uid) {
-            throw new https_1.HttpsError("failed-precondition", "Organizer must cancel the match, not leave it.");
         }
         const participants = Array.isArray(match.participants)
             ? match.participants.filter((x) => typeof x === "string")

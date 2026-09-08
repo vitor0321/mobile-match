@@ -85,6 +85,13 @@ class MatchDetailStepTest {
         )
 
     @Test
+    fun actionError_lightMode() =
+        snapshot(
+            loadedState.copy(actionErrorMessage = "Não foi possível sair da partida. Tente de novo."),
+            darkTheme = false,
+        )
+
+    @Test
     fun organizerNotParticipating_lightMode() =
         snapshot(
             loadedState.copy(

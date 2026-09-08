@@ -50,6 +50,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -284,7 +285,7 @@ class MatchDetailStepModelTest {
             model.onEvent(MatchDetailEvent.JoinMatch)
             advanceUntilIdle()
 
-            assertEquals(stringsHolder.strings.matchDetail.joinError, model.state.value.errorMessage)
+            assertEquals(stringsHolder.strings.matchDetail.joinError, model.state.value.actionErrorMessage)
             assertFalse(model.state.value.isJoining)
         }
 
@@ -347,7 +348,24 @@ class MatchDetailStepModelTest {
             model.onEvent(MatchDetailEvent.ConfirmCancelMatch)
             advanceUntilIdle()
 
-            assertEquals(stringsHolder.strings.matchDetail.cancelError, model.state.value.errorMessage)
+            assertEquals(stringsHolder.strings.matchDetail.cancelError, model.state.value.actionErrorMessage)
+        }
+
+    @Test
+    fun `a failed leave surfaces the leave error without hiding the match`() =
+        runTest(testDispatcher) {
+            val gameRepository = FakeGameRepository(leaveMatchResult = Result.failure(IllegalStateException("offline")))
+            val model = buildModel(gameRepository = gameRepository)
+            advanceUntilIdle()
+
+            model.onEvent(MatchDetailEvent.RequestLeaveMatch)
+            model.onEvent(MatchDetailEvent.ConfirmLeaveMatch)
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(stringsHolder.strings.matchDetail.leaveError, state.actionErrorMessage)
+            assertNull(state.errorMessage)
+            assertNotNull(state.match)
         }
 
     @Test
