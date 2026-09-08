@@ -5,6 +5,7 @@ import com.walcker.games.features.domain.shared.model.CreateMatchRequest
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
+import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.features.domain.shared.repository.MyMatch
@@ -24,6 +25,7 @@ internal class FakeGameRepository(
     var leaveMatchResult: Result<LeaveMatchOutcome> = Result.success(LeaveMatchOutcome("match-1")),
     var getGameByIdResult: Result<Game> = Result.success(game()),
     var loadMoreMatchesResult: Result<Unit> = Result.success(Unit),
+    var searchMatchesResult: Result<NearbyMatchesPage> = Result.success(NearbyMatchesPage(games = emptyList(), rangeCursors = emptyList())),
 ) : GameRepository {
     private val matchesFlow = MutableStateFlow<List<Game>>(emptyList())
     private val hasMoreMatchesFlow = MutableStateFlow(false)
@@ -32,6 +34,7 @@ internal class FakeGameRepository(
 
     val refreshCalls: MutableList<Double> = mutableListOf()
     val loadMoreMatchesCalls: MutableList<Double> = mutableListOf()
+    val searchMatchesCalls: MutableList<Double> = mutableListOf()
     val joinGameCalls: MutableList<String> = mutableListOf()
     val createMatchCalls: MutableList<CreateMatchRequest> = mutableListOf()
     val updateMatchCalls: MutableList<Pair<String, CreateMatchRequest>> = mutableListOf()
@@ -68,6 +71,14 @@ internal class FakeGameRepository(
     override suspend fun loadMoreMatches(radiusKm: Double): Result<Unit> {
         loadMoreMatchesCalls += radiusKm
         return loadMoreMatchesResult
+    }
+
+    override suspend fun searchMatches(
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): Result<NearbyMatchesPage> {
+        searchMatchesCalls += radiusKm
+        return searchMatchesResult
     }
 
     override suspend fun joinGame(gameId: String): Result<JoinMatchOutcome> {

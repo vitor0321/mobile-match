@@ -3,6 +3,7 @@ package com.walcker.games.features.ui.search
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCase
+import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.isDiscoverable
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.strings.GamesStringsHolder
@@ -17,13 +18,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val MILLIS_PER_SECOND = 1000L
+private const val SEARCH_RADIUS_KM = 20_000.0
 
 internal class SearchStepModel(
     private val repository: GameRepository,
@@ -43,6 +43,7 @@ internal class SearchStepModel(
             SearchState(
                 strings = gamesStrings.search,
                 cardStrings = gamesStrings.gameList,
+                mapStrings = gamesStrings.map,
             ),
         )
     val state: StateFlow<SearchState> = _state.asStateFlow()
@@ -50,15 +51,39 @@ internal class SearchStepModel(
     private val _effects = Channel<SearchEffect>(Channel.BUFFERED)
     val effects: Flow<SearchEffect> = _effects.receiveAsFlow()
 
-    private var allMatches: List<com.walcker.games.features.domain.shared.model.Game> = emptyList()
+    private var allMatches: List<Game> = emptyList()
 
     init {
-        repository
-            .observeMatches()
-            .onEach { games ->
-                allMatches = games
+        loadAllMatches()
+    }
+
+    private fun loadAllMatches() {
+        screenModelScope.launch {
+            _state.update { it.copy(isLoading = true, errorMessage = null) }
+
+            val accumulated = mutableListOf<Game>()
+            var cursors: List<String?>? = null
+            var failure: Throwable? = null
+
+            do {
+                val result = repository.searchMatches(SEARCH_RADIUS_KM, cursors)
+                val page = result.getOrNull()
+                if (page == null) {
+                    failure = result.exceptionOrNull()
+                    break
+                }
+                accumulated += page.games
+                cursors = page.rangeCursors
+            } while (cursors.any { it != null })
+
+            if (failure != null) {
+                _state.update { it.copy(isLoading = false, errorMessage = gamesStrings.search.loadErrorMessage) }
+            } else {
+                allMatches = accumulated
+                _state.update { it.copy(isLoading = false) }
                 applyQuery(_state.value.query)
-            }.launchIn(screenModelScope)
+            }
+        }
     }
 
     init {
@@ -112,6 +137,16 @@ internal class SearchStepModel(
                 screenModelScope.launch {
                     _effects.send(SearchEffect.NavigateToMatchDetail(event.gameId))
                 }
+            }
+            SearchEvents.Retry -> loadAllMatches()
+            SearchEvents.ToggleMap -> {
+                _state.update { it.copy(showMap = !it.showMap, selectedMapMatchId = null) }
+            }
+            is SearchEvents.PinSelected -> {
+                _state.update { it.copy(selectedMapMatchId = event.matchId) }
+            }
+            SearchEvents.MapPreviewDismissed -> {
+                _state.update { it.copy(selectedMapMatchId = null) }
             }
         }
     }
@@ -176,6 +211,7 @@ internal class SearchStepModel(
             it.copy(
                 strings = gamesStrings.search,
                 cardStrings = gamesStrings.gameList,
+                mapStrings = gamesStrings.map,
                 results = filtered.toImmutableList(),
             )
         }

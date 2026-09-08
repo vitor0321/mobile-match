@@ -7,6 +7,8 @@ import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
+import com.walcker.games.features.domain.shared.model.Game
+import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
@@ -51,6 +53,8 @@ class SearchStepModelTest {
     // isDiscoverable() drops anything already started, so fixtures need a start far in the future.
     private fun futureGame(id: String) = game(id = id, startsAtSeconds = Long.MAX_VALUE / 1000)
 
+    private fun pageOf(games: List<Game>) = Result.success(NearbyMatchesPage(games = games, rangeCursors = emptyList()))
+
     @Test
     fun `starts empty until matches arrive from the repository`() =
         runTest(testDispatcher) {
@@ -67,9 +71,8 @@ class SearchStepModelTest {
     @Test
     fun `an empty query matches every discoverable game`() =
         runTest(testDispatcher) {
-            val repository = FakeGameRepository()
+            val repository = FakeGameRepository(searchMatchesResult = pageOf(listOf(futureGame("match-1"), futureGame("match-2"))))
             val model = buildModel(repository)
-            repository.emitMatches(listOf(futureGame("match-1"), futureGame("match-2")))
             advanceUntilIdle()
 
             assertEquals(2, model.state.value.results.size)
@@ -78,9 +81,8 @@ class SearchStepModelTest {
     @Test
     fun `the query filters by venue, neighborhood, city and sport label`() =
         runTest(testDispatcher) {
-            val repository = FakeGameRepository()
+            val repository = FakeGameRepository(searchMatchesResult = pageOf(listOf(futureGame("match-1"), futureGame("match-2"))))
             val model = buildModel(repository)
-            repository.emitMatches(listOf(futureGame("match-1"), futureGame("match-2")))
             advanceUntilIdle()
 
             model.onEvent(SearchEvents.QueryChanged("centro"))
@@ -100,9 +102,8 @@ class SearchStepModelTest {
     @Test
     fun `a sport filter narrows the results`() =
         runTest(testDispatcher) {
-            val repository = FakeGameRepository()
+            val repository = FakeGameRepository(searchMatchesResult = pageOf(listOf(futureGame("match-1"))))
             val model = buildModel(repository)
-            repository.emitMatches(listOf(futureGame("match-1")))
             advanceUntilIdle()
 
             model.onEvent(SearchEvents.SportFilterChanged(setOf(Sport.FUTEBOL)))
@@ -122,9 +123,8 @@ class SearchStepModelTest {
     @Test
     fun `resetting filters clears the query and reapplies to the full list`() =
         runTest(testDispatcher) {
-            val repository = FakeGameRepository()
+            val repository = FakeGameRepository(searchMatchesResult = pageOf(listOf(futureGame("match-1"))))
             val model = buildModel(repository)
-            repository.emitMatches(listOf(futureGame("match-1")))
             advanceUntilIdle()
             model.onEvent(SearchEvents.QueryChanged("não existe"))
             advanceUntilIdle()

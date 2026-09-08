@@ -44,6 +44,16 @@ class GeoHashTest {
     }
 
     @Test
+    fun `boundsForRadiusHugeRadiusCoversDistantCity`() {
+        val vitoria = Coordinates(lat = -20.3155, lng = -40.3128)
+        val saoPaulo = Coordinates(lat = -23.5505, lng = -46.6333)
+        val ranges = boundsForRadius(vitoria, radiusKm = 20_000.0)
+        val saoPauloHash = encodeGeoHash(saoPaulo, precision = 1)
+        val covered = ranges.any { it.start <= saoPauloHash && saoPauloHash <= it.endInclusive }
+        assertTrue(covered)
+    }
+
+    @Test
     fun `boundsForRadiusLargerRadiusMoreRanges`() {
         val center = Coordinates(lat = -23.5505, lng = -46.6333)
         val smallRanges = boundsForRadius(center, radiusKm = 1.0)

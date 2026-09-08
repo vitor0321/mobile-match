@@ -28,6 +28,16 @@ internal sealed interface SearchEvents {
     data class SelectGame(
         val gameId: String,
     ) : SearchEvents
+
+    data object Retry : SearchEvents
+
+    data object ToggleMap : SearchEvents
+
+    data class PinSelected(
+        val matchId: String,
+    ) : SearchEvents
+
+    data object MapPreviewDismissed : SearchEvents
 }
 
 internal sealed interface SearchEffect {

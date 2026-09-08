@@ -72,10 +72,15 @@ public fun boundsForRadius(
     val latDegrees = radiusKm / (METERS_PER_DEGREE_LATITUDE / 1000.0)
     val lngDegrees = kmToLongitudeDegrees(radiusKm, center.lat)
 
-    val latMin = center.lat - latDegrees
-    val latMax = center.lat + latDegrees
-    val lngMin = center.lng - lngDegrees
-    val lngMax = center.lng + lngDegrees
+    val coversWholeGlobe = latDegrees >= 180.0 && lngDegrees >= 360.0
+    if (coversWholeGlobe) {
+        return listOf(GeoHashRange(start = FULL_COVERAGE_START, endInclusive = FULL_COVERAGE_ENDINCLUSIVE))
+    }
+
+    val latMin = (center.lat - latDegrees).coerceIn(-90.0, 90.0)
+    val latMax = (center.lat + latDegrees).coerceIn(-90.0, 90.0)
+    val lngMin = (center.lng - lngDegrees).coerceIn(-180.0, 180.0)
+    val lngMax = (center.lng + lngDegrees).coerceIn(-180.0, 180.0)
 
     val corners =
         listOf(
@@ -125,10 +130,12 @@ private fun kmToLongitudeDegrees(
     latitude: Double,
 ): Double {
     val radians = radiusKm / (METERS_PER_DEGREE_LATITUDE / 1000.0) * PI / 180.0
+    val exceedsSmallCircleCap = radians >= PI / 2
+    if (exceedsSmallCircleCap) return 360.0
     val latRad = latitude * PI / 180.0
     val numerator = sin(radians)
     val denom = cos(latRad)
-    if (denom == 0.0 || numerator > denom) return 360.0
+    if (denom <= 0.0 || numerator >= denom) return 360.0
     return asin(numerator / denom) * 180.0 / PI
 }
 
@@ -156,3 +163,5 @@ private fun mergeAdjacent(ranges: List<GeoHashRange>): List<GeoHashRange> {
 public const val DEFAULT_GEOHASH_PRECISION: Int = 9
 private const val BITS_PER_CHAR = 5
 private val BITS = intArrayOf(16, 8, 4, 2, 1)
+private const val FULL_COVERAGE_START = "0"
+private const val FULL_COVERAGE_ENDINCLUSIVE = "z~"

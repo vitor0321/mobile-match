@@ -11,6 +11,7 @@ import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchRole
+import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.features.domain.shared.repository.MyMatch
@@ -53,6 +54,18 @@ internal class GameRepositoryImpl(
             nearbyCursors = page.rangeCursors
             _hasMoreMatches.value = page.hasMore
             cache.appendAll(page.games)
+        }.recoverCatching { error ->
+            throw error.toGamesError()
+        }
+
+    override suspend fun searchMatches(
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): Result<NearbyMatchesPage> =
+        runCatching {
+            withRetry(shouldRetry = ::defaultShouldRetry) {
+                source.openGames(radiusKm, cursors)
+            }
         }.recoverCatching { error ->
             throw error.toGamesError()
         }

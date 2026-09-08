@@ -1,15 +1,19 @@
 package com.walcker.games.features.ui.search
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -31,7 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import com.walcker.games.features.ui.home.map.MatchMapView
+import com.walcker.games.features.ui.home.map.component.MapMatchPreviewCard
+import com.walcker.games.features.ui.home.map.mapper.toMapPin
+import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.search.component.SearchFiltersPanel
+import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.CedarSearchEmptyAnimation
 import com.walcker.match.cedar.components.CedarSearchField
@@ -72,6 +81,36 @@ internal class SearchStep : Screen {
             state = state,
             onEvent = stepModel::onEvent,
             snackbarHostState = snackbarHostState,
+            mapBody = { bodyModifier ->
+                Box(modifier = bodyModifier) {
+                    MatchMapView(
+                        pins = state.results.map { it.toMapPin() },
+                        camera = state.mapCamera,
+                        onPinClick = { matchId -> stepModel.onEvent(SearchEvents.PinSelected(matchId)) },
+                        onNearbyTap = {},
+                        nearbyCount = 0,
+                        hasLocationPermission = false,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    state.previewMatch?.let { game ->
+                        MapMatchPreviewCard(
+                            preview = MatchPreview(game = game, distanceKm = null),
+                            strings = state.mapStrings,
+                            gameListStrings = state.cardStrings,
+                            onDismiss = { stepModel.onEvent(SearchEvents.MapPreviewDismissed) },
+                            onDetailsClick = { stepModel.onEvent(SearchEvents.SelectGame(it)) },
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = CedarTokens.spacing.md,
+                                        vertical = CedarTokens.spacing.md,
+                                    ),
+                        )
+                    }
+                }
+            },
         )
     }
 }
@@ -83,6 +122,7 @@ internal fun SearchContent(
     onEvent: (SearchEvents) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    mapBody: @Composable (Modifier) -> Unit = {},
 ) {
     val strings = state.strings
     val cardStrings = state.cardStrings
@@ -166,11 +206,38 @@ internal fun SearchContent(
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
+                    IconButton(
+                        onClick = { onEvent(SearchEvents.ToggleMap) },
+                    ) {
+                        Icon(
+                            imageVector = if (state.showMap) Icons.AutoMirrored.Filled.List else Icons.Filled.Map,
+                            contentDescription = if (state.showMap) strings.showListAction else strings.showMapAction,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
 
             val hasActiveFilters = state.filters != SearchFilters()
             when {
+                state.isLoading ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CedarLoading(contentDescription = strings.loadingLabel)
+                    }
+
+                state.errorMessage != null ->
+                    EmptyState(
+                        message = state.errorMessage ?: strings.loadErrorMessage,
+                        actionLabel = strings.retry,
+                        onAction = { onEvent(SearchEvents.Retry) },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                state.showMap -> mapBody(Modifier.fillMaxSize())
+
                 state.query.isBlank() && !hasActiveFilters && state.results.isEmpty() ->
                     EmptyState(
                         message = strings.idlePrompt,

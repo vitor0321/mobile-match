@@ -25,6 +25,11 @@ internal data class SearchStrings(
     val priceMaxLabel: String,
     val confirm: String,
     val cancel: String,
+    val loadingLabel: String,
+    val loadErrorMessage: String,
+    val retry: String,
+    val showMapAction: String,
+    val showListAction: String,
 )
 
 internal val searchStringsEn =
@@ -53,6 +58,11 @@ internal val searchStringsEn =
         priceMaxLabel = "Max.",
         confirm = "Confirm",
         cancel = "Cancel",
+        loadingLabel = "Loading matches…",
+        loadErrorMessage = "Couldn't load matches. Please try again.",
+        retry = "Try again",
+        showMapAction = "Show map",
+        showListAction = "Show list",
     )
 
 internal val searchStringsPt =
@@ -81,4 +91,9 @@ internal val searchStringsPt =
         priceMaxLabel = "Máx.",
         confirm = "Confirmar",
         cancel = "Cancelar",
+        loadingLabel = "Carregando partidas…",
+        loadErrorMessage = "Não foi possível carregar as partidas. Tente de novo.",
+        retry = "Tentar de novo",
+        showMapAction = "Ver no mapa",
+        showListAction = "Ver em lista",
     )

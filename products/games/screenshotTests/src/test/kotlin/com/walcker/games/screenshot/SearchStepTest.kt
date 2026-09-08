@@ -41,8 +41,15 @@ class SearchStepTest {
     fun loading_lightMode() = snapshot(SearchState(isLoading = true), darkTheme = false)
 
     @Test
+    fun loadError_lightMode() =
+        snapshot(SearchState(errorMessage = "Não foi possível carregar as partidas. Tente de novo."), darkTheme = false)
+
+    @Test
     fun emptyForQuery_lightMode() = snapshot(SearchState(query = "quadra inexistente"), darkTheme = false)
 
     @Test
     fun filtersPanel_lightMode() = snapshot(resultsState.copy(showFiltersPanel = true), darkTheme = false)
+
+    @Test
+    fun mapMode_lightMode() = snapshot(resultsState.copy(showMap = true), darkTheme = false)
 }
