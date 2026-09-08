@@ -160,7 +160,7 @@ internal class FirestoreGameSource(
                 "startsAtSeconds" to request.startsAtSeconds,
                 "durationMin" to request.durationMin,
                 "recurrence" to request.recurrence.name,
-                "confirmedCount" to 1,
+                "confirmedCount" to 0,
                 "totalSlots" to request.totalPlayers,
                 "priceCents" to (
                     request.pricePerPlayer
@@ -179,7 +179,9 @@ internal class FirestoreGameSource(
                 // escolhido no app. Fica congelada na partida; quem vir depois,
                 // de outro país, ainda vê o preço na moeda de quem organizou.
                 "currencyCode" to currentDeviceCurrencyCode(),
-                "participants" to listOf(organizerId),
+                // Organizador não entra automaticamente — se quiser jogar,
+                // usa o botão "Participar", que passa pelo joinMatch normal.
+                "participants" to emptyList<String>(),
             )
 
         val matchId = firestore.collection("matches").add(data).getOrThrow()

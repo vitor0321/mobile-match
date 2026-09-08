@@ -79,6 +79,7 @@ import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarLoading
+import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.CedarSplashLoadingAnimation
@@ -248,6 +249,7 @@ internal fun MatchDetailContent(
                     match.status == MatchStatus.CANCELLED
             )
     val isParticipant = state.currentUserId != null && state.currentUserId in (match?.participants ?: emptyList())
+    val isOrganizer = match != null && state.currentUserId != null && state.currentUserId == match.organizerId
 
     if (state.isJoining && isFull) {
         CedarSplashLoadingAnimation(
@@ -364,6 +366,7 @@ internal fun MatchDetailContent(
                         isCancellingSeries = state.isCancellingSeries,
                         currentUserId = state.currentUserId,
                         isParticipant = isParticipant,
+                        isJoining = state.isJoining,
                         participantRatings = state.participantRatings,
                         organizerRatingsGiven = state.organizerRatingsGiven,
                         onRatePlayer = { userId, displayName ->
@@ -372,6 +375,7 @@ internal fun MatchDetailContent(
                         onDismissRatingSuccess = { onEvent(MatchDetailEvent.DismissRatingSuccess) },
                         onDismissRatingError = { onEvent(MatchDetailEvent.DismissRatingError) },
                         onRateMatch = { onEvent(MatchDetailEvent.OpenMatchRatingSheet) },
+                        onJoinMatch = { onEvent(MatchDetailEvent.JoinMatch) },
                         onLeaveMatch = { onEvent(MatchDetailEvent.RequestLeaveMatch) },
                         onCancelMatch = { onEvent(MatchDetailEvent.RequestCancelMatch) },
                         onCancelMatchSeries = { onEvent(MatchDetailEvent.RequestCancelSeries) },
@@ -386,7 +390,7 @@ internal fun MatchDetailContent(
             }
         }
 
-        if (match != null && !isParticipant) {
+        if (match != null && !isParticipant && !isOrganizer) {
             JoinBar(
                 label =
                     when {
@@ -497,10 +501,12 @@ internal fun MatchDetailBody(
     onDismissRatingSuccess: () -> Unit,
     onDismissRatingError: () -> Unit,
     onRateMatch: () -> Unit,
+    onJoinMatch: () -> Unit,
     onLeaveMatch: () -> Unit,
     onCancelMatch: () -> Unit,
     onCancelMatchSeries: () -> Unit,
     onEditMatch: () -> Unit,
+    isJoining: Boolean,
     isLeavingMatch: Boolean,
     isCancellingMatch: Boolean,
     isCancellingSeries: Boolean,
@@ -709,6 +715,21 @@ internal fun MatchDetailBody(
                         modifier = Modifier.weight(1f),
                     )
                 }
+            }
+        }
+
+        if (isOrganizer && !isParticipant) {
+            if (isJoining) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CedarLoading(contentDescription = detail.participateAction, size = ActionLoadingSize)
+                }
+            } else {
+                CedarPrimaryButton(
+                    text = detail.participateAction,
+                    onClick = onJoinMatch,
+                    enabled = !isClosed,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 

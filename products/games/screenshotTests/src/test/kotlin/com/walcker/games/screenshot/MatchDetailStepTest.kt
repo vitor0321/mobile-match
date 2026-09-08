@@ -83,4 +83,14 @@ class MatchDetailStepTest {
             ),
             darkTheme = false,
         )
+
+    @Test
+    fun organizerNotParticipating_lightMode() =
+        snapshot(
+            loadedState.copy(
+                match = loadedState.match?.copy(organizerId = "player-1", participants = emptyList()),
+                participants = fakeParticipantsSummary(confirmed = emptyList()),
+            ),
+            darkTheme = false,
+        )
 }
