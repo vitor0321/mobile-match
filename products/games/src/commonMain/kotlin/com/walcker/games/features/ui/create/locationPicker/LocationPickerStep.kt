@@ -22,6 +22,7 @@ import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarSearchField
+import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 import org.koin.core.parameter.parametersOf
 
@@ -125,7 +126,12 @@ internal fun LocationPickerContent(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(CedarTokens.spacing.lg),
+                        .padding(
+                            start = CedarTokens.spacing.lg,
+                            end = CedarTokens.spacing.lg,
+                            top = CedarTokens.spacing.lg,
+                            bottom = CedarTokens.spacing.lg + LocalBottomBarInset.current,
+                        ),
                 verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
             ) {
                 LocationSummary(
