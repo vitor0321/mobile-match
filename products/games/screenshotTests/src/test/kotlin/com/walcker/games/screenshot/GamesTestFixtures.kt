@@ -32,6 +32,8 @@ internal fun fakeGame(
     organizerRating: Double = 4.5,
     status: MatchStatus = MatchStatus.OPEN,
     participants: List<String> = emptyList(),
+    teamCount: Int = 0,
+    teamAssignments: Map<String, Int> = emptyMap(),
 ): Game =
     Game(
         id = id,
@@ -53,6 +55,8 @@ internal fun fakeGame(
         organizerRating = organizerRating,
         status = status,
         participants = participants,
+        teamCount = teamCount,
+        teamAssignments = teamAssignments,
     )
 
 internal fun fakeRating(
