@@ -5,6 +5,7 @@ import com.walcker.games.features.ui.create.locationPicker.LocationPickerStepMod
 import com.walcker.games.features.ui.home.GameListStepModel
 import com.walcker.games.features.ui.home.map.MapStepModel
 import com.walcker.games.features.ui.myMatches.MyMatchesStepModel
+import com.walcker.games.features.ui.shared.manageMatch.ManageMatchStepModel
 import com.walcker.games.features.ui.playerProfile.PlayerProfileStepModel
 import com.walcker.games.features.ui.search.SearchStepModel
 import com.walcker.games.features.ui.shared.notifications.NotificationHistoryStepModel
@@ -108,6 +109,25 @@ internal val gamesUiModule =
         factory {
             PlayerSearchStepModel(
                 searchPlayersUseCase = get(),
+                stringsHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
+            )
+        }
+        factory { (matchId: String) ->
+            ManageMatchStepModel(
+                matchId = matchId,
+                getGameById = get(),
+                observeMatch = get(),
+                observeParticipants = get(),
+                cancelMatch = get(),
+                cancelMatchSeries = get(),
+                setTeamAssignments = get(),
+                submitRating = get(),
+                submitReport = get(),
+                playerRepository = get(),
+                ratingRepository = get(),
+                sessionHolder = get(),
                 stringsHolder = get(),
                 analytics = get(),
                 crashReporter = get(),

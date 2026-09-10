@@ -13,6 +13,8 @@ internal fun game(
     confirmedPlayers: Int = 1,
     totalPlayers: Int = 10,
     organizerId: String = "organizer-1",
+    teamCount: Int = 0,
+    teamAssignments: Map<String, Int> = emptyMap(),
 ): Game =
     Game(
         id = id,
@@ -34,4 +36,6 @@ internal fun game(
         organizerRating = 5.0,
         status = status,
         participants = participants,
+        teamCount = teamCount,
+        teamAssignments = teamAssignments,
     )
