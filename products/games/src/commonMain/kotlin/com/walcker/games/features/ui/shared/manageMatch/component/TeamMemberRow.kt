@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +34,8 @@ import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.tokens.CedarTokens
 
+private val MinTouchTarget = 48.dp
+
 @Composable
 internal fun TeamMemberRow(
     participant: Participant,
@@ -50,18 +54,19 @@ internal fun TeamMemberRow(
             modifier
                 .fillMaxWidth()
                 .background(color = MaterialTheme.colorScheme.surface, shape = CedarTokens.radius.smShape)
-                .combinedClickable(enabled = !isSaving, onLongClick = { showMoveMenu = true }, onClick = {})
-                .padding(horizontal = CedarTokens.spacing.sm, vertical = CedarTokens.spacing.xs),
+                .combinedClickable(
+                    enabled = !isSaving,
+                    onLongClick = { showMoveMenu = true },
+                    onLongClickLabel = strings.teamsMoveToMenuTitle,
+                    onClick = {},
+                ).padding(horizontal = CedarTokens.spacing.sm, vertical = CedarTokens.spacing.xs),
         horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = Icons.Filled.DragHandle,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        Box(
             modifier =
                 Modifier
-                    .size(24.dp)
+                    .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
                     .pointerInput(participant.userId, isSaving) {
                         if (isSaving) return@pointerInput
                         detectDragGestures(
@@ -69,7 +74,15 @@ internal fun TeamMemberRow(
                             onDragEnd = onDragEnd,
                         )
                     },
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.DragHandle,
+                contentDescription = strings.teamsDragHandleContentDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+        }
         PlayerAvatar(displayName = participant.displayName, photoUrl = participant.photoUrl, size = PlayerAvatarSize.Small)
         Text(
             text = participant.displayName,
