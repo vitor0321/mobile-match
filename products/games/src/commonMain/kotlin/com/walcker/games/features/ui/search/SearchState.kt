@@ -9,9 +9,10 @@ import com.walcker.games.strings.PtBrGamesStrings
 import com.walcker.games.strings.SearchStrings
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
-private val DEFAULT_SEARCH_CAMERA = MapCamera(lat = -14.235, lng = -51.9253, zoom = 4f)
-private const val RESULT_CAMERA_ZOOM = 12f
+internal val DEFAULT_SEARCH_MAP_CAMERA = MapCamera(lat = -14.235, lng = -51.9253, zoom = 4f)
+internal const val SEARCH_RESULTS_PAGE_SIZE = 20
 
 internal data class SearchFilters(
     val startDateMs: Long? = null,
@@ -34,10 +35,18 @@ internal data class SearchState(
     val mySports: Set<Sport> = emptySet(),
     val showMap: Boolean = false,
     val selectedMapMatchId: String? = null,
+    val visibleResultsCount: Int = SEARCH_RESULTS_PAGE_SIZE,
+    val mapResults: ImmutableList<Game> = persistentListOf(),
+    val mapCamera: MapCamera = DEFAULT_SEARCH_MAP_CAMERA,
+    val isMapLoading: Boolean = false,
+    val mapErrorMessage: String? = null,
 ) {
     val previewMatch: Game?
-        get() = results.find { it.id == selectedMapMatchId }
+        get() = mapResults.find { it.id == selectedMapMatchId }
 
-    val mapCamera: MapCamera
-        get() = results.firstOrNull()?.let { MapCamera(lat = it.lat, lng = it.lng, zoom = RESULT_CAMERA_ZOOM) } ?: DEFAULT_SEARCH_CAMERA
+    val visibleResults: ImmutableList<Game>
+        get() = if (results.size <= visibleResultsCount) results else results.take(visibleResultsCount).toImmutableList()
+
+    val hasMoreResults: Boolean
+        get() = results.size > visibleResultsCount
 }

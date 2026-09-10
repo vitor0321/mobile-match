@@ -30,6 +30,7 @@ import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
 
 private val ActionLoadingSize = 28.dp
+private const val StartsSoonThresholdSeconds = 3 * 60 * 60
 
 @Composable
 internal fun MyMatchCard(
@@ -42,7 +43,10 @@ internal fun MyMatchCard(
     statusFinishedLabel: String,
     playersLabel: String,
     ratingsCountLabel: (Int) -> String,
+    startsSoonBadge: String,
+    nowSeconds: Long,
     isPast: Boolean,
+    onClick: () -> Unit,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
     isProcessing: Boolean = false,
@@ -54,8 +58,13 @@ internal fun MyMatchCard(
             game.status == MatchStatus.FINISHED || isPast -> statusFinishedLabel
             else -> null
         }
+    val startsSoon =
+        statusLabel == null &&
+            game.startsAtSeconds > nowSeconds &&
+            game.startsAtSeconds - nowSeconds <= StartsSoonThresholdSeconds
 
     Card(
+        onClick = onClick,
         shape = CedarTokens.radius.mdShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = CedarTokens.elevation.flat),
@@ -66,7 +75,7 @@ internal fun MyMatchCard(
             verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
             ) {
                 Column(
@@ -99,7 +108,7 @@ internal fun MyMatchCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "${game.sport.label} · ${game.neighborhood} · $playersLabel",
+                        text = "${game.sport.label} · ${game.neighborhood}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -107,9 +116,30 @@ internal fun MyMatchCard(
                     )
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xxs),
+                if (statusLabel != null) {
+                    CedarTag(
+                        label = statusLabel,
+                        tone =
+                            if (game.status == MatchStatus.CANCELLED) {
+                                CedarTagTone.Danger
+                            } else {
+                                CedarTagTone.Neutral
+                            },
+                    )
+                } else if (startsSoon) {
+                    CedarTag(label = startsSoonBadge, tone = CedarTagTone.Warning)
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.xs),
                 ) {
                     CedarTag(
                         label =
@@ -119,27 +149,18 @@ internal fun MyMatchCard(
                                 participantBadge
                             },
                     )
-                    if (statusLabel != null) {
-                        CedarTag(
-                            label = statusLabel,
-                            tone =
-                                if (game.status == MatchStatus.CANCELLED) {
-                                    CedarTagTone.Danger
-                                } else {
-                                    CedarTagTone.Neutral
-                                },
-                        )
-                    }
+                    Text(
+                        text = playersLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
-            }
 
-            if (statusLabel == null) {
-                val isOrganizer = myMatch.role == MatchRole.ORGANIZER
-                val actionLabel = if (isOrganizer) cancelActionLabel else leaveActionLabel
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (isOrganizer) Arrangement.End else Arrangement.Start,
-                ) {
+                if (statusLabel == null) {
+                    val isOrganizer = myMatch.role == MatchRole.ORGANIZER
+                    val actionLabel = if (isOrganizer) cancelActionLabel else leaveActionLabel
                     if (isProcessing) {
                         CedarLoading(
                             contentDescription = actionLabel,

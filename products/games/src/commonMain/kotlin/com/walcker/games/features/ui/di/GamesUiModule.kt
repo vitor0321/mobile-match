@@ -5,9 +5,9 @@ import com.walcker.games.features.ui.create.locationPicker.LocationPickerStepMod
 import com.walcker.games.features.ui.home.GameListStepModel
 import com.walcker.games.features.ui.home.map.MapStepModel
 import com.walcker.games.features.ui.myMatches.MyMatchesStepModel
-import com.walcker.games.features.ui.shared.manageMatch.ManageMatchStepModel
 import com.walcker.games.features.ui.playerProfile.PlayerProfileStepModel
 import com.walcker.games.features.ui.search.SearchStepModel
+import com.walcker.games.features.ui.shared.manageMatch.ManageMatchStepModel
 import com.walcker.games.features.ui.shared.notifications.NotificationHistoryStepModel
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsStepModel
 import com.walcker.games.features.ui.shared.playerRatings.PlayerRatingsListStepModel
@@ -44,6 +44,8 @@ internal val gamesUiModule =
                 analytics = get(),
                 sessionHolder = get(),
                 observeAvailability = get(),
+                locationProvider = get(),
+                crashReporter = get(),
             )
         }
         factory { (matchId: String?) ->

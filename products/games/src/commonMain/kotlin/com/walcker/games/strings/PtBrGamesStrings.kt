@@ -19,6 +19,7 @@ internal val PtBrGamesStrings =
         reports = reportStringsPt,
         matchConfirmed = matchConfirmedStringsPt,
         matchDetail = matchDetailStringsPt,
+        manageMatch = manageMatchStringsPt,
         map = mapStringsPt,
         loginRequired = loginRequiredStringsPt,
         about = aboutStringsPt,

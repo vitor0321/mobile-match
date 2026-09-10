@@ -8,6 +8,7 @@ import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.match.core.geo.Coordinates
 import kotlinx.coroutines.flow.Flow
 
 internal data class MyMatch(
@@ -25,6 +26,12 @@ internal interface GameRepository {
     suspend fun loadMoreMatches(radiusKm: Double): Result<Unit>
 
     suspend fun searchMatches(
+        radiusKm: Double,
+        cursors: List<String?>? = null,
+    ): Result<NearbyMatchesPage>
+
+    suspend fun searchMatchesNear(
+        center: Coordinates,
         radiusKm: Double,
         cursors: List<String?>? = null,
     ): Result<NearbyMatchesPage>

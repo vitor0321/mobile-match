@@ -92,6 +92,43 @@ class MatchDetailStepTest {
         )
 
     @Test
+    fun yourStatusWaitlist_lightMode() =
+        snapshot(
+            loadedState.copy(
+                participants =
+                    fakeParticipantsSummary(
+                        confirmed = emptyList(),
+                        waitlist = listOf(fakeParticipant(userId = "player-1", isConfirmed = false, positionInWaitlist = 2)),
+                        confirmedCount = 0,
+                    ),
+            ),
+            darkTheme = false,
+        )
+
+    @Test
+    fun yourTeamAssignment_lightMode() =
+        snapshot(
+            loadedState.copy(
+                match = loadedState.match?.copy(teamCount = 2, teamAssignments = mapOf("player-1" to 1)),
+            ),
+            darkTheme = false,
+        )
+
+    @Test
+    fun yourStatusWaitlist_darkMode() =
+        snapshot(
+            loadedState.copy(
+                participants =
+                    fakeParticipantsSummary(
+                        confirmed = emptyList(),
+                        waitlist = listOf(fakeParticipant(userId = "player-1", isConfirmed = false, positionInWaitlist = 2)),
+                        confirmedCount = 0,
+                    ),
+            ),
+            darkTheme = true,
+        )
+
+    @Test
     fun organizerNotParticipating_lightMode() =
         snapshot(
             loadedState.copy(

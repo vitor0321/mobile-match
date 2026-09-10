@@ -8,6 +8,7 @@ import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.match.core.geo.Coordinates
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -24,6 +25,8 @@ internal class FakeGameSource(
     var getGameByIdResult: () -> Game = { game() },
 ) : GameSource {
     var openGamesCallCount: Int = 0
+        private set
+    var openGamesNearCallCount: Int = 0
         private set
     val openGamesCursorsCalls: MutableList<List<String?>?> = mutableListOf()
     var joinGameCallCount: Int = 0
@@ -47,6 +50,15 @@ internal class FakeGameSource(
     ): NearbyMatchesPage {
         openGamesCallCount++
         openGamesCursorsCalls += cursors
+        return NearbyMatchesPage(games = openGamesResult(), rangeCursors = openGamesRangeCursors)
+    }
+
+    override suspend fun openGamesNear(
+        center: Coordinates,
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): NearbyMatchesPage {
+        openGamesNearCallCount++
         return NearbyMatchesPage(games = openGamesResult(), rangeCursors = openGamesRangeCursors)
     }
 

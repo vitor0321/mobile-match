@@ -6,24 +6,17 @@ import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakePlayerRepository
 import com.walcker.games.fake.FakeRatingRepository
-import com.walcker.games.fake.FakeReportRepository
 import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
 import com.walcker.games.fake.testUserSession
-import com.walcker.games.features.domain.shared.model.CancelMatchOutcome
 import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.Participant
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
-import com.walcker.games.features.domain.shared.model.Rating
-import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
-import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
-import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCaseImpl
-import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.JoinGameUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCaseImpl
@@ -31,8 +24,6 @@ import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitOrganizerRatingUseCase
-import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
-import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCaseImpl
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
 import com.walcker.match.core.analytics.AnalyticsEvent
@@ -73,7 +64,6 @@ class MatchDetailStepModelTest {
     private fun buildModel(
         gameRepository: FakeGameRepository = FakeGameRepository(),
         ratingRepository: FakeRatingRepository = FakeRatingRepository(),
-        reportRepository: FakeReportRepository = FakeReportRepository(),
         playerRepository: FakePlayerRepository = FakePlayerRepository(),
         sessionHolder: FakeSessionHolder = FakeSessionHolder(),
         promotionCoordinator: PromotionCoordinator = PromotionCoordinator(),
@@ -87,14 +77,9 @@ class MatchDetailStepModelTest {
         observeParticipants = ObserveParticipantsUseCaseImpl(gameRepository),
         joinGame = JoinGameUseCaseImpl(gameRepository),
         leaveMatch = LeaveMatchUseCaseImpl(gameRepository),
-        cancelMatch = CancelMatchUseCaseImpl(gameRepository),
-        cancelMatchSeries = CancelMatchSeriesUseCaseImpl(gameRepository),
-        submitRating = SubmitRatingUseCase(ratingRepository),
         submitMatchRating = SubmitMatchRatingUseCase(ratingRepository),
         submitOrganizerRating = SubmitOrganizerRatingUseCase(ratingRepository),
-        submitReport = SubmitReportUseCaseImpl(reportRepository),
         playerRepository = playerRepository,
-        ratingRepository = ratingRepository,
         sessionHolder = sessionHolder,
         promotionCoordinator = promotionCoordinator,
         stringsHolder = stringsHolder,
@@ -321,37 +306,6 @@ class MatchDetailStepModelTest {
         }
 
     @Test
-    fun `cancelling the match surfaces a success message`() =
-        runTest(testDispatcher) {
-            val gameRepository = FakeGameRepository(cancelMatchResult = Result.success(CancelMatchOutcome.Cancelled(matchId = "match-1")))
-            val model = buildModel(gameRepository = gameRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.RequestCancelMatch)
-            model.onEvent(MatchDetailEvent.ConfirmCancelMatch)
-            advanceUntilIdle()
-
-            val state = model.state.value
-            assertEquals(stringsHolder.strings.matchDetail.cancelSuccess, state.successMessage)
-            assertFalse(state.isCancellingMatch)
-            assertFalse(state.showCancelConfirmDialog)
-        }
-
-    @Test
-    fun `a failed cancel surfaces the cancel error`() =
-        runTest(testDispatcher) {
-            val gameRepository = FakeGameRepository(cancelMatchResult = Result.failure(IllegalStateException("offline")))
-            val model = buildModel(gameRepository = gameRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.RequestCancelMatch)
-            model.onEvent(MatchDetailEvent.ConfirmCancelMatch)
-            advanceUntilIdle()
-
-            assertEquals(stringsHolder.strings.matchDetail.cancelError, model.state.value.actionErrorMessage)
-        }
-
-    @Test
     fun `a failed leave surfaces the leave error without hiding the match`() =
         runTest(testDispatcher) {
             val gameRepository = FakeGameRepository(leaveMatchResult = Result.failure(IllegalStateException("offline")))
@@ -366,84 +320,6 @@ class MatchDetailStepModelTest {
             assertEquals(stringsHolder.strings.matchDetail.leaveError, state.actionErrorMessage)
             assertNull(state.errorMessage)
             assertNotNull(state.match)
-        }
-
-    @Test
-    fun `submitting a rating succeeds and closes the sheet`() =
-        runTest(testDispatcher) {
-            val ratingRepository = FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Recorded(averageRating = 4.5f, ratingCount = 3)))
-            val model = buildModel(ratingRepository = ratingRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(rating = 5, comment = "Bom jogo", reportReason = null, reportDetails = ""),
-            )
-            advanceUntilIdle()
-
-            val state = model.state.value
-            assertFalse(state.showRatingSheet)
-            assertEquals(stringsHolder.strings.ratings.submitSuccess, state.ratingSuccessMessage)
-            assertEquals(listOf("player-2"), ratingRepository.submitCalls)
-        }
-
-    @Test
-    fun `submitting a rating updates the participant's visible rating summary`() =
-        runTest(testDispatcher) {
-            val ratingRepository =
-                FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Recorded(averageRating = 4.5f, ratingCount = 3)))
-            val model = buildModel(ratingRepository = ratingRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
-            )
-            advanceUntilIdle()
-
-            assertEquals(
-                PlayerRatingSummary(rating = 4.5f, ratingCount = 3),
-                model.state.value.participantRatings["player-2"],
-            )
-        }
-
-    @Test
-    fun `editing a rating surfaces its own message`() =
-        runTest(testDispatcher) {
-            val ratingRepository = FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Updated(averageRating = 4f, ratingCount = 2)))
-            val model = buildModel(ratingRepository = ratingRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
-            )
-            advanceUntilIdle()
-
-            assertEquals(stringsHolder.strings.ratings.updated, model.state.value.ratingSuccessMessage)
-        }
-
-    @Test
-    fun `a failed rating submission surfaces an error and closes the sheet`() =
-        runTest(testDispatcher) {
-            val ratingRepository = FakeRatingRepository(submitResult = Result.failure(IllegalStateException("offline")))
-            val model = buildModel(ratingRepository = ratingRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
-            )
-            advanceUntilIdle()
-
-            val state = model.state.value
-            assertEquals(stringsHolder.strings.ratings.submitError, state.ratingErrorMessage)
-            assertFalse(state.isSubmittingRating)
-            assertFalse(state.showRatingSheet)
-            assertNull(state.selectedPlayerForRating)
-
-            model.onEvent(MatchDetailEvent.DismissRatingError)
-            assertNull(model.state.value.ratingErrorMessage)
         }
 
     @Test
@@ -489,98 +365,6 @@ class MatchDetailStepModelTest {
         }
 
     @Test
-    fun `submitting a rating with a report reason also files the report`() =
-        runTest(testDispatcher) {
-            val reportRepository = FakeReportRepository(submitResult = Result.success(SubmitReportOutcome.Recorded))
-            val ratingRepository =
-                FakeRatingRepository(submitResult = Result.success(SubmitRatingOutcome.Recorded(averageRating = 4.5f, ratingCount = 3)))
-            val model = buildModel(ratingRepository = ratingRepository, reportRepository = reportRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(
-                    rating = 5,
-                    comment = "",
-                    reportReason = ReportReason.NO_SHOW,
-                    reportDetails = "Não apareceu",
-                ),
-            )
-            advanceUntilIdle()
-
-            val state = model.state.value
-            assertFalse(state.showRatingSheet)
-            assertEquals(listOf("player-2"), reportRepository.submitCalls)
-            assertEquals(
-                "${stringsHolder.strings.ratings.submitSuccess} ${stringsHolder.strings.reports.success}",
-                state.ratingSuccessMessage,
-            )
-        }
-
-    @Test
-    fun `submitting a rating without a report reason never calls the report repository`() =
-        runTest(testDispatcher) {
-            val reportRepository = FakeReportRepository()
-            val model = buildModel(reportRepository = reportRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(rating = 5, comment = "", reportReason = null, reportDetails = ""),
-            )
-            advanceUntilIdle()
-
-            assertEquals(emptyList<String>(), reportRepository.submitCalls)
-        }
-
-    @Test
-    fun `a report reason already reported still shows the rating's success message`() =
-        runTest(testDispatcher) {
-            val reportRepository = FakeReportRepository(submitResult = Result.success(SubmitReportOutcome.AlreadyReported))
-            val model = buildModel(reportRepository = reportRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(
-                    rating = 5,
-                    comment = "",
-                    reportReason = ReportReason.OTHER,
-                    reportDetails = "",
-                ),
-            )
-            advanceUntilIdle()
-
-            assertEquals(
-                "${stringsHolder.strings.ratings.submitSuccess} ${stringsHolder.strings.reports.alreadyReported}",
-                model.state.value.ratingSuccessMessage,
-            )
-        }
-
-    @Test
-    fun `a failed report submission does not hide the rating's success message`() =
-        runTest(testDispatcher) {
-            val reportRepository = FakeReportRepository(submitResult = Result.failure(IllegalStateException("offline")))
-            val model = buildModel(reportRepository = reportRepository)
-            advanceUntilIdle()
-
-            model.onEvent(MatchDetailEvent.OpenRatingSheet(userId = "player-2", displayName = "Bruno"))
-            model.onEvent(
-                MatchDetailEvent.SubmitRating(
-                    rating = 5,
-                    comment = "",
-                    reportReason = ReportReason.OTHER,
-                    reportDetails = "",
-                ),
-            )
-            advanceUntilIdle()
-
-            val state = model.state.value
-            assertFalse(state.showRatingSheet)
-            assertEquals(stringsHolder.strings.ratings.submitSuccess, state.ratingSuccessMessage)
-        }
-
-    @Test
     fun `canRate reflects that the match is over and the user took part in it`() =
         runTest(testDispatcher) {
             val myGame =
@@ -610,74 +394,5 @@ class MatchDetailStepModelTest {
             val state = model.state.value
             assertFalse(state.isMatchOver)
             assertFalse(state.canRate)
-        }
-
-    @Test
-    fun `canRatePlayers is true for the organizer, independent of match timing`() =
-        runTest(testDispatcher) {
-            val myGame =
-                game(id = "match-1", startsAtSeconds = 100_000, durationMin = 60, status = MatchStatus.OPEN, organizerId = "user-1")
-                    .copy(participants = listOf("player-2"))
-            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
-            val model = buildModel(gameRepository = gameRepository, nowSeconds = { 5_000L })
-
-            advanceUntilIdle()
-
-            val state = model.state.value
-            assertFalse(state.isMatchOver)
-            assertTrue(state.canRatePlayers)
-        }
-
-    @Test
-    fun `canRatePlayers is false for a participant who is not the organizer`() =
-        runTest(testDispatcher) {
-            val myGame =
-                game(id = "match-1", organizerId = "someone-else")
-                    .copy(participants = listOf("user-1"))
-            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
-            val model = buildModel(gameRepository = gameRepository)
-
-            advanceUntilIdle()
-
-            assertFalse(model.state.value.canRatePlayers)
-        }
-
-    @Test
-    fun `canRate for the match itself is unaffected by canRatePlayers`() =
-        runTest(testDispatcher) {
-            val myGame =
-                game(id = "match-1", startsAtSeconds = 1_000, durationMin = 1, status = MatchStatus.OPEN, organizerId = "someone-else")
-                    .copy(participants = listOf("user-1"))
-            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
-            val model = buildModel(gameRepository = gameRepository, nowSeconds = { 5_000L })
-
-            advanceUntilIdle()
-
-            val state = model.state.value
-            assertTrue(state.canRate)
-            assertFalse(state.canRatePlayers)
-        }
-
-    @Test
-    fun `loading the match fetches ratings the organizer already gave, keyed by rated player`() =
-        runTest(testDispatcher) {
-            val myGame = game(id = "match-1", organizerId = "user-1").copy(participants = listOf("player-2"))
-            val existing =
-                Rating(
-                    id = "user-1_player-2",
-                    matchId = "match-1",
-                    ratedUserId = "player-2",
-                    raterUserId = "user-1",
-                    rating = 3,
-                    comment = "",
-                    createdAtMs = 1_000L,
-                )
-            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
-            val ratingRepository = FakeRatingRepository(ratingsGivenForMatchResult = Result.success(listOf(existing)))
-            val model = buildModel(gameRepository = gameRepository, ratingRepository = ratingRepository)
-
-            advanceUntilIdle()
-
-            assertEquals(mapOf("player-2" to existing), model.state.value.organizerRatingsGiven)
         }
 }

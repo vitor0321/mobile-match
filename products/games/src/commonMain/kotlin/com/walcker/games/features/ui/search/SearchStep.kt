@@ -3,23 +3,18 @@ package com.walcker.games.features.ui.search
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,18 +30,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
+import com.walcker.games.features.ui.home.component.GameList
 import com.walcker.games.features.ui.home.map.MatchMapView
 import com.walcker.games.features.ui.home.map.component.MapMatchPreviewCard
 import com.walcker.games.features.ui.home.map.mapper.toMapPin
 import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.search.component.SearchFiltersPanel
+import com.walcker.games.features.ui.shared.matchDetail.component.Banner
+import com.walcker.match.cedar.components.CedarFloatingDialog
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.CedarSearchEmptyAnimation
 import com.walcker.match.cedar.components.CedarSearchField
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.LocalBottomBarInset
-import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.MatchDetailCoordinator
 import org.koin.compose.koinInject
@@ -84,14 +81,32 @@ internal class SearchStep : Screen {
             mapBody = { bodyModifier ->
                 Box(modifier = bodyModifier) {
                     MatchMapView(
-                        pins = state.results.map { it.toMapPin() },
+                        pins = state.mapResults.map { it.toMapPin() },
                         camera = state.mapCamera,
                         onPinClick = { matchId -> stepModel.onEvent(SearchEvents.PinSelected(matchId)) },
                         onNearbyTap = {},
                         nearbyCount = 0,
                         hasLocationPermission = false,
                         modifier = Modifier.fillMaxSize(),
+                        onCameraIdle = { camera -> stepModel.onEvent(SearchEvents.MapCameraIdle(camera)) },
                     )
+                    if (state.isMapLoading) {
+                        Box(
+                            modifier = Modifier.align(Alignment.TopCenter).padding(top = CedarTokens.spacing.md),
+                        ) {
+                            CedarLoading(contentDescription = state.mapStrings.loadingLabel)
+                        }
+                    }
+                    state.mapErrorMessage?.let { message ->
+                        Banner(
+                            message = message,
+                            container = MaterialTheme.colorScheme.errorContainer,
+                            onContainer = MaterialTheme.colorScheme.onErrorContainer,
+                            dismissContentDescription = state.mapStrings.closeContentDescription,
+                            onDismiss = { stepModel.onEvent(SearchEvents.MapErrorDismissed) },
+                            modifier = Modifier.align(Alignment.TopCenter),
+                        )
+                    }
                     state.previewMatch?.let { game ->
                         MapMatchPreviewCard(
                             preview = MatchPreview(game = game, distanceKm = null),
@@ -106,7 +121,7 @@ internal class SearchStep : Screen {
                                     .padding(
                                         horizontal = CedarTokens.spacing.md,
                                         vertical = CedarTokens.spacing.md,
-                                    ),
+                                    ).padding(bottom = LocalBottomBarInset.current),
                         )
                     }
                 }
@@ -115,7 +130,6 @@ internal class SearchStep : Screen {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SearchContent(
     state: SearchState,
@@ -128,10 +142,9 @@ internal fun SearchContent(
     val cardStrings = state.cardStrings
 
     if (state.showFiltersPanel) {
-        ModalBottomSheet(
-            onDismissRequest = { onEvent(SearchEvents.ToggleFiltersPanel) },
-            shape = CedarTokens.radius.sheet,
-            containerColor = MaterialTheme.colorScheme.surface,
+        CedarFloatingDialog(
+            onDismiss = { onEvent(SearchEvents.ToggleFiltersPanel) },
+            scrollable = false,
         ) {
             SearchFiltersPanel(
                 strings = strings,
@@ -274,33 +287,13 @@ internal fun SearchContent(
                                 vertical = CedarTokens.spacing.xs,
                             ),
                     )
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding =
-                            PaddingValues(
-                                start = CedarTokens.spacing.lg,
-                                end = CedarTokens.spacing.lg,
-                                top = CedarTokens.spacing.xs,
-                                bottom = CedarTokens.spacing.xs + LocalBottomBarInset.current,
-                            ),
-                        verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
-                    ) {
-                        items(items = state.results, key = { it.id }) { game ->
-                            MatchCard(
-                                venueName = game.venueName,
-                                startsAtSeconds = game.startsAtSeconds,
-                                metaLabel = "${game.sport.label} · ${game.neighborhood}",
-                                priceLabel = game.pricePerPlayer?.let { cardStrings.perPlayer(it) },
-                                slotsLabel = cardStrings.slotsBadge(game.openSlots),
-                                openSlots = game.openSlots,
-                                cityLabel = game.city,
-                                onClick = { onEvent(SearchEvents.SelectGame(game.id)) },
-                                matchRating = game.matchRating.toFloat().takeIf { game.matchRatingCount > 0 },
-                                matchRatingCountLabel =
-                                    cardStrings.ratingsCount(game.matchRatingCount).takeIf { game.matchRatingCount > 0 },
-                            )
-                        }
-                    }
+                    GameList(
+                        strings = cardStrings,
+                        games = state.visibleResults,
+                        onClick = { onEvent(SearchEvents.SelectGame(it)) },
+                        hasMore = state.hasMoreResults,
+                        onLoadMore = { onEvent(SearchEvents.LoadMoreResults) },
+                    )
                 }
             }
         }

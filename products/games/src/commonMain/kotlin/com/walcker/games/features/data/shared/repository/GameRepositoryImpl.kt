@@ -15,6 +15,7 @@ import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.features.domain.shared.repository.MyMatch
+import com.walcker.match.core.geo.Coordinates
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,6 +66,19 @@ internal class GameRepositoryImpl(
         runCatching {
             withRetry(shouldRetry = ::defaultShouldRetry) {
                 source.openGames(radiusKm, cursors)
+            }
+        }.recoverCatching { error ->
+            throw error.toGamesError()
+        }
+
+    override suspend fun searchMatchesNear(
+        center: Coordinates,
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): Result<NearbyMatchesPage> =
+        runCatching {
+            withRetry(shouldRetry = ::defaultShouldRetry) {
+                source.openGamesNear(center, radiusKm, cursors)
             }
         }.recoverCatching { error ->
             throw error.toGamesError()

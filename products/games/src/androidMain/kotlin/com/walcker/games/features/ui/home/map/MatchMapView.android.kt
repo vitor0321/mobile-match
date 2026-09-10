@@ -17,6 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -25,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.CameraMoveStartedReason
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -48,6 +51,7 @@ internal actual fun MatchMapView(
     nearbyCount: Int,
     hasLocationPermission: Boolean,
     modifier: Modifier,
+    onCameraIdle: (MapCamera) -> Unit,
 ) {
     val context = LocalContext.current
     val cameraPositionState =
@@ -60,6 +64,7 @@ internal actual fun MatchMapView(
         }
     val isDarkTheme = isSystemInDarkTheme()
     val mapStyleOptions = rememberGoogleMapStyleOptions(isDarkTheme)
+    val currentOnCameraIdle = rememberUpdatedState(onCameraIdle)
 
     LaunchedEffect(camera.lat, camera.lng) {
         cameraPositionState.position =
@@ -67,6 +72,21 @@ internal actual fun MatchMapView(
                 LatLng(camera.lat, camera.lng),
                 camera.zoom,
             )
+    }
+
+    LaunchedEffect(cameraPositionState) {
+        snapshotFlow { cameraPositionState.isMoving }.collect { isMoving ->
+            if (!isMoving && cameraPositionState.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE) {
+                val position = cameraPositionState.position
+                currentOnCameraIdle.value(
+                    MapCamera(
+                        lat = position.target.latitude,
+                        lng = position.target.longitude,
+                        zoom = position.zoom,
+                    ),
+                )
+            }
+        }
     }
 
     Box(modifier = modifier) {

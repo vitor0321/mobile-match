@@ -7,10 +7,17 @@ import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
 import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
 import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.match.core.geo.Coordinates
 import kotlinx.coroutines.flow.Flow
 
 internal interface GameSource {
     suspend fun openGames(
+        radiusKm: Double,
+        cursors: List<String?>? = null,
+    ): NearbyMatchesPage
+
+    suspend fun openGamesNear(
+        center: Coordinates,
         radiusKm: Double,
         cursors: List<String?>? = null,
     ): NearbyMatchesPage

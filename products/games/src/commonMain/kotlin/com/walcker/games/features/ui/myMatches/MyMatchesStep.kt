@@ -38,6 +38,7 @@ import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.MainTab
+import com.walcker.match.navigator.MatchDetailCoordinator
 import com.walcker.match.navigator.TabCoordinator
 import org.koin.compose.koinInject
 
@@ -47,6 +48,7 @@ internal class MyMatchesStep : Screen {
     @Composable
     override fun Content() {
         val tabCoordinator = koinInject<TabCoordinator>()
+        val matchDetailCoordinator = koinInject<MatchDetailCoordinator>()
         val strings = rememberGamesStrings().strings.myMatches
         val model = koinScreenModel<MyMatchesStepModel>()
         val state by model.state.collectAsState()
@@ -56,6 +58,15 @@ internal class MyMatchesStep : Screen {
             state.errorMessage?.let {
                 snackbarHostState.showSnackbar(it)
                 model.onEvent(MyMatchesEvent.DismissError)
+            }
+        }
+
+        LaunchedEffect(model) {
+            model.effects.collect { effect ->
+                when (effect) {
+                    is MyMatchesEffect.NavigateToMatchDetail -> matchDetailCoordinator.open(effect.matchId)
+                    is MyMatchesEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                }
             }
         }
 
@@ -151,6 +162,7 @@ internal fun MyMatchesContent(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
+                val nowSeconds = remember { kotlin.time.Clock.System.now().epochSeconds }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding =
@@ -177,8 +189,11 @@ internal fun MyMatchesContent(
                                     myMatch.game.totalPlayers,
                                 ),
                             ratingsCountLabel = strings.ratingsCount,
+                            startsSoonBadge = strings.startsSoonBadge,
+                            nowSeconds = nowSeconds,
                             isPast = !isActiveTab,
                             isProcessing = state.processingMatchId == myMatch.game.id,
+                            onClick = { onEvent(MyMatchesEvent.MatchClicked(myMatch.game.id)) },
                             onActionClick = {
                                 if (myMatch.role == MatchRole.ORGANIZER) {
                                     onEvent(MyMatchesEvent.CancelRequested(myMatch.game.id))

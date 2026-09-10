@@ -11,31 +11,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.ui.shared.notifications.component.NotificationItemRow
 import com.walcker.games.strings.NotificationHistoryStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarFloatingDialog
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.DeepLink
 import com.walcker.match.navigator.DeepLinkCoordinator
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationHistoryStep(
     isVisible: Boolean,
@@ -45,27 +40,14 @@ fun NotificationHistoryStep(
     val deepLinkCoordinator: DeepLinkCoordinator = koinInject()
     val state by stepModel.state.collectAsState()
     val strings = rememberGamesStrings().strings.notificationHistory
-    val sheetState = rememberModalBottomSheetState()
-    val coroutineScope = rememberCoroutineScope()
 
     if (isVisible) {
-        ModalBottomSheet(
-            onDismissRequest = {
-                coroutineScope.launch { sheetState.hide() }
-                onDismiss()
-            },
-            sheetState = sheetState,
-            shape = CedarTokens.radius.sheet,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
+        CedarFloatingDialog(onDismiss = onDismiss, scrollable = false) {
             NotificationHistoryContent(
                 state = state,
                 strings = strings,
                 onEvent = stepModel::onEvent,
-                onClose = {
-                    coroutineScope.launch { sheetState.hide() }
-                    onDismiss()
-                },
+                onClose = onDismiss,
                 onNotificationTap = { notificationId ->
                     val matchId =
                         state.notifications
@@ -74,7 +56,6 @@ fun NotificationHistoryStep(
                             ?.get("matchId")
                     if (!matchId.isNullOrEmpty()) {
                         deepLinkCoordinator.navigate(DeepLink.OpenMatch(matchId))
-                        coroutineScope.launch { sheetState.hide() }
                         onDismiss()
                     }
                 },

@@ -47,6 +47,11 @@ internal class MyMatchesStepModel(
             MyMatchesEvent.DismissError -> _state.update { it.copy(errorMessage = null) }
             is MyMatchesEvent.CancelRequested -> handleCancel(event.gameId)
             is MyMatchesEvent.LeaveRequested -> handleLeave(event.gameId)
+            is MyMatchesEvent.MatchClicked -> {
+                screenModelScope.launch {
+                    _effects.send(MyMatchesEffect.NavigateToMatchDetail(event.gameId))
+                }
+            }
         }
     }
 

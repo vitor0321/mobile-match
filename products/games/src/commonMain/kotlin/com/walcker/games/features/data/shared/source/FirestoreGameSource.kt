@@ -41,6 +41,12 @@ internal class FirestoreGameSource(
         return queryNearbyMatches(userLocation, radiusKm, cursors)
     }
 
+    override suspend fun openGamesNear(
+        center: Coordinates,
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): NearbyMatchesPage = queryNearbyMatches(center, radiusKm, cursors)
+
     private suspend fun resolveUserLocation(): Coordinates {
         if (!locationProvider.requestPermission()) return DefaultCenter
         return locationProvider.currentLocation().getOrNull() ?: DefaultCenter

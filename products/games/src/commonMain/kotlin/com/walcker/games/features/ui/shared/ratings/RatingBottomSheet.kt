@@ -1,18 +1,13 @@
 package com.walcker.games.features.ui.shared.ratings
 
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.domain.shared.model.ReportReason
 import com.walcker.games.features.ui.shared.ratings.component.RatingForm
 import com.walcker.games.strings.RatingStrings
 import com.walcker.games.strings.ReportStrings
-import com.walcker.match.cedar.tokens.CedarTokens
+import com.walcker.match.cedar.components.CedarFloatingDialog
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RatingBottomSheet(
     isVisible: Boolean,
@@ -27,14 +22,7 @@ internal fun RatingBottomSheet(
     modifier: Modifier = Modifier,
 ) {
     if (isVisible) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = sheetState,
-            shape = CedarTokens.radius.sheet,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
+        CedarFloatingDialog(onDismiss = onDismiss) {
             RatingForm(
                 playerName = playerName,
                 strings = strings,

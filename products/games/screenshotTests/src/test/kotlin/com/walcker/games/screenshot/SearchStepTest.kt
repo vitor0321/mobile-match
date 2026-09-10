@@ -52,4 +52,13 @@ class SearchStepTest {
 
     @Test
     fun mapMode_lightMode() = snapshot(resultsState.copy(showMap = true), darkTheme = false)
+
+    @Test
+    fun resultsWithLoadMore_lightMode() =
+        snapshot(
+            resultsState.copy(
+                results = persistentListOf(*(1..25).map { fakeGame(id = "match-$it") }.toTypedArray()),
+            ),
+            darkTheme = false,
+        )
 }

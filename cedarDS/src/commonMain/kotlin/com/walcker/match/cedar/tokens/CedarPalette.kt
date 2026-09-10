@@ -54,6 +54,11 @@ internal object CedarPalette {
     val Red900: Color = Color(0xFF7A271A)
     val Red400: Color = Color(0xFFFF8A80)
 
+    val Amber600: Color = Color(0xFFB54708)
+    val Amber100: Color = Color(0xFFFEF0C7)
+    val Amber900: Color = Color(0xFF4A2A03)
+    val Amber400: Color = Color(0xFFFFB258)
+
     val CanvasDark: Color = Color(0xFF0B1220)
     val SurfaceDark: Color = Color(0xFF131E30)
     val SurfaceSubtleDark: Color = Color(0xFF1A2739)

@@ -16,6 +16,8 @@ public enum class CedarTagTone {
 
     Available,
 
+    Warning,
+
     Danger,
 }
 
@@ -30,6 +32,7 @@ public fun CedarTag(
             CedarTagTone.Neutral -> MaterialTheme.colorScheme.surfaceVariant
             CedarTagTone.Info -> MaterialTheme.colorScheme.primaryContainer
             CedarTagTone.Available -> CedarTokens.colors.availableContainer
+            CedarTagTone.Warning -> CedarTokens.colors.warningContainer
             CedarTagTone.Danger -> MaterialTheme.colorScheme.errorContainer
         }
     val foreground =
@@ -37,6 +40,7 @@ public fun CedarTag(
             CedarTagTone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
             CedarTagTone.Info -> MaterialTheme.colorScheme.onPrimaryContainer
             CedarTagTone.Available -> CedarTokens.colors.availableText
+            CedarTagTone.Warning -> CedarTokens.colors.warningText
             CedarTagTone.Danger -> MaterialTheme.colorScheme.onErrorContainer
         }
 

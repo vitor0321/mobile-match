@@ -1,5 +1,6 @@
 package com.walcker.games.features.ui.myMatches
 
+import app.cash.turbine.test
 import com.walcker.games.fake.FakeAnalyticsTracker
 import com.walcker.games.fake.FakeCrashReporter
 import com.walcker.games.fake.FakeGameRepository
@@ -155,6 +156,23 @@ class MyMatchesStepModelTest {
             advanceUntilIdle()
 
             assertEquals(listOf("match-1"), repository.leaveMatchCalls)
+        }
+
+    @Test
+    fun `clicking a match sends a navigate-to-detail effect`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository()
+            val model = buildModel(repository)
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(MyMatchesEvent.MatchClicked("match-1"))
+
+                val effect = awaitItem()
+                assertTrue(effect is MyMatchesEffect.NavigateToMatchDetail)
+                assertEquals("match-1", (effect as MyMatchesEffect.NavigateToMatchDetail).matchId)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test

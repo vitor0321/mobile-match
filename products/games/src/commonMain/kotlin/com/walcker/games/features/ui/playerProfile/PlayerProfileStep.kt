@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +51,7 @@ import com.walcker.games.features.ui.playerProfile.component.ProfileHeader
 import com.walcker.games.features.ui.playerProfile.component.RatingItemCard
 import com.walcker.games.features.ui.shared.common.LoginRequiredBottomSheet
 import com.walcker.games.features.ui.shared.notifications.NotificationHistoryStep
+import com.walcker.games.features.ui.shared.notifications.rememberHasUnreadNotifications
 import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.components.CedarLoading
@@ -87,6 +90,7 @@ internal class PlayerProfileStep : Screen {
         val loginRequired = rememberGamesStrings().strings.loginRequired
         var showLoginSheet by remember { mutableStateOf(false) }
         var showNotifications by remember { mutableStateOf(false) }
+        val hasUnreadNotifications by rememberHasUnreadNotifications()
 
         LaunchedEffect(state.errorMessage) {
             state.errorMessage?.let {
@@ -124,6 +128,7 @@ internal class PlayerProfileStep : Screen {
             onEvent = model::onEvent,
             strings = strings,
             onLoginRequested = { loginCoordinator.requestLogin() },
+            hasUnreadNotifications = hasUnreadNotifications,
             onNotificationsClicked = { showNotifications = true },
             onMyMatchesClicked = { tabCoordinator.requestTab(MainTab.MyMatches) },
             onAboutClicked = { navigator.push(AboutStep()) },
@@ -154,6 +159,7 @@ internal fun PlayerProfileContent(
     strings: PlayerProfileStrings,
     modifier: Modifier = Modifier,
     onLoginRequested: () -> Unit = {},
+    hasUnreadNotifications: Boolean = false,
     onNotificationsClicked: () -> Unit = {},
     onMyMatchesClicked: () -> Unit = {},
     onAboutClicked: () -> Unit = {},
@@ -261,11 +267,13 @@ internal fun PlayerProfileContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onNotificationsClicked) {
-                        Icon(
-                            imageVector = Icons.Outlined.Notifications,
-                            contentDescription = strings.notificationsContentDescription,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
+                        BadgedBox(badge = { if (hasUnreadNotifications) Badge() }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Notifications,
+                                contentDescription = strings.notificationsContentDescription,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }

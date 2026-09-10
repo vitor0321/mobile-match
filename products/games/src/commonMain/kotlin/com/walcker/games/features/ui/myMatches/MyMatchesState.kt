@@ -29,10 +29,18 @@ internal sealed interface MyMatchesEvent {
     data class LeaveRequested(
         val gameId: String,
     ) : MyMatchesEvent
+
+    data class MatchClicked(
+        val gameId: String,
+    ) : MyMatchesEvent
 }
 
 internal sealed interface MyMatchesEffect {
     data class ShowMessage(
         val message: String,
+    ) : MyMatchesEffect
+
+    data class NavigateToMatchDetail(
+        val matchId: String,
     ) : MyMatchesEffect
 }

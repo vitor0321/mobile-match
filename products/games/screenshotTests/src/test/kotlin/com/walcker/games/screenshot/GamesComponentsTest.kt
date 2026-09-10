@@ -11,8 +11,8 @@ import com.walcker.games.features.ui.home.map.component.MapMatchPreviewCard
 import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.myMatches.component.MyMatchCard
 import com.walcker.games.features.ui.playerProfile.component.AvailabilityCard
+import com.walcker.games.features.ui.shared.manageMatch.component.ParticipantRow
 import com.walcker.games.features.ui.shared.matchDetail.component.JoinBar
-import com.walcker.games.features.ui.shared.matchDetail.component.ParticipantRow
 import com.walcker.games.features.ui.shared.matchDetail.component.StatusBadge
 import com.walcker.games.features.ui.shared.notifications.component.NotificationItemRow
 import com.walcker.games.features.ui.shared.playerDetails.component.RatingCard
@@ -52,7 +52,10 @@ class GamesComponentsTest {
                 statusFinishedLabel = "Encerrada",
                 playersLabel = "6/10 jogadores",
                 ratingsCountLabel = { n -> "$n avaliações" },
+                startsSoonBadge = "Começa em breve",
+                nowSeconds = 0L,
                 isPast = false,
+                onClick = {},
                 onActionClick = {},
             )
         }
@@ -70,7 +73,10 @@ class GamesComponentsTest {
                 statusFinishedLabel = "Encerrada",
                 playersLabel = "6/10 jogadores",
                 ratingsCountLabel = { n -> "$n avaliações" },
+                startsSoonBadge = "Começa em breve",
+                nowSeconds = 0L,
                 isPast = false,
+                onClick = {},
                 onActionClick = {},
             )
         }
@@ -88,7 +94,31 @@ class GamesComponentsTest {
                 statusFinishedLabel = "Encerrada",
                 playersLabel = "10/10 jogadores",
                 ratingsCountLabel = { n -> "$n avaliações" },
+                startsSoonBadge = "Começa em breve",
+                nowSeconds = 0L,
                 isPast = true,
+                onClick = {},
+                onActionClick = {},
+            )
+        }
+
+    @Test
+    fun myMatchCard_startsSoon_lightMode() =
+        snapshot {
+            MyMatchCard(
+                myMatch = fakeMyMatch(role = MatchRole.PARTICIPANT, game = fakeGame(startsAtSeconds = 3_600L)),
+                organizerBadge = "Organizador",
+                participantBadge = "Participante",
+                cancelActionLabel = "Cancelar",
+                leaveActionLabel = "Sair",
+                statusCancelledLabel = "Cancelada",
+                statusFinishedLabel = "Encerrada",
+                playersLabel = "6/10 jogadores",
+                ratingsCountLabel = { n -> "$n avaliações" },
+                startsSoonBadge = "Começa em breve",
+                nowSeconds = 0L,
+                isPast = false,
+                onClick = {},
                 onActionClick = {},
             )
         }

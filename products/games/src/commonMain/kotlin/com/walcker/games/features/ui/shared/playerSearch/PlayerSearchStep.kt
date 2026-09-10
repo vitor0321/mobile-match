@@ -11,11 +11,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -36,6 +34,7 @@ import com.walcker.games.features.ui.shared.playerSearch.component.PlayerFilters
 import com.walcker.games.features.ui.shared.playerSearch.component.PlayerSearchResultCard
 import com.walcker.games.strings.PlayerSearchStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarFloatingDialog
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
 import com.walcker.match.cedar.components.CedarSearchField
@@ -72,7 +71,6 @@ internal class PlayerSearchStep : Screen {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PlayerSearchContent(
     state: PlayerSearchState,
@@ -82,10 +80,9 @@ internal fun PlayerSearchContent(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     if (state.showFiltersPanel) {
-        ModalBottomSheet(
-            onDismissRequest = { onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
-            shape = CedarTokens.radius.sheet,
-            containerColor = MaterialTheme.colorScheme.surface,
+        CedarFloatingDialog(
+            onDismiss = { onEvent(PlayerSearchEvents.ToggleFiltersPanel) },
+            scrollable = false,
         ) {
             PlayerFiltersPanel(
                 filters = state.filters,

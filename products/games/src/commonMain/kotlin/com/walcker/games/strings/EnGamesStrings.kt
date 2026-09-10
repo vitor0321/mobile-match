@@ -19,6 +19,7 @@ internal val EnGamesStrings =
         reports = reportStringsEn,
         matchConfirmed = matchConfirmedStringsEn,
         matchDetail = matchDetailStringsEn,
+        manageMatch = manageMatchStringsEn,
         map = mapStringsEn,
         loginRequired = loginRequiredStringsEn,
         about = aboutStringsEn,

@@ -7,6 +7,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ import com.walcker.games.features.ui.home.map.model.MapPin
 import com.walcker.match.cedar.components.LocalBottomBarInset
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
 import platform.CoreLocation.CLLocationCoordinate2D
 import platform.CoreLocation.CLLocationCoordinate2DMake
 import platform.MapKit.MKAnnotationProtocol
@@ -30,6 +32,7 @@ import platform.MapKit.MKMapViewDelegateProtocol
 import platform.MapKit.MKMarkerAnnotationView
 import platform.UIKit.UIColor
 import platform.darwin.NSObject
+import kotlin.math.log2
 import kotlin.math.pow
 
 @OptIn(ExperimentalForeignApi::class)
@@ -59,9 +62,12 @@ internal actual fun MatchMapView(
     nearbyCount: Int,
     hasLocationPermission: Boolean,
     modifier: Modifier,
+    onCameraIdle: (MapCamera) -> Unit,
 ) {
     val currentOnPinClick = rememberUpdatedState(onPinClick)
+    val currentOnCameraIdle = rememberUpdatedState(onCameraIdle)
     val mapView = remember { MKMapView() }
+    val isProgrammaticRegionChange = remember { mutableStateOf(false) }
 
     val delegate =
         remember {
@@ -89,6 +95,25 @@ internal actual fun MatchMapView(
                     view.markerTintColor = annotation.status.markerColor()
                     return view
                 }
+
+                override fun mapView(
+                    mapView: MKMapView,
+                    regionDidChangeAnimated: Boolean,
+                ) {
+                    if (isProgrammaticRegionChange.value) {
+                        isProgrammaticRegionChange.value = false
+                        return
+                    }
+                    val region = mapView.region
+                    val zoom = log2(360.0 / region.useContents { span.latitudeDelta }).toFloat()
+                    currentOnCameraIdle.value(
+                        MapCamera(
+                            lat = region.useContents { center.latitude },
+                            lng = region.useContents { center.longitude },
+                            zoom = zoom,
+                        ),
+                    )
+                }
             }
         }
 
@@ -107,6 +132,7 @@ internal actual fun MatchMapView(
                 CLLocationCoordinate2DMake(camera.lat, camera.lng),
                 MKCoordinateSpanMake(delta, delta),
             )
+        isProgrammaticRegionChange.value = true
         mapView.setRegion(region, animated = true)
     }
 

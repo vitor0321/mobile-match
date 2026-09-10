@@ -54,11 +54,6 @@ internal fun PlayerHeader(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Text(
-            text = strings.ratingsCount(player.totalRatings),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
 
         player.favoriteSports
             .takeIf { it.isNotEmpty() }

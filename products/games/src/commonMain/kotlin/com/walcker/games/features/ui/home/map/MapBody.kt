@@ -6,11 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,11 +18,11 @@ import com.walcker.games.features.ui.home.map.component.LocationUnavailableCard
 import com.walcker.games.features.ui.home.map.component.MapMatchPreviewCard
 import com.walcker.games.features.ui.home.map.component.NearbyMatchesSheet
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.match.cedar.components.CedarFloatingDialog
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.tokens.CedarTokens
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MapBody(
     state: MapState,
@@ -40,7 +36,6 @@ internal fun MapBody(
     val allStrings = rememberGamesStrings().strings
     val strings = allStrings.map
     var showNearbySheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Box(modifier = modifier) {
         PullToRefreshBox(
@@ -56,6 +51,7 @@ internal fun MapBody(
                 nearbyCount = state.nearbyMatches.size,
                 hasLocationPermission = state.hasLocationPermission,
                 modifier = Modifier.fillMaxSize(),
+                onCameraIdle = {},
             )
         }
 
@@ -95,12 +91,7 @@ internal fun MapBody(
     }
 
     if (showNearbySheet && state.nearbyMatches.isNotEmpty()) {
-        ModalBottomSheet(
-            onDismissRequest = { showNearbySheet = false },
-            sheetState = sheetState,
-            shape = CedarTokens.radius.sheet,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
+        CedarFloatingDialog(onDismiss = { showNearbySheet = false }, scrollable = false) {
             NearbyMatchesSheet(
                 strings = strings,
                 matches = state.nearbyMatches,

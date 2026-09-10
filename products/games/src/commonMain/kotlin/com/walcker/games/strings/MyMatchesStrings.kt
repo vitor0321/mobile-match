@@ -19,6 +19,7 @@ internal data class MyMatchesStrings(
     val playersCount: (confirmed: Int, total: Int) -> String,
     val emptyActiveAction: String,
     val ratingsCount: (Int) -> String,
+    val startsSoonBadge: String,
 )
 
 internal val myMatchesStringsPt =
@@ -32,8 +33,8 @@ internal val myMatchesStringsPt =
         emptyPast = "Nenhuma partida no histórico.",
         organizerBadge = "Organizador",
         participantBadge = "Participante",
-        cancelAction = "Cancelar partida",
-        leaveAction = "Sair da partida",
+        cancelAction = "Cancelar",
+        leaveAction = "Sair",
         cancelError = "Não foi possível cancelar a partida.",
         leaveError = "Não foi possível sair da partida.",
         statusCancelled = "Cancelada",
@@ -41,6 +42,7 @@ internal val myMatchesStringsPt =
         playersCount = { confirmed, total -> "$confirmed/$total jogadores" },
         emptyActiveAction = "Buscar partidas",
         ratingsCount = { n -> if (n == 1) "1 avaliação" else "$n avaliações" },
+        startsSoonBadge = "Começa em breve",
     )
 
 internal val myMatchesStringsEn =
@@ -54,8 +56,8 @@ internal val myMatchesStringsEn =
         emptyPast = "No past matches.",
         organizerBadge = "Organizer",
         participantBadge = "Participant",
-        cancelAction = "Cancel match",
-        leaveAction = "Leave match",
+        cancelAction = "Cancel",
+        leaveAction = "Leave",
         cancelError = "Could not cancel the match.",
         leaveError = "Could not leave the match.",
         statusCancelled = "Cancelled",
@@ -63,4 +65,5 @@ internal val myMatchesStringsEn =
         playersCount = { confirmed, total -> "$confirmed/$total players" },
         emptyActiveAction = "Find matches",
         ratingsCount = { n -> if (n == 1) "1 review" else "$n reviews" },
+        startsSoonBadge = "Starting soon",
     )

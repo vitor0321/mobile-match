@@ -56,4 +56,17 @@ class PlayerProfileStepTest {
             loadedState.copy(organizerAverageRating = 3.8f, organizerTotalRatings = 4),
             darkTheme = false,
         )
+
+    @Test
+    fun unreadNotifications_lightMode() =
+        paparazzi.snapshot {
+            GamesSnapshotTheme(darkTheme = false) {
+                PlayerProfileContent(
+                    state = loadedState,
+                    onEvent = {},
+                    strings = PtBrGamesStrings.playerProfile,
+                    hasUnreadNotifications = true,
+                )
+            }
+        }
 }

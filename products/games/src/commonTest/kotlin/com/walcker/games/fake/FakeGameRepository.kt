@@ -9,6 +9,7 @@ import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.ParticipantsSummary
 import com.walcker.games.features.domain.shared.repository.GameRepository
 import com.walcker.games.features.domain.shared.repository.MyMatch
+import com.walcker.match.core.geo.Coordinates
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,8 @@ internal class FakeGameRepository(
     var getGameByIdResult: Result<Game> = Result.success(game()),
     var loadMoreMatchesResult: Result<Unit> = Result.success(Unit),
     var searchMatchesResult: Result<NearbyMatchesPage> = Result.success(NearbyMatchesPage(games = emptyList(), rangeCursors = emptyList())),
+    var searchMatchesResults: MutableList<Result<NearbyMatchesPage>>? = null,
+    var searchMatchesNearResult: Result<NearbyMatchesPage> = Result.success(NearbyMatchesPage(games = emptyList(), rangeCursors = emptyList())),
 ) : GameRepository {
     private val matchesFlow = MutableStateFlow<List<Game>>(emptyList())
     private val hasMoreMatchesFlow = MutableStateFlow(false)
@@ -36,6 +39,7 @@ internal class FakeGameRepository(
     val refreshCalls: MutableList<Double> = mutableListOf()
     val loadMoreMatchesCalls: MutableList<Double> = mutableListOf()
     val searchMatchesCalls: MutableList<Double> = mutableListOf()
+    val searchMatchesNearCalls: MutableList<Pair<Coordinates, Double>> = mutableListOf()
     val joinGameCalls: MutableList<String> = mutableListOf()
     val createMatchCalls: MutableList<CreateMatchRequest> = mutableListOf()
     val updateMatchCalls: MutableList<Pair<String, CreateMatchRequest>> = mutableListOf()
@@ -80,7 +84,17 @@ internal class FakeGameRepository(
         cursors: List<String?>?,
     ): Result<NearbyMatchesPage> {
         searchMatchesCalls += radiusKm
-        return searchMatchesResult
+        val queue = searchMatchesResults
+        return if (queue != null && queue.isNotEmpty()) queue.removeAt(0) else searchMatchesResult
+    }
+
+    override suspend fun searchMatchesNear(
+        center: Coordinates,
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): Result<NearbyMatchesPage> {
+        searchMatchesNearCalls += center to radiusKm
+        return searchMatchesNearResult
     }
 
     override suspend fun joinGame(gameId: String): Result<JoinMatchOutcome> {

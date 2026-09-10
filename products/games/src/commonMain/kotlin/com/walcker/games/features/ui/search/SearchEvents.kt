@@ -1,6 +1,7 @@
 package com.walcker.games.features.ui.search
 
 import com.walcker.games.features.domain.shared.model.Sport
+import com.walcker.games.features.ui.home.map.MapCamera
 
 internal sealed interface SearchEvents {
     data class QueryChanged(
@@ -38,6 +39,16 @@ internal sealed interface SearchEvents {
     ) : SearchEvents
 
     data object MapPreviewDismissed : SearchEvents
+
+    data object LoadMoreResults : SearchEvents
+
+    data class MapCameraIdle(
+        val camera: MapCamera,
+    ) : SearchEvents
+
+    data object MapRetry : SearchEvents
+
+    data object MapErrorDismissed : SearchEvents
 }
 
 internal sealed interface SearchEffect {
