@@ -307,6 +307,69 @@ describe("matches", () => {
     await assertSucceeds(updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {priceCents: 2500}));
   });
 
+  it("o organizador ainda edita uma partida antiga sem currencyCode/matchRating (regressão de schema legado)", async () => {
+    await seed(async (database) => {
+      // Documento propositalmente sem currencyCode/matchRating/matchRatingCount/
+      // organizerRatingCount — reproduz partidas reais anteriores a esses campos
+      // existirem no schema. Nenhum deles está em matchEditableFields(), então
+      // uma edição nunca consegue adicioná-los.
+      await setDoc(doc(database, "matches", MATCH_ID), {
+        organizerId: ORGANIZER,
+        organizerName: "Organizador",
+        organizerRating: 5,
+        sport: "futsal",
+        venueName: "Green Ball",
+        address: "Rua das Quadras, 100",
+        neighborhood: "União dos Cegos",
+        city: "São Paulo",
+        lat: -23.5505,
+        lng: -46.6333,
+        geohash: "6gyf4bf8m",
+        startsAtSeconds: Math.floor(Date.now() / 1_000) + 6 * 3_600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 4,
+        priceCents: 2000,
+        status: "OPEN",
+        participants: [],
+      });
+    });
+
+    await assertSucceeds(
+      updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+    await assertSucceeds(updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {priceCents: 2500}));
+  });
+
+  it("nega criar uma partida sem currencyCode/matchRating (a criação continua exigindo o schema completo)", async () => {
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        organizerId: ORGANIZER,
+        organizerName: "Organizador",
+        organizerRating: 5,
+        sport: "futsal",
+        venueName: "Green Ball",
+        address: "Rua das Quadras, 100",
+        neighborhood: "União dos Cegos",
+        city: "São Paulo",
+        lat: -23.5505,
+        lng: -46.6333,
+        geohash: "6gyf4bf8m",
+        startsAtSeconds: Math.floor(Date.now() / 1_000) + 6 * 3_600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 0,
+        priceCents: 2000,
+        status: "OPEN",
+        participants: [],
+        // sem currencyCode/matchRating/matchRatingCount/organizerRatingCount
+      }),
+    );
+  });
+
   it("apaga partida vazia, mas exige cancelamento quando já tem gente", async () => {
     await seed(async (database) => {
       await setDoc(doc(database, "matches", "vazia"), matchPayload());
