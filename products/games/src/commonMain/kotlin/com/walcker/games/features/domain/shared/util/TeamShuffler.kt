@@ -2,7 +2,7 @@ package com.walcker.games.features.domain.shared.util
 
 import kotlin.random.Random
 
-private const val MIN_TEAMS = 1
+private const val MIN_TEAMS = 2
 private const val MAX_TEAMS = 6
 
 internal fun shuffleIntoTeams(

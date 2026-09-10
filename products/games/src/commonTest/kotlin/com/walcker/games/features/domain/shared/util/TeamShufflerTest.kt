@@ -44,6 +44,13 @@ class TeamShufflerTest {
     }
 
     @Test
+    fun `team count of 1 throws`() {
+        assertFailsWith<IllegalArgumentException> {
+            shuffleIntoTeams(listOf("p1"), teamCount = 1)
+        }
+    }
+
+    @Test
     fun `team count above 6 throws`() {
         assertFailsWith<IllegalArgumentException> {
             shuffleIntoTeams(listOf("p1"), teamCount = 7)
