@@ -69,6 +69,8 @@ import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCa
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCase
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.SetTeamAssignmentsUseCase
+import com.walcker.games.features.domain.shared.usecase.SetTeamAssignmentsUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitOrganizerRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
@@ -111,6 +113,7 @@ internal val gamesDataModule =
         factory<CancelMatchUseCase> { CancelMatchUseCaseImpl(repository = get()) }
         factory<CancelMatchSeriesUseCase> { CancelMatchSeriesUseCaseImpl(repository = get()) }
         factory<LeaveMatchUseCase> { LeaveMatchUseCaseImpl(repository = get()) }
+        factory<SetTeamAssignmentsUseCase> { SetTeamAssignmentsUseCaseImpl(repository = get()) }
         factory<GetNotificationHistoryUseCase> { GetNotificationHistoryUseCaseImpl(repository = get()) }
         factory<ObserveHasUnreadNotificationsUseCase> {
             ObserveHasUnreadNotificationsUseCaseImpl(repository = get(), sessionHolder = get())

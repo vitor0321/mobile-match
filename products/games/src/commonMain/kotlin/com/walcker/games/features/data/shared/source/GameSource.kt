@@ -19,6 +19,12 @@ internal interface GameSource {
 
     suspend fun leaveMatch(gameId: String): LeaveMatchOutcome
 
+    suspend fun setTeamAssignments(
+        matchId: String,
+        teamCount: Int,
+        assignments: Map<String, Int>,
+    )
+
     suspend fun cancelMatch(gameId: String): CancelMatchOutcome
 
     suspend fun cancelMatchSeries(matchId: String)

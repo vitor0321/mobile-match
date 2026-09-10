@@ -128,6 +128,15 @@ internal class GameRepositoryImpl(
             }
         }.recoverCatching { error -> throw error.toGamesError() }
 
+    override suspend fun setTeamAssignments(
+        matchId: String,
+        teamCount: Int,
+        assignments: Map<String, Int>,
+    ): Result<Unit> =
+        runCatching {
+            source.setTeamAssignments(matchId, teamCount, assignments)
+        }.recoverCatching { error -> throw error.toGamesError() }
+
     override suspend fun getGameById(gameId: String): Result<Game> =
         runCatching {
             source.getGameById(gameId)

@@ -91,6 +91,17 @@ internal class FirestoreGameSource(
         )
     }
 
+    override suspend fun setTeamAssignments(
+        matchId: String,
+        teamCount: Int,
+        assignments: Map<String, Int>,
+    ) {
+        firestore
+            .document("matches/$matchId")
+            .update(mapOf("teamCount" to teamCount, "teamAssignments" to assignments))
+            .getOrThrow()
+    }
+
     override suspend fun cancelMatch(gameId: String): CancelMatchOutcome {
         val result =
             firestore.callFunction(

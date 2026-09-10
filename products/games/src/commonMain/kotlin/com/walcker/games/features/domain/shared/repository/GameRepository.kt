@@ -46,6 +46,12 @@ internal interface GameRepository {
 
     suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome>
 
+    suspend fun setTeamAssignments(
+        matchId: String,
+        teamCount: Int,
+        assignments: Map<String, Int>,
+    ): Result<Unit>
+
     suspend fun getGameById(gameId: String): Result<Game>
 
     fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>>

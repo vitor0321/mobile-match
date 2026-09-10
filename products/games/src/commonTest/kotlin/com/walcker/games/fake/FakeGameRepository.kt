@@ -23,6 +23,7 @@ internal class FakeGameRepository(
     var cancelMatchResult: Result<CancelMatchOutcome> = Result.success(CancelMatchOutcome.Cancelled("match-1")),
     var cancelMatchSeriesResult: Result<Unit> = Result.success(Unit),
     var leaveMatchResult: Result<LeaveMatchOutcome> = Result.success(LeaveMatchOutcome("match-1")),
+    var setTeamAssignmentsResult: Result<Unit> = Result.success(Unit),
     var getGameByIdResult: Result<Game> = Result.success(game()),
     var loadMoreMatchesResult: Result<Unit> = Result.success(Unit),
     var searchMatchesResult: Result<NearbyMatchesPage> = Result.success(NearbyMatchesPage(games = emptyList(), rangeCursors = emptyList())),
@@ -41,6 +42,7 @@ internal class FakeGameRepository(
     val cancelMatchCalls: MutableList<String> = mutableListOf()
     val cancelMatchSeriesCalls: MutableList<String> = mutableListOf()
     val leaveMatchCalls: MutableList<String> = mutableListOf()
+    val setTeamAssignmentsCalls: MutableList<Triple<String, Int, Map<String, Int>>> = mutableListOf()
     val getGameByIdCalls: MutableList<String> = mutableListOf()
 
     fun emitMatches(games: List<Game>) {
@@ -114,6 +116,15 @@ internal class FakeGameRepository(
     override suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome> {
         leaveMatchCalls += gameId
         return leaveMatchResult
+    }
+
+    override suspend fun setTeamAssignments(
+        matchId: String,
+        teamCount: Int,
+        assignments: Map<String, Int>,
+    ): Result<Unit> {
+        setTeamAssignmentsCalls += Triple(matchId, teamCount, assignments)
+        return setTeamAssignmentsResult
     }
 
     override suspend fun getGameById(gameId: String): Result<Game> {

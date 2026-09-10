@@ -19,6 +19,7 @@ internal class FakeGameSource(
     var cancelMatchResult: () -> CancelMatchOutcome = { CancelMatchOutcome.Cancelled(matchId = "match-1") },
     var createMatchResult: () -> String = { "match-1" },
     var updateMatchResult: () -> Unit = {},
+    var setTeamAssignmentsResult: () -> Unit = {},
     var matchesForUserResult: () -> List<Game> = { emptyList() },
     var getGameByIdResult: () -> Game = { game() },
 ) : GameSource {
@@ -30,6 +31,8 @@ internal class FakeGameSource(
     var createMatchCallCount: Int = 0
         private set
     var updateMatchCallCount: Int = 0
+        private set
+    var setTeamAssignmentsCallCount: Int = 0
         private set
     var cancelMatchCallCount: Int = 0
         private set
@@ -77,6 +80,15 @@ internal class FakeGameSource(
     ) {
         updateMatchCallCount++
         updateMatchResult()
+    }
+
+    override suspend fun setTeamAssignments(
+        matchId: String,
+        teamCount: Int,
+        assignments: Map<String, Int>,
+    ) {
+        setTeamAssignmentsCallCount++
+        setTeamAssignmentsResult()
     }
 
     override suspend fun matchesForUser(userId: String): List<Game> = matchesForUserResult()
