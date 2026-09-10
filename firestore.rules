@@ -224,8 +224,11 @@ service cloud.firestore {
         && changedKeys().hasOnly(matchEditableFields())
         && isValidMatchContent(incoming())
         && incoming().totalSlots >= current().confirmedCount
-        // 'FULL' e 'FINISHED' são estados calculados pelo servidor.
-        && incoming().status in ['OPEN', 'CANCELLED'];
+        // 'FULL' é aceito como status de entrada — a lotação cheia é o
+        // momento em que o organizador mais precisa editar (ex.: sortear
+        // times). 'FINISHED' continua bloqueado: é estado calculado pelo
+        // servidor.
+        && incoming().status in ['OPEN', 'FULL', 'CANCELLED'];
 
       allow update: if isAdmin();
 

@@ -247,6 +247,44 @@ class ManageMatchStepModelTest {
         }
 
     @Test
+    fun `loading a match with an existing team count syncs the selected team count`() =
+        runTest(testDispatcher) {
+            val myGame =
+                game(
+                    id = "match-1",
+                    organizerId = "player-1",
+                    teamCount = 4,
+                    teamAssignments = mapOf("p1" to 0, "p2" to 1, "p3" to 2, "p4" to 3),
+                ).copy(participants = listOf("p1", "p2", "p3", "p4"))
+            val gameRepository = FakeGameRepository(getGameByIdResult = Result.success(myGame))
+            val model = buildModel(gameRepository = gameRepository)
+
+            advanceUntilIdle()
+
+            assertEquals(4, model.state.value.selectedTeamCount)
+        }
+
+    @Test
+    fun `observing a match with an existing team count syncs the selected team count`() =
+        runTest(testDispatcher) {
+            val gameRepository = FakeGameRepository()
+            val model = buildModel(gameRepository = gameRepository)
+            advanceUntilIdle()
+
+            val myGame =
+                game(
+                    id = "match-1",
+                    organizerId = "player-1",
+                    teamCount = 3,
+                    teamAssignments = mapOf("p1" to 0, "p2" to 1, "p3" to 2),
+                ).copy(participants = listOf("p1", "p2", "p3"))
+            gameRepository.emitMatch(Result.success(myGame))
+            advanceUntilIdle()
+
+            assertEquals(3, model.state.value.selectedTeamCount)
+        }
+
+    @Test
     fun `selecting a team count only updates local state, no write happens yet`() =
         runTest(testDispatcher) {
             val gameRepository = FakeGameRepository()

@@ -181,6 +181,34 @@ describe("profiles/private — telefone, Pix, geo e disponibilidade", () => {
   });
 });
 
+function validMatchPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    organizerId: ORGANIZER,
+    organizerName: "Organizador",
+    sport: "futsal",
+    venueName: "Green Ball",
+    address: "Rua das Quadras, 100",
+    neighborhood: "União dos Cegos",
+    city: "São Paulo",
+    lat: -23.5505,
+    lng: -46.6333,
+    geohash: "6gyf4bf8m",
+    startsAtSeconds: Math.floor(Date.now() / 1_000) + 6 * 3_600,
+    durationMin: 60,
+    totalSlots: 14,
+    confirmedCount: 0,
+    priceCents: 2000,
+    currencyCode: "BRL",
+    status: "OPEN",
+    organizerRating: 5,
+    organizerRatingCount: 0,
+    matchRating: 0,
+    matchRatingCount: 0,
+    participants: [],
+    ...overrides,
+  };
+}
+
 describe("matches", () => {
   it("o organizador cria a própria partida", async () => {
     await assertSucceeds(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), matchPayload()));
@@ -234,6 +262,49 @@ describe("matches", () => {
     });
 
     await assertFails(updateDoc(doc(asUser(PLAYER), "matches", MATCH_ID), {venue: "Sequestrada"}));
+  });
+
+  it("o organizador grava teamCount e teamAssignments na própria partida", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 4}));
+    });
+
+    await assertSucceeds(
+      updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+  });
+
+  it("nega um terceiro gravar teamCount e teamAssignments na partida de outro organizador", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 4}));
+    });
+
+    await assertFails(
+      updateDoc(doc(asUser(PLAYER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+  });
+
+  it("o organizador ainda edita a partida cheia (regressão do bloqueio em FULL)", async () => {
+    await seed(async (database) => {
+      await setDoc(
+        doc(database, "matches", MATCH_ID),
+        validMatchPayload({totalSlots: 4, confirmedCount: 4, status: "FULL"}),
+      );
+    });
+
+    await assertSucceeds(
+      updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+    await assertSucceeds(updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {priceCents: 2500}));
   });
 
   it("apaga partida vazia, mas exige cancelamento quando já tem gente", async () => {

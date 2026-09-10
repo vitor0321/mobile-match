@@ -146,6 +146,11 @@ internal class ManageMatchStepModel(
         return copy(canRatePlayers = game.canOrganizerRate(userId = currentUserId))
     }
 
+    private fun ManageMatchState.withSelectedTeamCountFromMatch(): ManageMatchState {
+        val teamCount = match?.teamCount ?: return this
+        return if (teamCount > 0) copy(selectedTeamCount = teamCount) else this
+    }
+
     init {
         loadMatch()
         subscribeToMatch()
@@ -211,7 +216,9 @@ internal class ManageMatchStepModel(
             _state.update { it.copy(isLoading = true, errorMessage = null) }
             getGameById(matchId)
                 .onSuccess { game ->
-                    _state.update { it.copy(isLoading = false, match = game).withCanRatePlayers() }
+                    _state.update {
+                        it.copy(isLoading = false, match = game).withCanRatePlayers().withSelectedTeamCountFromMatch()
+                    }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
                     _state.update {
@@ -230,7 +237,9 @@ internal class ManageMatchStepModel(
                 .catch { }
                 .collect { result ->
                     result.onSuccess { game ->
-                        _state.update { it.copy(match = game, isLoading = false).withCanRatePlayers() }
+                        _state.update {
+                            it.copy(match = game, isLoading = false).withCanRatePlayers().withSelectedTeamCountFromMatch()
+                        }
                     }
                 }
         }
