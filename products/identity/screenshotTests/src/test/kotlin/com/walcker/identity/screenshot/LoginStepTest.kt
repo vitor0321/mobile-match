@@ -10,7 +10,6 @@ import org.junit.Rule
 import org.junit.Test
 
 class LoginStepTest {
-
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
@@ -19,10 +18,11 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        password = "123456",
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            password = "123456",
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},
@@ -40,10 +40,11 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        password = "123456",
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            password = "123456",
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},
@@ -61,10 +62,11 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        error = "Não foi possível entrar",
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            error = "Não foi possível entrar",
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},
@@ -82,10 +84,11 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        error = "Não foi possível entrar",
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            error = "Não foi possível entrar",
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},
@@ -103,11 +106,12 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        password = "123456",
-                        isLoading = true,
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            password = "123456",
+                            isLoading = true,
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},
@@ -125,11 +129,12 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        password = "123456",
-                        isLoading = true,
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            password = "123456",
+                            isLoading = true,
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},
@@ -147,10 +152,11 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        password = "123456",
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            password = "123456",
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},
@@ -170,10 +176,11 @@ class LoginStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 LoginScreen(
-                    state = LoginState(
-                        email = "user@match.app",
-                        password = "123456",
-                    ),
+                    state =
+                        LoginState(
+                            email = "user@match.app",
+                            password = "123456",
+                        ),
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onSubmit = {},

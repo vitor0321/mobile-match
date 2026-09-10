@@ -1,9 +1,9 @@
-# Match — app esportivo de vagas
+# Join Play — app esportivo de vagas
 
 Marketplace que conecta **vagas em partidas** a **jogadores disponíveis**.
 A partida já existe e a quadra já está reservada; o app resolve o espaço vazio.
 
-> TEM UMA VAGA. TEM ALGUÉM QUERENDO JOGAR. A GENTE FAZ O MATCH.
+> TEM UMA VAGA. TEM ALGUÉM QUERENDO JOGAR. A GENTE FAZ O JOIN PLAY.
 
 Kotlin Multiplatform + Compose Multiplatform, rodando em Android e iOS a partir
 de um único codebase. Derivado da base do projeto Lexis.

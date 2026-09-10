@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>InvalidPackageDeclaration:AppleAuthSource.android.kt$package com.walcker.identity.features.data.remote</ID>
+    <ID>InvalidPackageDeclaration:CurrentDayKey.android.kt$package com.walcker.identity.features.data.pro</ID>
+    <ID>InvalidPackageDeclaration:FirebaseAuthSource.android.kt$package com.walcker.identity.features.data.remote</ID>
+    <ID>InvalidPackageDeclaration:GoogleAuthSource.android.kt$package com.walcker.identity.features.data.remote</ID>
+    <ID>UnusedImports:FirebaseAuthSource.android.kt$import kotlin.coroutines.resume</ID>
+  </CurrentIssues>
+</SmellBaseline>

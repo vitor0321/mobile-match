@@ -54,17 +54,9 @@ struct ContentView: View {
 }
 
 private struct MatchSplashView: View {
-    private let backgroundColor = Color(red: 79 / 255, green: 129 / 255, blue: 76 / 255)
+    private let backgroundColor = Color(red: 9 / 255, green: 103 / 255, blue: 255 / 255)
 
     var body: some View {
-        ZStack {
-            backgroundColor
-
-            Image("SplashIcon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 132, height: 132)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        }
+        backgroundColor
     }
 }

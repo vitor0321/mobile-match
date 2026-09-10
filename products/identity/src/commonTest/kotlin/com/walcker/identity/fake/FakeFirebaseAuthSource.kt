@@ -19,16 +19,25 @@ internal class FakeFirebaseAuthSource(
 
     var lastSignInInput: Pair<String, String>? = null
     var lastSignUpInput: Pair<String, String>? = null
+    var lastSignUpDisplayName: String? = null
     var deleteCurrentUserCallCount: Int = 0
     var signOutCallCount: Int = 0
 
-    override suspend fun signIn(email: String, password: String): Result<UserSession> {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession> {
         lastSignInInput = email to password
         return signInResult
     }
 
-    override suspend fun signUp(email: String, password: String): Result<UserSession> {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserSession> {
         lastSignUpInput = email to password
+        lastSignUpDisplayName = displayName
         return signUpResult
     }
 
@@ -74,4 +83,3 @@ internal class FakeFirebaseAuthSource(
         sendPasswordResetEmailResult = result
     }
 }
-

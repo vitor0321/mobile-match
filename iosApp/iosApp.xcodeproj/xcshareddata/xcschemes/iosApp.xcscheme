@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B5118011F083BCA9537806D8"
-               BuildableName = "Bible Match.app"
+               BuildableName = "Join Play Dev.app"
                BlueprintName = "iosApp"
                ReferencedContainer = "container:iosApp.xcodeproj">
             </BuildableReference>
@@ -46,7 +46,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B5118011F083BCA9537806D8"
-            BuildableName = "Bible Match.app"
+            BuildableName = "Join Play Dev.app"
             BlueprintName = "iosApp"
             ReferencedContainer = "container:iosApp.xcodeproj">
          </BuildableReference>
@@ -63,7 +63,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B5118011F083BCA9537806D8"
-            BuildableName = "Bible Match.app"
+            BuildableName = "Join Play Dev.app"
             BlueprintName = "iosApp"
             ReferencedContainer = "container:iosApp.xcodeproj">
          </BuildableReference>

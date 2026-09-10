@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LambdaParameterInRestartableEffect:LocationPickerMap.android.kt$onLocationSettled</ID>
+    <ID>UnusedPrivateProperty:MatchMapView.android.kt$val rightTangentAngle = 90f - tangentAngleDeg</ID>
+  </CurrentIssues>
+</SmellBaseline>

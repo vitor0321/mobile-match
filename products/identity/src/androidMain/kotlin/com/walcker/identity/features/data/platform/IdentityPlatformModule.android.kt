@@ -15,30 +15,33 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
-internal actual val identityPlatformModule: Module = module {
-    single<IdentityPlatformServices> {
-        AndroidIdentityPlatformServices(
-            application = androidContext().applicationContext as Application,
-            activityHolder = get(),
-            stringsHolder = get(),
-        )
+internal actual val identityPlatformModule: Module =
+    module {
+        single<IdentityPlatformServices> {
+            AndroidIdentityPlatformServices(
+                application = androidContext().applicationContext as Application,
+                activityHolder = get(),
+                stringsHolder = get(),
+            )
+        }
     }
-}
 
 private class AndroidIdentityPlatformServices(
     private val application: Application,
     private val activityHolder: CurrentActivityHolder,
     private val stringsHolder: IdentityStringsHolder,
 ) : IdentityPlatformServices {
-    override fun proStateDataStore(): DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath {
-        (application.filesDir.path + "/datastore/identity_pro_state.preferences_pb").toPath()
-    }
+    override fun proStateDataStore(): DataStore<Preferences> =
+        PreferenceDataStoreFactory.createWithPath {
+            (application.filesDir.path + "/datastore/identity_pro_state.preferences_pb").toPath()
+        }
 
-    override fun googleAuthSource(): GoogleAuthSource = AndroidGoogleAuthSource(
-        application = application,
-        firebaseAuth = FirebaseAuth.getInstance(),
-        credentialManager = CredentialManager.create(application),
-        activityHolder = activityHolder,
-        stringsHolder = stringsHolder,
-    )
+    override fun googleAuthSource(): GoogleAuthSource =
+        AndroidGoogleAuthSource(
+            application = application,
+            firebaseAuth = FirebaseAuth.getInstance(),
+            credentialManager = CredentialManager.create(application),
+            activityHolder = activityHolder,
+            stringsHolder = stringsHolder,
+        )
 }

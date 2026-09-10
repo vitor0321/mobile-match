@@ -17,4 +17,3 @@ internal class FakeGoogleAuthSource(
         signInResult = result
     }
 }
-

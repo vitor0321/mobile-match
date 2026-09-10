@@ -82,8 +82,6 @@ jobs:
 
       - name: Validate release secrets
         env:
-          ADMOB_ANDROID_APP_ID: ${{ secrets.ADMOB_ANDROID_APP_ID }}
-          ADMOB_ANDROID_BANNER_UNIT_ID: ${{ secrets.ADMOB_ANDROID_BANNER_UNIT_ID }}
           ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -93,8 +91,6 @@ jobs:
           PUBLISH_TO_PLAY: ${{ steps.release_settings.outputs.publish_to_play }}
         run: |
           required_secrets=(
-            ADMOB_ANDROID_APP_ID
-            ADMOB_ANDROID_BANNER_UNIT_ID
             ANDROID_KEYSTORE_BASE64
             ANDROID_KEY_ALIAS
             ANDROID_KEY_PASSWORD
@@ -125,15 +121,11 @@ jobs:
 
       - name: Create local.properties
         env:
-          ADMOB_ANDROID_APP_ID: ${{ secrets.ADMOB_ANDROID_APP_ID }}
-          ADMOB_ANDROID_BANNER_UNIT_ID: ${{ secrets.ADMOB_ANDROID_BANNER_UNIT_ID }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           {
-            echo "ADMOB_APP_ID=${ADMOB_ANDROID_APP_ID}"
-            echo "ADMOB_BANNER_UNIT_ID=${ADMOB_ANDROID_BANNER_UNIT_ID}"
             echo "release.keyAlias=${ANDROID_KEY_ALIAS}"
             echo "release.keyPassword=${ANDROID_KEY_PASSWORD}"
             echo "release.storeFile=${RUNNER_TEMP}/android-release.jks"

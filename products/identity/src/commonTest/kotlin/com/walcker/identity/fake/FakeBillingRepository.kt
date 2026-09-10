@@ -51,4 +51,3 @@ internal class FakeBillingRepository(
         managementUrlResult = result
     }
 }
-

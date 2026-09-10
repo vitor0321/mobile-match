@@ -1,0 +1,35 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>EmptyIfBlock:PlayerProfileStepModel.kt$PlayerProfileStepModel${ }</ID>
+    <ID>ForbiddenComment:FirestoreGameSource.kt$FirestoreGameSource$// "A mesma partida" ao longo do tempo = mesmo organizador + local + esporte.</ID>
+    <ID>ForbiddenComment:FirestoreGameSource.kt$FirestoreGameSource$// Localizado por query de igualdade, não por id determinístico — ver</ID>
+    <ID>ForbiddenComment:FirestoreGameSource.kt$FirestoreGameSource$// Moeda do dispositivo de quem está criando agora — não o idioma</ID>
+    <ID>ForbiddenComment:FirestoreGameSource.kt$FirestoreGameSource$// de outro país, ainda vê o preço na moeda de quem organizou.</ID>
+    <ID>ForbiddenComment:FirestoreGameSource.kt$FirestoreGameSource$// escolhido no app. Fica congelada na partida; quem vir depois,</ID>
+    <ID>ForbiddenComment:FirestoreGameSource.kt$FirestoreGameSource$// submitMatchRating em functions/src/index.ts, que usa a mesma query.</ID>
+    <ID>ForbiddenComment:FirestorePlayerSource.kt$FirestorePlayerSource$// Leituras individuais em paralelo, não um whereIn por id de documento: a</ID>
+    <ID>ForbiddenComment:FirestorePlayerSource.kt$FirestorePlayerSource$// abstração FirestoreClient não expõe FieldPath.documentId(), e o custo de</ID>
+    <ID>ForbiddenComment:FirestorePlayerSource.kt$FirestorePlayerSource$// cobrado, batched ou não) — só muda o número de round-trips, que o</ID>
+    <ID>ForbiddenComment:FirestorePlayerSource.kt$FirestorePlayerSource$// coroutineScope já paraleliza.</ID>
+    <ID>ForbiddenComment:FirestorePlayerSource.kt$FirestorePlayerSource$// leitura no Firestore é o mesmo dos dois jeitos (um doc lido = um doc</ID>
+    <ID>ForbiddenComment:MatchDetailStepModel.kt$MatchDetailStepModel$// TODO: Handled by Navigator back button</ID>
+    <ID>ForbiddenComment:SearchFiltersPanel.kt$// "25," não parseia e não pode apagar o que a pessoa já escreveu.</ID>
+    <ID>ForbiddenComment:SearchFiltersPanel.kt$// A fonte da verdade é o texto digitado, não o Float — texto intermediário como</ID>
+    <ID>FunctionOnlyReturningConstant:Retry.kt$internal fun defaultShouldRetry(error: Throwable): Boolean</ID>
+    <ID>LambdaParameterInRestartableEffect:GameList.kt$onLoadMore</ID>
+    <ID>LambdaParameterInRestartableEffect:MatchDetailStep.kt$onNavigateToConfirmation</ID>
+    <ID>LambdaParameterInRestartableEffect:PlayerRatingsListStep.kt$onEvent</ID>
+    <ID>UnusedParameter:Retry.kt$error: Throwable</ID>
+    <ID>UnusedPrivateProperty:NotificationHistoryStepModel.kt$NotificationHistoryStepModel$private val stringsHolder: GamesStringsHolder</ID>
+    <ID>UseCheckOrError:FirestoreGameSource.kt$FirestoreGameSource$throw IllegalStateException( "Unexpected cancelMatch response status: ${payload["status"]}", )</ID>
+    <ID>UseCheckOrError:FirestoreGameSource.kt$FirestoreGameSource$throw IllegalStateException( "Unexpected joinMatch response status: ${payload["status"]}", )</ID>
+    <ID>UseCheckOrError:FirestoreGameSource.kt$FirestoreGameSource$throw IllegalStateException("Cannot create match: no authenticated user")</ID>
+    <ID>UseCheckOrError:FirestoreGameSource.kt$FirestoreGameSource$throw IllegalStateException("Match not found: $gameId")</ID>
+    <ID>UseCheckOrError:FirestoreGameSource.kt$FirestoreGameSource$throw IllegalStateException("Match not found: $matchId")</ID>
+    <ID>UseCheckOrError:FirestoreRatingSource.kt$FirestoreRatingSource$throw IllegalStateException( "Unexpected submitPlayerRating response status: $status", )</ID>
+    <ID>UseCheckOrError:FirestoreReportSource.kt$FirestoreReportSource$throw IllegalStateException( "Unexpected submitReport response status: $status", )</ID>
+    <ID>UseCheckOrError:Retry.kt$throw lastError ?: IllegalStateException("withRetry exited without error")</ID>
+  </CurrentIssues>
+</SmellBaseline>

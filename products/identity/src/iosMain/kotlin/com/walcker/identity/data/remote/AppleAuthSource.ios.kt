@@ -3,7 +3,6 @@ package com.walcker.identity.features.data.remote
 import cocoapods.FirebaseAuth.FIRAuth
 import cocoapods.FirebaseAuth.FIROAuthProvider
 import com.walcker.identity.api.UserSession
-import com.walcker.identity.features.data.remote.AppleAuthSource as FeatureAppleAuthSource
 import com.walcker.identity.features.domain.error.IdentityError
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.identity.strings.resolveStringsOrDefault
@@ -33,14 +32,14 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIWindow
 import platform.darwin.NSObject
 import kotlin.coroutines.resume
+import com.walcker.identity.features.data.remote.AppleAuthSource as FeatureAppleAuthSource
 
 @OptIn(ExperimentalForeignApi::class)
-internal actual fun createAppleAuthSource(stringsHolder: IdentityStringsHolder): FeatureAppleAuthSource {
-    return IosAppleAuthSource(
+internal actual fun createAppleAuthSource(stringsHolder: IdentityStringsHolder): FeatureAppleAuthSource =
+    IosAppleAuthSource(
         auth = FIRAuth.auth(),
         stringsHolder = stringsHolder,
     )
-}
 
 internal actual val isAppleSignInAvailable: Boolean = true
 
@@ -51,55 +50,60 @@ internal class IosAppleAuthSource(
 ) : FeatureAppleAuthSource {
     override suspend fun signIn(): Result<UserSession> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
-        val anchor = currentPresentationAnchor()
-            ?: return Result.failure(IllegalStateException(strings.missingPresentationAnchor))
+        val anchor =
+            currentPresentationAnchor()
+                ?: return Result.failure(IllegalStateException(strings.missingPresentationAnchor))
 
         val rawNonce = randomNonce()
         val hashedNonce = sha256Hex(rawNonce)
 
         val appleProvider = ASAuthorizationAppleIDProvider()
-        val request = appleProvider.createRequest().apply {
-            setRequestedScopes(listOf(ASAuthorizationScopeFullName, ASAuthorizationScopeEmail))
-            setNonce(hashedNonce)
-        }
+        val request =
+            appleProvider.createRequest().apply {
+                setRequestedScopes(listOf(ASAuthorizationScopeFullName, ASAuthorizationScopeEmail))
+                setNonce(hashedNonce)
+            }
 
         return suspendCancellableCoroutine { continuation ->
-            val delegate = AppleSignInDelegate(
-                anchor = anchor,
-                onCredential = { credential ->
-                    val identityToken = credential.identityToken?.let { data ->
-                        @OptIn(BetaInteropApi::class)
-                        NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString()
-                    }
-                    if (identityToken.isNullOrBlank()) {
-                        continuation.resume(Result.failure(IllegalStateException(strings.invalidAppleIdToken)))
-                        return@AppleSignInDelegate
-                    }
-
-                    val firCredential = FIROAuthProvider.credentialWithProviderID(
-                        providerID = "apple.com",
-                        IDToken = identityToken,
-                        rawNonce = rawNonce,
-                    )
-                    auth.signInWithCredential(firCredential) { authResult, authError ->
-                        if (authError != null) {
-                            continuation.resume(Result.failure(authError.toThrowable(strings.firebaseAppleAuthFailed)))
-                            return@signInWithCredential
+            val delegate =
+                AppleSignInDelegate(
+                    anchor = anchor,
+                    onCredential = { credential ->
+                        val identityToken =
+                            credential.identityToken?.let { data ->
+                                @OptIn(BetaInteropApi::class)
+                                NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString()
+                            }
+                        if (identityToken.isNullOrBlank()) {
+                            continuation.resume(Result.failure(IllegalStateException(strings.invalidAppleIdToken)))
+                            return@AppleSignInDelegate
                         }
-                        val session = authResult?.user()?.toUserSession()
-                        continuation.resume(
-                            if (session != null) {
-                                Result.success(session)
-                            } else {
-                                Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterAppleSignIn))
-                            },
-                        )
-                    }
-                },
-                onError = { error ->
-                    continuation.resume(Result.failure(error.toAppleSignInError()))
-                },
-            )
+
+                        val firCredential =
+                            FIROAuthProvider.credentialWithProviderID(
+                                providerID = "apple.com",
+                                IDToken = identityToken,
+                                rawNonce = rawNonce,
+                            )
+                        auth.signInWithCredential(firCredential) { authResult, authError ->
+                            if (authError != null) {
+                                continuation.resume(Result.failure(authError.toThrowable(strings.firebaseAppleAuthFailed)))
+                                return@signInWithCredential
+                            }
+                            val session = authResult?.user()?.toUserSession()
+                            continuation.resume(
+                                if (session != null) {
+                                    Result.success(session)
+                                } else {
+                                    Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterAppleSignIn))
+                                },
+                            )
+                        }
+                    },
+                    onError = { error ->
+                        continuation.resume(Result.failure(error.toAppleSignInError()))
+                    },
+                )
 
             val controller = ASAuthorizationController(authorizationRequests = listOf(request))
             controller.delegate = delegate
@@ -121,7 +125,6 @@ private class AppleSignInDelegate(
 ) : NSObject(),
     ASAuthorizationControllerDelegateProtocol,
     ASAuthorizationControllerPresentationContextProvidingProtocol {
-
     private var onCredential: ((ASAuthorizationAppleIDCredential) -> Unit)? = onCredential
     private var onError: ((NSError) -> Unit)? = onError
 
@@ -157,8 +160,7 @@ private class AppleSignInDelegate(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun NSError.toAppleSignInError(): Throwable =
-    if (code == 1001L) IdentityError.Cancelled else IdentityError.ProviderUnavailable
+private fun NSError.toAppleSignInError(): Throwable = if (code == 1001L) IdentityError.Cancelled else IdentityError.ProviderUnavailable
 
 private fun currentPresentationAnchor(): UIWindow? {
     val app = UIApplication.sharedApplication

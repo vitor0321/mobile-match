@@ -11,4 +11,3 @@ internal fun LoginEvents(
     val onEvent = remember(stepModel) { { event: LoginInternalRoute -> stepModel.onEvent(event) } }
     content(onEvent)
 }
-

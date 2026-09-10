@@ -18,8 +18,6 @@ jobs:
       - name: Validate release secrets
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
-          ADMOB_IOS_APP_ID: ${{ secrets.ADMOB_IOS_APP_ID }}
-          ADMOB_IOS_BANNER_UNIT_ID: ${{ secrets.ADMOB_IOS_BANNER_UNIT_ID }}
           IOS_DISTRIBUTION_CERTIFICATE_P12: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_P12 }}
           IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
@@ -30,8 +28,6 @@ jobs:
         run: |
           required_secrets=(
             DEVELOPMENT_TEAM
-            ADMOB_IOS_APP_ID
-            ADMOB_IOS_BANNER_UNIT_ID
             IOS_DISTRIBUTION_CERTIFICATE_P12
             IOS_DISTRIBUTION_CERTIFICATE_PASSWORD
             IOS_PROVISIONING_PROFILE
@@ -141,8 +137,6 @@ jobs:
         run: |
           {
             echo "DEVELOPMENT_TEAM=${{ secrets.DEVELOPMENT_TEAM }}"
-            echo "ADMOB_APP_ID=${{ secrets.ADMOB_IOS_APP_ID }}"
-            echo "ADMOB_BANNER_UNIT_ID=${{ secrets.ADMOB_IOS_BANNER_UNIT_ID }}"
             echo "IOS_PROVISIONING_PROFILE_NAME=${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}"
           } > iosApp/Secrets.xcconfig
 

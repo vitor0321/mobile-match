@@ -4,9 +4,7 @@ import com.walcker.identity.api.UserSession
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.identity.strings.resolveStringsOrDefault
 
-internal actual fun createAppleAuthSource(stringsHolder: IdentityStringsHolder): AppleAuthSource {
-    return AndroidAppleAuthSource(stringsHolder = stringsHolder)
-}
+internal actual fun createAppleAuthSource(stringsHolder: IdentityStringsHolder): AppleAuthSource = AndroidAppleAuthSource(stringsHolder = stringsHolder)
 
 internal actual val isAppleSignInAvailable: Boolean = false
 

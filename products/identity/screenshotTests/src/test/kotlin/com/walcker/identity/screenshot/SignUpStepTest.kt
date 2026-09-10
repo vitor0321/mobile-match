@@ -10,7 +10,6 @@ import org.junit.Rule
 import org.junit.Test
 
 class SignUpStepTest {
-
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
@@ -19,11 +18,14 @@ class SignUpStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 SignUpScreen(
-                    state = SignUpState(
-                        email = "user@match.app",
-                        password = "123456",
-                        confirmPassword = "123456",
-                    ),
+                    state =
+                        SignUpState(
+                            fullName = "Jonathan Tomaz",
+                            email = "user@match.app",
+                            password = "123456",
+                            confirmPassword = "123456",
+                        ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -40,11 +42,14 @@ class SignUpStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 SignUpScreen(
-                    state = SignUpState(
-                        email = "user@match.app",
-                        password = "123456",
-                        confirmPassword = "123456",
-                    ),
+                    state =
+                        SignUpState(
+                            fullName = "Jonathan Tomaz",
+                            email = "user@match.app",
+                            password = "123456",
+                            confirmPassword = "123456",
+                        ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -61,10 +66,12 @@ class SignUpStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 SignUpScreen(
-                    state = SignUpState(
-                        email = "user@match.app",
-                        error = "Não foi possível criar a conta",
-                    ),
+                    state =
+                        SignUpState(
+                            email = "user@match.app",
+                            error = "Não foi possível criar a conta",
+                        ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -81,10 +88,12 @@ class SignUpStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 SignUpScreen(
-                    state = SignUpState(
-                        email = "user@match.app",
-                        error = "Não foi possível criar a conta",
-                    ),
+                    state =
+                        SignUpState(
+                            email = "user@match.app",
+                            error = "Não foi possível criar a conta",
+                        ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -101,12 +110,15 @@ class SignUpStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = false) {
                 SignUpScreen(
-                    state = SignUpState(
-                        email = "user@match.app",
-                        password = "123456",
-                        confirmPassword = "123456",
-                        isLoading = true,
-                    ),
+                    state =
+                        SignUpState(
+                            fullName = "Jonathan Tomaz",
+                            email = "user@match.app",
+                            password = "123456",
+                            confirmPassword = "123456",
+                            isLoading = true,
+                        ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -123,12 +135,15 @@ class SignUpStepTest {
         paparazzi.snapshot {
             IdentitySnapshotTheme(darkTheme = true) {
                 SignUpScreen(
-                    state = SignUpState(
-                        email = "user@match.app",
-                        password = "123456",
-                        confirmPassword = "123456",
-                        isLoading = true,
-                    ),
+                    state =
+                        SignUpState(
+                            fullName = "Jonathan Tomaz",
+                            email = "user@match.app",
+                            password = "123456",
+                            confirmPassword = "123456",
+                            isLoading = true,
+                        ),
+                    onFullNameChanged = {},
                     onEmailChanged = {},
                     onPasswordChanged = {},
                     onConfirmPasswordChanged = {},
@@ -140,4 +155,3 @@ class SignUpStepTest {
         }
     }
 }
-

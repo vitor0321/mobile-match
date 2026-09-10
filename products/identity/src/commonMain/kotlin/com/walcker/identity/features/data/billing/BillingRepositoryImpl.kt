@@ -11,37 +11,30 @@ import kotlinx.collections.immutable.ImmutableList
 internal class BillingRepositoryImpl(
     private val billingClient: BillingClient,
 ) : BillingRepository {
-    override suspend fun listOfferings(): Result<ImmutableList<ProductOffering>> {
-        return billingClient.listOfferings().mapError()
-    }
+    override suspend fun listOfferings(): Result<ImmutableList<ProductOffering>> = billingClient.listOfferings().mapError()
 
-    override suspend fun purchase(packageId: String): Result<Unit> {
-        return billingClient.purchase(packageId)
+    override suspend fun purchase(packageId: String): Result<Unit> =
+        billingClient
+            .purchase(packageId)
             .mapError()
             .fold(
                 onSuccess = { Result.success(Unit) },
                 onFailure = { Result.failure(it) },
             )
-    }
 
-    override suspend fun restore(): Result<Boolean> {
-        return billingClient.restore().mapError()
-    }
+    override suspend fun restore(): Result<Boolean> = billingClient.restore().mapError()
 
-    override suspend fun managementUrl(): Result<String?> {
-        return billingClient.managementUrl().mapError()
-    }
+    override suspend fun managementUrl(): Result<String?> = billingClient.managementUrl().mapError()
 }
 
-private fun <T> Result<T>.mapError(): Result<T> {
-    return fold(
+private fun <T> Result<T>.mapError(): Result<T> =
+    fold(
         onSuccess = { Result.success(it) },
         onFailure = { Result.failure(it.toPurchaseError()) },
     )
-}
 
-private fun Throwable.toPurchaseError(): PurchaseError {
-    return when (this) {
+private fun Throwable.toPurchaseError(): PurchaseError =
+    when (this) {
         is PurchaseError -> this
         is PurchasesTransactionException -> {
             if (userCancelled) {
@@ -62,13 +55,12 @@ private fun Throwable.toPurchaseError(): PurchaseError {
 
         else -> PurchaseError.Unknown(message)
     }
-}
 
 private fun toErrorByCode(
     code: PurchasesErrorCode,
     message: String?,
-): PurchaseError {
-    return when (code) {
+): PurchaseError =
+    when (code) {
         PurchasesErrorCode.NetworkError,
         PurchasesErrorCode.OfflineConnectionError,
         -> PurchaseError.Network
@@ -85,5 +77,3 @@ private fun toErrorByCode(
 
         else -> PurchaseError.Unknown(message)
     }
-}
-

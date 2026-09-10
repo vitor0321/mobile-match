@@ -11,12 +11,6 @@ internal class FakeIdentityDestination : IdentityDestination {
     var signUpCallCount: Int = 0
         private set
 
-    var paywallCallCount: Int = 0
-        private set
-
-    var profileCallCount: Int = 0
-        private set
-
     override fun login(): Screen {
         loginCallCount += 1
         return TestIdentityScreen("login")
@@ -26,16 +20,6 @@ internal class FakeIdentityDestination : IdentityDestination {
         signUpCallCount += 1
         return TestIdentityScreen("signup")
     }
-
-    override fun paywall(): Screen {
-        paywallCallCount += 1
-        return TestIdentityScreen("paywall")
-    }
-
-    override fun profile(): Screen {
-        profileCallCount += 1
-        return TestIdentityScreen("profile")
-    }
 }
 
 private data class TestIdentityScreen(
@@ -44,4 +28,3 @@ private data class TestIdentityScreen(
     @Composable
     override fun Content() = Unit
 }
-

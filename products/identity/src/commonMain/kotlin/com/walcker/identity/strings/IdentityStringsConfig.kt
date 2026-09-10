@@ -7,8 +7,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.staticCompositionLocalOf
 import cafe.adriel.lyricist.Lyricist
-import com.walcker.match.core.strings.MatchDefaultLanguageTag
 import com.walcker.match.core.strings.Locales
+import com.walcker.match.core.strings.MATCH_DEFAULT_LANGUAGE_TAG
 import com.walcker.match.core.strings.createLyricist
 import com.walcker.match.core.strings.normalizeMatchLanguageTag
 
@@ -31,14 +31,13 @@ internal class IdentityStringsHolder {
     fun hasStrings(): Boolean = currentStrings != null
 }
 
-internal fun IdentityStringsHolder.resolveStringsOrDefault(): IdentityStrings {
-    return if (hasStrings()) strings else PtBrIdentityStrings
-}
+internal fun IdentityStringsHolder.resolveStringsOrDefault(): IdentityStrings = if (hasStrings()) strings else PtBrIdentityStrings
 
-private val identityTranslations = mapOf(
-    Locales.EN to EnIdentityStrings,
-    Locales.PT to PtBrIdentityStrings,
-)
+private val identityTranslations =
+    mapOf(
+        Locales.EN to EnIdentityStrings,
+        Locales.PT to PtBrIdentityStrings,
+    )
 
 @Composable
 internal fun ProvideIdentityStrings(
@@ -64,12 +63,13 @@ internal fun ProvideIdentityStrings(
 @Composable
 internal fun rememberIdentityStrings(languageTag: String): Lyricist<IdentityStrings> {
     val normalizedLanguageTag = normalizeMatchLanguageTag(languageTag)
-    val lyricist = androidx.compose.runtime.remember {
-        createLyricist(
-            defaultLanguageTag = MatchDefaultLanguageTag,
-            translations = identityTranslations,
-        )
-    }
+    val lyricist =
+        androidx.compose.runtime.remember {
+            createLyricist(
+                defaultLanguageTag = MATCH_DEFAULT_LANGUAGE_TAG,
+                translations = identityTranslations,
+            )
+        }
 
     LaunchedEffect(normalizedLanguageTag) {
         if (lyricist.languageTag != normalizedLanguageTag) {
@@ -79,4 +79,3 @@ internal fun rememberIdentityStrings(languageTag: String): Lyricist<IdentityStri
 
     return lyricist
 }
-

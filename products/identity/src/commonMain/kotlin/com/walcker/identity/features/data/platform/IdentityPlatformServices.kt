@@ -6,5 +6,6 @@ import com.walcker.identity.features.data.remote.GoogleAuthSource
 
 internal interface IdentityPlatformServices {
     fun proStateDataStore(): DataStore<Preferences>
+
     fun googleAuthSource(): GoogleAuthSource
 }

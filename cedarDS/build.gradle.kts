@@ -10,7 +10,7 @@ plugins {
 kotlin {
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
     iosArm64()
@@ -19,6 +19,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                implementation(projects.core)
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.material3)
@@ -29,20 +30,37 @@ kotlin {
                 implementation(libs.kotlinx.collections.immutable)
                 implementation(libs.coil.compose)
                 implementation(libs.coil.network.ktor)
+                implementation(libs.compottie)
+                implementation(libs.compottie.dot)
+                implementation(libs.haze)
             }
         }
     }
 }
 
+compose.resources {
+    packageOfResClass = "com.walcker.match.cedar.generated.resources"
+    generateResClass = always
+}
+
 android {
     namespace = "com.walcker.match.cedar"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.android.compileSdk
+            .get()
+            .toInt()
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+        targetSdk =
+            libs.versions.android.targetSdk
+                .get()
+                .toInt()
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }

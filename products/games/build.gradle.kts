@@ -10,20 +10,28 @@ plugins {
 kotlin {
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
     iosArm64()
     iosSimulatorArm64()
 
+    sourceSets.all {
+        languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.firestore)
             implementation(projects.navigator)
             implementation(projects.cedarDS)
+            implementation(projects.products.identity)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+
+            implementation(libs.lyricist.core)
 
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.screenmodel)
@@ -32,10 +40,16 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+            implementation(compose.materialIconsExtended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
+            implementation(libs.coil.compose)
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
+
+            implementation(libs.datastore.preferences)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -44,6 +58,8 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.koin.android)
+            implementation(libs.maps.compose)
+            implementation(libs.play.services.maps)
         }
         androidUnitTest.dependencies {
             implementation(libs.junit)
@@ -54,15 +70,24 @@ kotlin {
 
 android {
     namespace = "com.walcker.games"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.android.compileSdk
+            .get()
+            .toInt()
 
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+        targetSdk =
+            libs.versions.android.targetSdk
+                .get()
+                .toInt()
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }

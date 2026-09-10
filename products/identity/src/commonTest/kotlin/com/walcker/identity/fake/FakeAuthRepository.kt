@@ -24,11 +24,15 @@ internal class FakeAuthRepository(
     var signInWithGoogleCallCount: Int = 0
     var signInWithAppleCallCount: Int = 0
     var lastSignUpInput: Pair<String, String>? = null
+    var lastSignUpDisplayName: String? = null
     var deleteAccountCallCount: Int = 0
     var signOutCallCount: Int = 0
     var lastSendPasswordResetEmailInput: String? = null
 
-    override suspend fun signIn(email: String, password: String): Result<UserSession> {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession> {
         lastSignInInput = email to password
         return signInResult
     }
@@ -43,8 +47,13 @@ internal class FakeAuthRepository(
         return signInWithAppleResult
     }
 
-    override suspend fun signUp(email: String, password: String): Result<UserSession> {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserSession> {
         lastSignUpInput = email to password
+        lastSignUpDisplayName = displayName
         return signUpResult
     }
 

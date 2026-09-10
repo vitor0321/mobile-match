@@ -6,4 +6,3 @@ public interface SessionHolder {
     public val currentUser: Flow<UserSession?>
     public val isAuthenticated: Flow<Boolean>
 }
-

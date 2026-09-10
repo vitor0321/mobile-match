@@ -6,6 +6,9 @@ import com.walcker.identity.features.domain.error.IdentityError
 import com.walcker.identity.features.domain.error.passwordResetMessage
 import com.walcker.identity.features.domain.usecase.SignUseCase
 import com.walcker.identity.strings.IdentityStringsHolder
+import com.walcker.match.core.analytics.AnalyticsEvent
+import com.walcker.match.core.analytics.AnalyticsTracker
+import com.walcker.match.core.analytics.CrashReporter
 import com.walcker.match.core.navigation.NavigatorHolder
 import kotlinx.coroutines.launch
 
@@ -13,8 +16,9 @@ internal class ForgotPasswordStepModel(
     private val signUseCase: SignUseCase,
     private val navigatorHolder: NavigatorHolder,
     private val stringsHolder: IdentityStringsHolder,
+    private val analytics: AnalyticsTracker,
+    private val crashReporter: CrashReporter,
 ) : StateScreenModel<ForgotPasswordState>(ForgotPasswordState()) {
-
     fun onEvent(event: ForgotPasswordInternalRoute) {
         when (event) {
             ForgotPasswordInternalRoute.OnBackClicked -> navigateBack()
@@ -40,20 +44,24 @@ internal class ForgotPasswordStepModel(
             return
         }
         mutableState.value = mutableState.value.copy(isLoading = true, error = null, isSuccess = false, email = email)
+        analytics.track(AnalyticsEvent.PasswordResetRequested())
         screenModelScope.launch {
-            signUseCase.sendPasswordResetEmail(email = email)
+            signUseCase
+                .sendPasswordResetEmail(email = email)
                 .onSuccess {
                     mutableState.value = mutableState.value.copy(isLoading = false, isSuccess = true)
-                }
-                .onFailure { error ->
-                    mutableState.value = mutableState.value.copy(
-                        isLoading = false,
-                        error = when (error) {
-                            IdentityError.Cancelled -> null
-                            is IdentityError -> error.passwordResetMessage(strings)
-                            else -> strings.sendEmailError
-                        },
-                    )
+                }.onFailure { error ->
+                    crashReporter.recordException(error)
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            error =
+                                when (error) {
+                                    IdentityError.Cancelled -> null
+                                    is IdentityError -> error.passwordResetMessage(strings)
+                                    else -> strings.sendEmailError
+                                },
+                        )
                 }
         }
     }

@@ -1,0 +1,106 @@
+build:
+  # O débito existente (59 achados na primeira execução real, ver
+  # LINT_SETUP_PROMPT.md) está congelado em detekt-baseline.xml por módulo — não
+  # aqui. Qualquer coisa NOVA já bloqueia o build.
+  maxIssues: 0
+
+config:
+  validation: true
+  # Exclusão de diretórios (build/**, generated/**, ...) não é feita aqui —
+  # `config > excludes` é regex para validação de config, não glob de arquivo.
+  # Está em build.gradle.kts via tasks.withType<Detekt>().configureEach { exclude(...) }.
+
+complexity:
+  active: false # tudo de complexidade/tamanho mora em detekt-warn.yml, não aqui
+
+style:
+  UnusedImports:
+    active: true
+  UnusedPrivateMember:
+    active: true
+  ForbiddenComment:
+    active: true
+    comments:
+      # `^(?!...)`/`$` ancorados: sem os dois, o lookahead negativo casa a
+      # partir de QUALQUER posição da string via find(), então "// TODO: x"
+      # também "casava" começando depois do TODO — false positive em TODO de verdade.
+      - reason: 'Comentário fora do padrão `// TODO` — CLAUDE.md proíbe qualquer outro comentário no código.'
+        value: '^(?!\s*//\s*TODO\b).*$'
+    allowedPatterns: ''
+  MagicNumber:
+    active: false # ruidoso demais neste código (geo, PIX, formatação de moeda são
+                   # naturalmente cheios de constante numérica de domínio) — mesma
+                   # razão pela qual o prompt original pula
+                   # security/detect-object-injection
+  MaxLineLength:
+    active: false # .editorconfig já fixa max_line_length = off para o ktlint —
+                   # formatação não é trabalho do detekt, não duplicar a decisão
+  ReturnCount:
+    active: false # pressão de complexidade, não bug — vive em detekt-warn.yml
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Composable'] # mesma exceção que .editorconfig já dá ao
+                                     # ktlint (ktlint_function_naming_ignore_when_annotated_with)
+  MatchingDeclarationName:
+    active: false # conflita com decisão já tomada: .editorconfig desliga
+                   # ktlint_standard_filename de propósito (convenção
+                   # *.android.kt/*.ios.kt do projeto)
+
+performance:
+  SpreadOperator:
+    active: false # heurística de performance, falso positivo comum — detekt-warn.yml
+
+empty-blocks:
+  EmptyFunctionBlock:
+    active: true
+    ignoreOverridden: true # overrides vazios de interface acontecem legitimamente (fakes de teste, no-op de plataforma)
+  EmptyClassBlock:
+    active: true
+  EmptyIfBlock:
+    active: true
+  EmptyElseBlock:
+    active: true
+  EmptyCatchBlock:
+    active: true
+    allowedExceptionNameRegex: '_|(ignore|expected).*'
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false # o projeto usa Result<T> com onFailure amplo de propósito (ver CrashReporter/AnalyticsTracker)
+  SwallowedException:
+    active: false # mesmo motivo — muitos onFailure encapsulam o erro original em vez de relançar
+  TooGenericExceptionThrown:
+    active: true
+    excludes: ['**/FirebaseCrashReporter.kt', '**/IosCrashReporter.kt'] # forceCrash()
+                                                                          # lança RuntimeException
+                                                                          # de propósito, para
+                                                                          # testar o Crashlytics
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    active: false # CLAUDE.md permite !! como escape hatch pragmático (mesma decisão do tseslint no-non-null-assertion)
+
+coroutines:
+  InjectDispatcher:
+    active: false # pressão arquitetural real, mas o projeto não tem convenção de
+                   # injeção de dispatcher hoje — fica em detekt-warn.yml, não aqui
+
+# compose-rules — LambdaParameterInRestartableEffect fica ativa (closure obsoleta
+# em LaunchedEffect/DisposableEffect é bug de verdade). As demais abaixo são
+# convenção/heurística com débito real hoje — mesmo raciocínio do jsx-a11y no
+# prompt original: valor real, mas warn, não error.
+Compose:
+  CompositionLocalAllowlist:
+    active: false
+  ParameterNaming:
+    active: false
+  ComposableParamOrder:
+    active: false
+  ModifierWithoutDefault:
+    active: false
+  ModifierMissing:
+    active: false
+  MutableStateAutoboxing:
+    active: false

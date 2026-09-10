@@ -9,18 +9,11 @@ private const val INITIAL_DELAY_MS = 500L
 private const val MAX_DELAY_MS = 10_000L
 private const val BACKOFF_FACTOR = 2
 
-/** Marks a failure as safe to retry with [withRetry]'s default policy. */
 open class RetryableException(
     message: String? = null,
     cause: Throwable? = null,
 ) : Exception(message, cause)
 
-/**
- * Executes [block] until it succeeds or the retry policy is exhausted.
- *
- * Only [RetryableException] instances are retried by default. Cancellation and every other
- * failure are propagated immediately, so callers retain structured-concurrency semantics.
- */
 suspend fun <T> withRetry(
     retries: Int = DEFAULT_RETRIES,
     initialDelay: Long = INITIAL_DELAY_MS,

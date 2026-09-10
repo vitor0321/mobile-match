@@ -1,0 +1,158 @@
+package com.walcker.games.fake
+
+import com.walcker.games.features.domain.shared.model.CancelMatchOutcome
+import com.walcker.games.features.domain.shared.model.CreateMatchRequest
+import com.walcker.games.features.domain.shared.model.Game
+import com.walcker.games.features.domain.shared.model.JoinMatchOutcome
+import com.walcker.games.features.domain.shared.model.LeaveMatchOutcome
+import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
+import com.walcker.games.features.domain.shared.model.ParticipantsSummary
+import com.walcker.games.features.domain.shared.repository.GameRepository
+import com.walcker.games.features.domain.shared.repository.MyMatch
+import com.walcker.match.core.geo.Coordinates
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+
+internal class FakeGameRepository(
+    var myMatches: Result<List<MyMatch>> = Result.success(emptyList()),
+    var refreshResult: Result<Unit> = Result.success(Unit),
+    var joinGameResult: Result<JoinMatchOutcome> = Result.success(JoinMatchOutcome.Confirmed(matchId = "match-1")),
+    var createMatchResult: Result<String> = Result.success("match-1"),
+    var updateMatchResult: Result<Unit> = Result.success(Unit),
+    var cancelMatchResult: Result<CancelMatchOutcome> = Result.success(CancelMatchOutcome.Cancelled("match-1")),
+    var cancelMatchSeriesResult: Result<Unit> = Result.success(Unit),
+    var leaveMatchResult: Result<LeaveMatchOutcome> = Result.success(LeaveMatchOutcome("match-1")),
+    var setTeamAssignmentsResult: Result<Unit> = Result.success(Unit),
+    var getGameByIdResult: Result<Game> = Result.success(game()),
+    var loadMoreMatchesResult: Result<Unit> = Result.success(Unit),
+    var searchMatchesResult: Result<NearbyMatchesPage> = Result.success(NearbyMatchesPage(games = emptyList(), rangeCursors = emptyList())),
+    var searchMatchesResults: MutableList<Result<NearbyMatchesPage>>? = null,
+    var searchMatchesNearResult: Result<NearbyMatchesPage> = Result.success(NearbyMatchesPage(games = emptyList(), rangeCursors = emptyList())),
+) : GameRepository {
+    private val matchesFlow = MutableStateFlow<List<Game>>(emptyList())
+    private val hasMoreMatchesFlow = MutableStateFlow(false)
+    private val participantsFlow = MutableStateFlow<Result<ParticipantsSummary>?>(null)
+    private val matchFlow = MutableStateFlow<Result<Game>?>(null)
+
+    val refreshCalls: MutableList<Double> = mutableListOf()
+    val loadMoreMatchesCalls: MutableList<Double> = mutableListOf()
+    val searchMatchesCalls: MutableList<Double> = mutableListOf()
+    val searchMatchesNearCalls: MutableList<Pair<Coordinates, Double>> = mutableListOf()
+    val joinGameCalls: MutableList<String> = mutableListOf()
+    val createMatchCalls: MutableList<CreateMatchRequest> = mutableListOf()
+    val updateMatchCalls: MutableList<Pair<String, CreateMatchRequest>> = mutableListOf()
+    val cancelMatchCalls: MutableList<String> = mutableListOf()
+    val cancelMatchSeriesCalls: MutableList<String> = mutableListOf()
+    val leaveMatchCalls: MutableList<String> = mutableListOf()
+    val setTeamAssignmentsCalls: MutableList<Triple<String, Int, Map<String, Int>>> = mutableListOf()
+    val getGameByIdCalls: MutableList<String> = mutableListOf()
+
+    fun emitMatches(games: List<Game>) {
+        matchesFlow.value = games
+    }
+
+    fun emitHasMoreMatches(hasMore: Boolean) {
+        hasMoreMatchesFlow.value = hasMore
+    }
+
+    fun emitParticipants(result: Result<ParticipantsSummary>) {
+        participantsFlow.value = result
+    }
+
+    fun emitMatch(result: Result<Game>) {
+        matchFlow.value = result
+    }
+
+    override fun observeMatches(): Flow<List<Game>> = matchesFlow.asStateFlow()
+
+    override fun observeHasMoreMatches(): Flow<Boolean> = hasMoreMatchesFlow.asStateFlow()
+
+    override suspend fun refresh(radiusKm: Double): Result<Unit> {
+        refreshCalls += radiusKm
+        return refreshResult
+    }
+
+    override suspend fun loadMoreMatches(radiusKm: Double): Result<Unit> {
+        loadMoreMatchesCalls += radiusKm
+        return loadMoreMatchesResult
+    }
+
+    override suspend fun searchMatches(
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): Result<NearbyMatchesPage> {
+        searchMatchesCalls += radiusKm
+        val queue = searchMatchesResults
+        return if (queue != null && queue.isNotEmpty()) queue.removeAt(0) else searchMatchesResult
+    }
+
+    override suspend fun searchMatchesNear(
+        center: Coordinates,
+        radiusKm: Double,
+        cursors: List<String?>?,
+    ): Result<NearbyMatchesPage> {
+        searchMatchesNearCalls += center to radiusKm
+        return searchMatchesNearResult
+    }
+
+    override suspend fun joinGame(gameId: String): Result<JoinMatchOutcome> {
+        joinGameCalls += gameId
+        return joinGameResult
+    }
+
+    override suspend fun createMatch(request: CreateMatchRequest): Result<String> {
+        createMatchCalls += request
+        return createMatchResult
+    }
+
+    override suspend fun updateMatch(
+        matchId: String,
+        request: CreateMatchRequest,
+    ): Result<Unit> {
+        updateMatchCalls += matchId to request
+        return updateMatchResult
+    }
+
+    override suspend fun getMyMatches(userId: String): Result<List<MyMatch>> = myMatches
+
+    override suspend fun cancelMatch(gameId: String): Result<CancelMatchOutcome> {
+        cancelMatchCalls += gameId
+        return cancelMatchResult
+    }
+
+    override suspend fun cancelMatchSeries(matchId: String): Result<Unit> {
+        cancelMatchSeriesCalls += matchId
+        return cancelMatchSeriesResult
+    }
+
+    override suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome> {
+        leaveMatchCalls += gameId
+        return leaveMatchResult
+    }
+
+    override suspend fun setTeamAssignments(
+        matchId: String,
+        teamCount: Int,
+        assignments: Map<String, Int>,
+    ): Result<Unit> {
+        setTeamAssignmentsCalls += Triple(matchId, teamCount, assignments)
+        return setTeamAssignmentsResult
+    }
+
+    override suspend fun getGameById(gameId: String): Result<Game> {
+        getGameByIdCalls += gameId
+        return getGameByIdResult
+    }
+
+    override fun observeParticipants(matchId: String): Flow<Result<ParticipantsSummary>> =
+        flow {
+            participantsFlow.collect { value -> if (value != null) emit(value) }
+        }
+
+    override fun observeMatch(matchId: String): Flow<Result<Game>> =
+        flow {
+            matchFlow.collect { value -> if (value != null) emit(value) }
+        }
+}
