@@ -53,6 +53,12 @@ internal fun DocumentSnapshot.toGame(): Game? {
                     ?.let { runCatching { RecurrenceOption.valueOf(it) }.getOrNull() }
                     ?: RecurrenceOption.NONE,
             seriesId = getString("seriesId"),
+            teamCount = getLong("teamCount")?.toInt() ?: 0,
+            teamAssignments =
+                getMap("teamAssignments")
+                    ?.mapNotNull { (userId, value) -> (value as? Number)?.toInt()?.let { userId to it } }
+                    ?.toMap()
+                    ?: emptyMap(),
         )
     } catch (e: Exception) {
         null

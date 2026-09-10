@@ -165,7 +165,8 @@ service cloud.firestore {
       return [
         'sport', 'venueName', 'address', 'neighborhood', 'city',
         'lat', 'lng', 'geohash', 'startsAtSeconds', 'durationMin',
-        'totalSlots', 'priceCents', 'status', 'recurrence', 'seriesId'
+        'totalSlots', 'priceCents', 'status', 'recurrence', 'seriesId',
+        'teamCount', 'teamAssignments'
       ];
     }
 
@@ -190,6 +191,8 @@ service cloud.firestore {
         && data.status is string
         && (!('recurrence' in data) || isText(data.recurrence, 20))
         && (!('seriesId' in data) || isText(data.seriesId, 30))
+        && (!('teamCount' in data) || (data.teamCount is int && data.teamCount >= 0 && data.teamCount <= 6))
+        && (!('teamAssignments' in data) || data.teamAssignments is map)
         && isText(data.organizerName, 80)
         && data.organizerRating is number
         && data.organizerRatingCount is int && data.organizerRatingCount >= 0

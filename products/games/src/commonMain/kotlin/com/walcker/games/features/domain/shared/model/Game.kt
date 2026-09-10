@@ -27,6 +27,8 @@ internal data class Game(
     val participants: List<String> = emptyList(),
     val recurrence: RecurrenceOption = RecurrenceOption.NONE,
     val seriesId: String? = null,
+    val teamCount: Int = 0,
+    val teamAssignments: Map<String, Int> = emptyMap(),
 ) {
     val openSlots: Int
         get() = (totalPlayers - confirmedPlayers).coerceAtLeast(0)
@@ -61,6 +63,11 @@ internal fun Game.canRateOrganizer(userId: String?): Boolean =
         userId != null &&
         userId != organizerId &&
         userId in participants
+
+internal val TEAM_SPORTS: Set<Sport> =
+    setOf(Sport.FUTSAL, Sport.FUTEBOL, Sport.SOCIETY, Sport.VOLEI, Sport.BASQUETE, Sport.FUTEVOLEI)
+
+internal fun Game.supportsTeamShuffle(): Boolean = sport in TEAM_SPORTS
 
 internal enum class MatchRole {
     ORGANIZER,

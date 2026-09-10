@@ -171,4 +171,28 @@ class GameMapperTest {
 
         assertEquals(listOf("p1", "p2"), snapshot(data).toGame()!!.participants)
     }
+
+    @Test
+    fun `team fields default to zero and empty when absent`() {
+        val game = snapshot(fullMatchData()).toGame()!!
+
+        assertEquals(0, game.teamCount)
+        assertEquals(emptyMap(), game.teamAssignments)
+    }
+
+    @Test
+    fun `team fields round-trip from Firestore data`() {
+        val data =
+            fullMatchData(
+                mapOf(
+                    "teamCount" to 3L,
+                    "teamAssignments" to mapOf("player-1" to 0L, "player-2" to 1L),
+                ),
+            )
+
+        val game = snapshot(data).toGame()!!
+
+        assertEquals(3, game.teamCount)
+        assertEquals(mapOf("player-1" to 0, "player-2" to 1), game.teamAssignments)
+    }
 }
