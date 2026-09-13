@@ -16,6 +16,7 @@ internal class FakePlayerSource(
         ),
     var detailsResult: Result<PlayerDetailsDto> = Result.success(playerDetailsDto()),
     var ratingSummaryResult: Result<Map<String, PlayerRatingSummary>> = Result.success(emptyMap()),
+    var skillRatingSummaryResult: Result<Map<String, PlayerRatingSummary>> = Result.success(emptyMap()),
     var organizerRatingSummaryResult: Result<PlayerRatingSummary?> = Result.success(null),
 ) : PlayerSource {
     var searchCallCount: Int = 0
@@ -39,6 +40,10 @@ internal class FakePlayerSource(
     override suspend fun getPlayersRatingSummary(
         userIds: List<String>,
     ): Result<Map<String, PlayerRatingSummary>> = ratingSummaryResult
+
+    override suspend fun getPlayersSkillRatingSummary(
+        userIds: List<String>,
+    ): Result<Map<String, PlayerRatingSummary>> = skillRatingSummaryResult
 
     override suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?> =
         organizerRatingSummaryResult

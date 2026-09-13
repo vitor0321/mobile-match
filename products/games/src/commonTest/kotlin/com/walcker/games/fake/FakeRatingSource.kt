@@ -12,6 +12,7 @@ internal class FakeRatingSource(
     var userRatingsResult: Result<List<Rating>> = Result.success(emptyList()),
     var matchLocationRatingsResult: Result<List<Rating>> = Result.success(emptyList()),
     var ratingsGivenForMatchResult: Result<List<Rating>> = Result.success(emptyList()),
+    var mySkillRatingsResult: Result<Map<String, Int>> = Result.success(emptyMap()),
 ) : RatingSource {
     var submitCallCount: Int = 0
         private set
@@ -41,6 +42,20 @@ internal class FakeRatingSource(
         submitCallCount++
         return submitResult
     }
+
+    override suspend fun submitSkillRating(
+        matchId: String,
+        ratedUserId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> {
+        submitCallCount++
+        return submitResult
+    }
+
+    override suspend fun getMySkillRatings(
+        organizerId: String,
+        userIds: List<String>,
+    ): Result<Map<String, Int>> = mySkillRatingsResult
 
     override suspend fun getUserRatings(
         userId: String,

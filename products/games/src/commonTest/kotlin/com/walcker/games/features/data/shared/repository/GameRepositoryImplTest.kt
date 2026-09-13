@@ -198,4 +198,67 @@ class GameRepositoryImplTest {
 
             assertIs<GamesError.PermissionDenied>(error)
         }
+
+    @Test
+    fun `setVipStatus does not retry on failure`() =
+        runTest {
+            val source = FakeGameSource(setVipStatusResult = { error("not organizer") })
+
+            val result = repository(source).setVipStatus("match-1", "target-uid", true)
+
+            assertTrue(result.isFailure)
+            assertEquals(1, source.setVipStatusCallCount)
+        }
+
+    @Test
+    fun `setVipStatus returns success`() =
+        runTest {
+            val source = FakeGameSource(setVipStatusResult = { })
+
+            val result = repository(source).setVipStatus("match-1", "target-uid", true)
+
+            assertTrue(result.isSuccess)
+        }
+
+    @Test
+    fun `confirmWaitlistedPlayer does not retry on failure`() =
+        runTest {
+            val source = FakeGameSource(confirmWaitlistedPlayerResult = { error("not waitlisted") })
+
+            val result = repository(source).confirmWaitlistedPlayer("match-1", "target-uid")
+
+            assertTrue(result.isFailure)
+            assertEquals(1, source.confirmWaitlistedPlayerCallCount)
+        }
+
+    @Test
+    fun `confirmWaitlistedPlayer returns success`() =
+        runTest {
+            val source = FakeGameSource(confirmWaitlistedPlayerResult = { })
+
+            val result = repository(source).confirmWaitlistedPlayer("match-1", "target-uid")
+
+            assertTrue(result.isSuccess)
+        }
+
+    @Test
+    fun `banPlayerFromMatch does not retry on failure`() =
+        runTest {
+            val source = FakeGameSource(banPlayerFromMatchResult = { error("not organizer") })
+
+            val result = repository(source).banPlayerFromMatch("match-1", "target-uid")
+
+            assertTrue(result.isFailure)
+            assertEquals(1, source.banPlayerFromMatchCallCount)
+        }
+
+    @Test
+    fun `banPlayerFromMatch returns the promoted uid`() =
+        runTest {
+            val source = FakeGameSource(banPlayerFromMatchResult = { "promoted-uid" })
+
+            val result = repository(source).banPlayerFromMatch("match-1", "target-uid")
+
+            assertEquals("promoted-uid", result.getOrNull())
+        }
 }

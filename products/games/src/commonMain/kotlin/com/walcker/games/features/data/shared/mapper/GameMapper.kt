@@ -59,6 +59,7 @@ internal fun DocumentSnapshot.toGame(): Game? {
                     ?.mapNotNull { (userId, value) -> (value as? Number)?.toInt()?.let { userId to it } }
                     ?.toMap()
                     ?: emptyMap(),
+            playersPerTeam = getLong("playersPerTeam")?.toInt() ?: 0,
         )
     } catch (e: Exception) {
         null

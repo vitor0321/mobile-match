@@ -34,13 +34,14 @@ public fun PlayerAvatar(
     photoUrl: String? = null,
     size: PlayerAvatarSize = PlayerAvatarSize.Medium,
 ) {
+    val (containerColor, onContainerColor) = avatarColorsFor(displayName)
     Surface(
         modifier =
             modifier
                 .size(size.dp)
                 .clip(CircleShape),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        color = containerColor,
+        contentColor = onContainerColor,
     ) {
         if (!photoUrl.isNullOrEmpty()) {
             AsyncImage(
@@ -62,6 +63,14 @@ public fun PlayerAvatar(
         }
     }
 }
+
+@Composable
+private fun avatarColorsFor(displayName: String) =
+    if (displayName.trim().sumOf { it.code } % 2 == 0) {
+        MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+    }
 
 private const val INITIALS_RATIO = 0.4f
 

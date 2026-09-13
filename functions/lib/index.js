@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendMatchReminders = exports.generateRecurringMatches = exports.cancelMatchSeries = exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitMatchRating = exports.submitOrganizerRating = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
+exports.sendMatchReminders = exports.generateRecurringMatches = exports.cancelMatchSeries = exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitMatchRating = exports.banPlayerFromMatch = exports.confirmWaitlistedPlayer = exports.setVipStatus = exports.submitSkillRating = exports.submitOrganizerRating = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
 exports.requireEmptyPayload = requireEmptyPayload;
 exports.shouldCancelOnOrganizerDeletion = shouldCancelOnOrganizerDeletion;
 const app_1 = require("firebase-admin/app");
@@ -43,6 +43,7 @@ const functionsV1 = __importStar(require("firebase-functions/v1"));
 const messaging_1 = require("firebase-admin/messaging");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const https_1 = require("firebase-functions/v2/https");
+const logger = __importStar(require("firebase-functions/logger"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const geo_js_1 = require("./geo.js");
 const notifications_js_1 = require("./notifications.js");
@@ -362,6 +363,10 @@ exports.joinMatch = (0, https_1.onCall)({ region: REGION }, async (request) => {
             throw new https_1.HttpsError("not-found", "Match not found.");
         }
         const match = matchSnap.data() ?? {};
+        const bannedSnap = await txn.get(db.doc(`matches/${matchId}/bannedUsers/${uid}`));
+        if (bannedSnap.exists) {
+            throw new https_1.HttpsError("permission-denied", "You have been banned from this match.");
+        }
         const status = String(match.status ?? "OPEN");
         if (status === "CANCELLED" || status === "FINISHED") {
             throw new https_1.HttpsError("failed-precondition", `Cannot join match in status ${status}.`);
@@ -387,14 +392,18 @@ exports.joinMatch = (0, https_1.onCall)({ region: REGION }, async (request) => {
         }
         const left = Math.max(totalSlots - confirmedCount, 0);
         const displayName = request.auth?.token?.name ?? (typeof match.organizerName === "string" ? "Jogador" : "Jogador");
+        const seriesId = typeof match.seriesId === "string" ? match.seriesId : "";
+        const isVip = seriesId.length > 0 &&
+            (await txn.get(db.doc(`matchSeries/${seriesId}/vipPlayers/${uid}`))).exists;
         const baseParticipant = {
             userId: uid,
             displayName,
             photoUrl: null,
             joinedAt: firestore_1.FieldValue.serverTimestamp(),
             hasPaid: false,
+            isVip,
         };
-        if (left > 0) {
+        if (isVip && left > 0) {
             // Slot available → join confirmed.
             txn.set(participantRef, {
                 ...baseParticipant,
@@ -415,6 +424,7 @@ exports.joinMatch = (0, https_1.onCall)({ region: REGION }, async (request) => {
             const position = waitlistSnapshot.size + 1;
             txn.set(participantRef, {
                 ...baseParticipant,
+                isVip: false,
                 isConfirmed: false,
                 positionInWaitlist: position,
             });
@@ -739,6 +749,284 @@ function parseSubmitRatingPayload(value, uid) {
         comment,
     };
 }
+// ---------------------------------------------------------------------------
+// submitSkillRating — Callable (invocada por products/games)
+//
+// Nota de habilidade (1-10) que o organizador atribui a um jogador que jogou
+// com ele — inclusive a si mesmo, se também jogou a própria partida.
+// Independente de submitPlayerRating (reputação geral, qualquer avaliador) e
+// de profiles/{uid}.rating: aqui quem avalia é sempre o organizador, a nota
+// mede capacidade técnica pra montar times equilibrados. uid precisa ser o
+// organizerId da partida, e ratedUserId precisa ter isConfirmed em
+// matches/{matchId}/participants/{ratedUserId} — a mesma fonte que
+// observeParticipants usa pra montar a lista de times, não o array
+// matches/{matchId}.participants (que também guarda quem só entrou na fila).
+//
+// profiles/{ratedUserId}/skillRatings/{organizerId} — um documento por
+// organizador avaliador, id = uid de quem avalia, então reenviar edita em vez
+// de duplicar (mesmo padrão dos outros dois). profiles/{ratedUserId}
+// .skillRating/.skillRatingCount é a média recalculada aqui, exibida em
+// qualquer partida futura desse jogador — não só na que gerou a nota.
+//
+// Retorna {status: "recorded" | "updated", averageRating, ratingCount}.
+// ---------------------------------------------------------------------------
+const SKILL_RATING_MIN = 1;
+const SKILL_RATING_MAX = 10;
+exports.submitSkillRating = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const { matchId, ratedUserId, rating } = parseSubmitSkillRatingPayload(request.data);
+    return db.runTransaction(async (txn) => {
+        await requireNotBlocked(txn, uid, Date.now());
+        const matchRef = db.doc(`matches/${matchId}`);
+        const skillRatingRef = db.doc(`profiles/${ratedUserId}/skillRatings/${uid}`);
+        const ratedProfileRef = db.doc(`profiles/${ratedUserId}`);
+        const ratedParticipantRef = db.doc(`matches/${matchId}/participants/${ratedUserId}`);
+        const [matchSnap, existingSnap, ratedProfileSnap, ratedParticipantSnap] = await txn.getAll(matchRef, skillRatingRef, ratedProfileRef, ratedParticipantRef);
+        if (!matchSnap.exists) {
+            logger.warn("submitSkillRating: match not found", { matchId, uid, ratedUserId });
+            throw new https_1.HttpsError("not-found", "Match not found.");
+        }
+        const match = matchSnap.data() ?? {};
+        if (match.organizerId !== uid) {
+            logger.warn("submitSkillRating: caller is not the organizer", {
+                matchId,
+                uid,
+                ratedUserId,
+                organizerId: match.organizerId,
+            });
+            throw new https_1.HttpsError("permission-denied", "Only the organizer can rate players' skill.");
+        }
+        // A fonte da verdade de "quem jogou" é o subdocumento de participante
+        // (o mesmo que a tela de sortear times lê via observeParticipants), não
+        // o array matches/{matchId}.participants — esse array também inclui
+        // quem só entrou na fila de espera, e partidas antigas podem tê-lo
+        // desatualizado.
+        if (ratedParticipantSnap.data()?.isConfirmed !== true) {
+            logger.warn("submitSkillRating: rated user is not a confirmed participant", {
+                matchId,
+                uid,
+                ratedUserId,
+                participantExists: ratedParticipantSnap.exists,
+                participantData: ratedParticipantSnap.data() ?? null,
+            });
+            throw new https_1.HttpsError("failed-precondition", "The rated user did not play this match.");
+        }
+        // Contas antigas podem ter ficado sem profiles/{uid} (onUserCreate nunca
+        // rodou ou falhou silenciosamente pra elas) — a pessoa consegue se
+        // autenticar e organizar partidas normalmente porque nada mais no app
+        // exige esse documento, mas a nota de habilidade precisa dele pra
+        // guardar a média. Em vez de travar, recria o perfil com o mesmo
+        // formato do onUserCreate a partir do registro real de Auth.
+        let ratedProfile = ratedProfileSnap.data();
+        if (ratedProfile === undefined) {
+            logger.warn("submitSkillRating: rated player profile missing, backfilling from Auth", {
+                matchId,
+                uid,
+                ratedUserId,
+            });
+            const ratedUser = await (0, auth_1.getAuth)().getUser(ratedUserId);
+            ratedProfile = {
+                fullName: ratedUser.displayName ?? "",
+                nickname: null,
+                avatarUrl: ratedUser.photoURL ?? null,
+                position: null,
+                level: "Livre",
+                sports: [],
+                city: null,
+                neighborhood: null,
+                rating: 0,
+                ratingCount: 0,
+                matchesPlayed: 0,
+                isBanned: false,
+                createdAt: firestore_1.FieldValue.serverTimestamp(),
+            };
+            txn.set(ratedProfileRef, ratedProfile);
+        }
+        const previousCount = Number(ratedProfile.skillRatingCount ?? 0);
+        const previousAverage = Number(ratedProfile.skillRating ?? 0);
+        const isEdit = existingSnap.exists;
+        const previousRatingValue = isEdit ? Number(existingSnap.data()?.rating ?? 0) : null;
+        const nextCount = isEdit ? previousCount : previousCount + 1;
+        const nextAverage = isEdit
+            ? roundTo((previousAverage * previousCount - previousRatingValue + rating) / previousCount, RATING_AVERAGE_DECIMALS)
+            : (0, moderation_js_1.nextRatingAverage)(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
+        const now = Date.now();
+        txn.set(skillRatingRef, {
+            matchId,
+            ratedUserId,
+            organizerId: uid,
+            rating,
+            createdAtMs: now,
+            createdAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        txn.update(ratedProfileRef, {
+            skillRating: nextAverage,
+            skillRatingCount: nextCount,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        const responseStatus = isEdit ? "updated" : "recorded";
+        return {
+            status: responseStatus,
+            matchId,
+            ratedUserId,
+            averageRating: nextAverage,
+            ratingCount: nextCount,
+        };
+    });
+});
+function parseSubmitSkillRatingPayload(value) {
+    const data = (value ?? {});
+    if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data.ratedUserId !== "string" || data.ratedUserId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "ratedUserId is required.");
+    }
+    if (typeof data.rating !== "number" ||
+        !Number.isInteger(data.rating) ||
+        data.rating < SKILL_RATING_MIN ||
+        data.rating > SKILL_RATING_MAX) {
+        throw new https_1.HttpsError("invalid-argument", `rating must be an integer between ${SKILL_RATING_MIN} and ${SKILL_RATING_MAX}.`);
+    }
+    return { matchId: data.matchId, ratedUserId: data.ratedUserId, rating: data.rating };
+}
+async function promoteToConfirmed(txn, matchId, targetUserId, currentConfirmedCount, totalSlots) {
+    const participantRef = db.doc(`matches/${matchId}/participants/${targetUserId}`);
+    const matchRef = db.doc(`matches/${matchId}`);
+    txn.update(participantRef, {
+        isConfirmed: true,
+        positionInWaitlist: null,
+        promotedAt: firestore_1.FieldValue.serverTimestamp(),
+    });
+    txn.update(matchRef, {
+        confirmedCount: firestore_1.FieldValue.increment(1),
+        status: currentConfirmedCount + 1 >= totalSlots ? "FULL" : "OPEN",
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+    });
+}
+exports.setVipStatus = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data?.targetUserId !== "string" || data.targetUserId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "targetUserId is required.");
+    }
+    if (typeof data?.isVip !== "boolean") {
+        throw new https_1.HttpsError("invalid-argument", "isVip is required.");
+    }
+    const matchId = data.matchId;
+    const targetUserId = data.targetUserId;
+    const isVip = data.isVip;
+    return db.runTransaction(async (txn) => {
+        await requireNotBlocked(txn, uid, Date.now());
+        const matchRef = db.doc(`matches/${matchId}`);
+        const targetParticipantRef = db.doc(`matches/${matchId}/participants/${targetUserId}`);
+        const [matchSnap, targetParticipantSnap] = await txn.getAll(matchRef, targetParticipantRef);
+        if (!matchSnap.exists) {
+            throw new https_1.HttpsError("not-found", "Match not found.");
+        }
+        const match = matchSnap.data() ?? {};
+        if (match.organizerId !== uid) {
+            throw new https_1.HttpsError("permission-denied", "Only the organizer can set VIP status.");
+        }
+        const seriesId = typeof match.seriesId === "string" ? match.seriesId : "";
+        if (!seriesId) {
+            throw new https_1.HttpsError("failed-precondition", "This match is not part of a recurring series.");
+        }
+        if (!targetParticipantSnap.exists) {
+            throw new https_1.HttpsError("failed-precondition", "Player is not in this match.");
+        }
+        const vipRef = db.doc(`matchSeries/${seriesId}/vipPlayers/${targetUserId}`);
+        if (isVip) {
+            txn.set(vipRef, { addedAt: firestore_1.FieldValue.serverTimestamp(), addedBy: uid });
+            txn.set(db.doc(`matchSeries/${seriesId}`), { organizerId: match.organizerId }, { merge: true });
+            txn.update(targetParticipantRef, { isVip: true });
+            const wasConfirmed = Boolean(targetParticipantSnap.data()?.isConfirmed);
+            if (!wasConfirmed) {
+                const totalSlots = Number(match.totalSlots ?? 0);
+                const confirmedCount = Number(match.confirmedCount ?? 0);
+                await promoteToConfirmed(txn, matchId, targetUserId, confirmedCount, totalSlots);
+            }
+        }
+        else {
+            txn.delete(vipRef);
+            txn.update(targetParticipantRef, { isVip: false });
+        }
+        return { matchId, isVip };
+    });
+});
+exports.confirmWaitlistedPlayer = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data?.targetUserId !== "string" || data.targetUserId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "targetUserId is required.");
+    }
+    const matchId = data.matchId;
+    const targetUserId = data.targetUserId;
+    return db.runTransaction(async (txn) => {
+        await requireNotBlocked(txn, uid, Date.now());
+        const matchRef = db.doc(`matches/${matchId}`);
+        const targetParticipantRef = db.doc(`matches/${matchId}/participants/${targetUserId}`);
+        const [matchSnap, targetParticipantSnap] = await txn.getAll(matchRef, targetParticipantRef);
+        if (!matchSnap.exists) {
+            throw new https_1.HttpsError("not-found", "Match not found.");
+        }
+        const match = matchSnap.data() ?? {};
+        if (match.organizerId !== uid) {
+            throw new https_1.HttpsError("permission-denied", "Only the organizer can confirm waitlisted players.");
+        }
+        const isWaitlisted = targetParticipantSnap.exists && targetParticipantSnap.data()?.isConfirmed === false;
+        if (!isWaitlisted) {
+            throw new https_1.HttpsError("failed-precondition", "Player is not on the waitlist.");
+        }
+        const totalSlots = Number(match.totalSlots ?? 0);
+        const confirmedCount = Number(match.confirmedCount ?? 0);
+        await promoteToConfirmed(txn, matchId, targetUserId, confirmedCount, totalSlots);
+        return { matchId };
+    });
+});
+exports.banPlayerFromMatch = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data?.targetUserId !== "string" || data.targetUserId.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "targetUserId is required.");
+    }
+    const matchId = data.matchId;
+    const targetUserId = data.targetUserId;
+    return db.runTransaction(async (txn) => {
+        await requireNotBlocked(txn, uid, Date.now());
+        const matchRef = db.doc(`matches/${matchId}`);
+        const matchSnap = await txn.get(matchRef);
+        if (!matchSnap.exists) {
+            throw new https_1.HttpsError("not-found", "Match not found.");
+        }
+        const match = matchSnap.data() ?? {};
+        if (match.organizerId !== uid) {
+            throw new https_1.HttpsError("permission-denied", "Only the organizer can ban players.");
+        }
+        if (targetUserId === uid) {
+            throw new https_1.HttpsError("failed-precondition", "Organizer cannot ban themselves.");
+        }
+        const promotedUserId = await removeParticipant(txn, matchId, targetUserId);
+        txn.set(db.doc(`matches/${matchId}/bannedUsers/${targetUserId}`), {
+            bannedAt: firestore_1.FieldValue.serverTimestamp(),
+            bannedBy: uid,
+        });
+        return { matchId, promotedUserId };
+    });
+});
 /**
  * Avaliação é pós-partida. Não dá para exigir status FINISHED porque nada marca
  * esse status ainda — então a verdade é o relógio: início + duração no passado.

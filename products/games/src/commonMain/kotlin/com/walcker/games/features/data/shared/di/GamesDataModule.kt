@@ -38,10 +38,14 @@ import com.walcker.games.features.domain.shared.repository.NotificationRepositor
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
 import com.walcker.games.features.domain.shared.repository.RatingRepository
 import com.walcker.games.features.domain.shared.repository.ReportRepository
+import com.walcker.games.features.domain.shared.usecase.BanPlayerFromMatchUseCase
+import com.walcker.games.features.domain.shared.usecase.BanPlayerFromMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.ConfirmWaitlistedPlayerUseCase
+import com.walcker.games.features.domain.shared.usecase.ConfirmWaitlistedPlayerUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.DeleteNotificationUseCase
 import com.walcker.games.features.domain.shared.usecase.DeleteNotificationUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCase
@@ -71,11 +75,14 @@ import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCase
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SetTeamAssignmentsUseCase
 import com.walcker.games.features.domain.shared.usecase.SetTeamAssignmentsUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.SetVipStatusUseCase
+import com.walcker.games.features.domain.shared.usecase.SetVipStatusUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.SubmitMatchRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitOrganizerRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
 import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.SubmitSkillRatingUseCase
 import com.walcker.match.firestore.FirestoreClient
 import org.koin.dsl.module
 
@@ -113,6 +120,9 @@ internal val gamesDataModule =
         factory<CancelMatchUseCase> { CancelMatchUseCaseImpl(repository = get()) }
         factory<CancelMatchSeriesUseCase> { CancelMatchSeriesUseCaseImpl(repository = get()) }
         factory<LeaveMatchUseCase> { LeaveMatchUseCaseImpl(repository = get()) }
+        factory<SetVipStatusUseCase> { SetVipStatusUseCaseImpl(repository = get()) }
+        factory<ConfirmWaitlistedPlayerUseCase> { ConfirmWaitlistedPlayerUseCaseImpl(repository = get()) }
+        factory<BanPlayerFromMatchUseCase> { BanPlayerFromMatchUseCaseImpl(repository = get()) }
         factory<SetTeamAssignmentsUseCase> { SetTeamAssignmentsUseCaseImpl(repository = get()) }
         factory<GetNotificationHistoryUseCase> { GetNotificationHistoryUseCaseImpl(repository = get()) }
         factory<ObserveHasUnreadNotificationsUseCase> {
@@ -129,6 +139,7 @@ internal val gamesDataModule =
         factory { SubmitRatingUseCase(ratingRepository = get()) }
         factory { SubmitMatchRatingUseCase(ratingRepository = get()) }
         factory { SubmitOrganizerRatingUseCase(ratingRepository = get()) }
+        factory { SubmitSkillRatingUseCase(ratingRepository = get()) }
         factory { GetUserRatingsUseCase(ratingRepository = get()) }
 
         single<PlayerSource> {

@@ -53,9 +53,26 @@ internal interface GameRepository {
 
     suspend fun leaveMatch(gameId: String): Result<LeaveMatchOutcome>
 
+    suspend fun setVipStatus(
+        matchId: String,
+        targetUserId: String,
+        isVip: Boolean,
+    ): Result<Unit>
+
+    suspend fun confirmWaitlistedPlayer(
+        matchId: String,
+        targetUserId: String,
+    ): Result<Unit>
+
+    suspend fun banPlayerFromMatch(
+        matchId: String,
+        targetUserId: String,
+    ): Result<String?>
+
     suspend fun setTeamAssignments(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
     ): Result<Unit>
 

@@ -10,6 +10,7 @@ internal class FakeRatingRepository(
     var userRatingsResult: Result<List<Rating>> = Result.success(emptyList()),
     var matchLocationRatingsResult: Result<List<Rating>> = Result.success(emptyList()),
     var ratingsGivenForMatchResult: Result<List<Rating>> = Result.success(emptyList()),
+    var mySkillRatingsResult: Result<Map<String, Int>> = Result.success(emptyMap()),
 ) : RatingRepository {
     val submitCalls: MutableList<String> = mutableListOf()
 
@@ -38,6 +39,20 @@ internal class FakeRatingRepository(
         submitCalls += "organizer:$matchId"
         return submitResult
     }
+
+    override suspend fun submitSkillRating(
+        matchId: String,
+        ratedUserId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> {
+        submitCalls += "skill:$ratedUserId"
+        return submitResult
+    }
+
+    override suspend fun getMySkillRatings(
+        organizerId: String,
+        userIds: List<String>,
+    ): Result<Map<String, Int>> = mySkillRatingsResult
 
     override suspend fun getUserRatings(
         userId: String,

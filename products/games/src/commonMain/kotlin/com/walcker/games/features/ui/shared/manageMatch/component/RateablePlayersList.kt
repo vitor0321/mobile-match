@@ -20,6 +20,9 @@ internal fun RateablePlayersList(
     participantRatings: Map<String, PlayerRatingSummary>,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
+    onBanPlayer: ((userId: String, displayName: String) -> Unit)? = null,
+    showVip: Boolean = false,
+    onToggleVip: ((userId: String, displayName: String, currentlyVip: Boolean) -> Unit)? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -37,6 +40,11 @@ internal fun RateablePlayersList(
                 ratingSummary = participantRatings[participant.userId],
                 ratingsCountLabel = strings.ratingsCount,
                 onRatePlayer = onRatePlayer,
+                banLabel = if (onBanPlayer != null) strings.banAction else null,
+                onBanPlayer = onBanPlayer,
+                isVip = participant.isVip,
+                vipLabel = if (showVip) (if (participant.isVip) strings.vipRemoveAction else strings.vipAction) else null,
+                onToggleVip = if (showVip) onToggleVip else null,
             )
         }
     }

@@ -381,6 +381,61 @@ describe("matches", () => {
   });
 });
 
+describe("matches/{matchId}/bannedUsers/{userId}", () => {
+  const BANNED = "banned-uid";
+
+  async function seedMatchAndBan() {
+    await seed(async (firestore) => {
+      await setDoc(doc(firestore, "matches", MATCH_ID), matchPayload());
+      await setDoc(doc(firestore, "matches", MATCH_ID, "bannedUsers", BANNED), {
+        bannedAt: serverTimestamp(),
+        bannedBy: ORGANIZER,
+      });
+    });
+  }
+
+  it("lets the organizer read the banned list", async () => {
+    await seedMatchAndBan();
+    await assertSucceeds(getDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID, "bannedUsers", BANNED)));
+  });
+
+  it("blocks a non-organizer from reading the banned list", async () => {
+    await seedMatchAndBan();
+    await assertFails(getDoc(doc(asUser(PLAYER), "matches", MATCH_ID, "bannedUsers", BANNED)));
+    await assertFails(getDoc(doc(asAnonymous(), "matches", MATCH_ID, "bannedUsers", BANNED)));
+  });
+
+  it("blocks every client write, organizer included", async () => {
+    await seed(async (firestore) => {
+      await setDoc(doc(firestore, "matches", MATCH_ID), matchPayload());
+    });
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID, "bannedUsers", BANNED), {
+        bannedAt: serverTimestamp(),
+        bannedBy: ORGANIZER,
+      }),
+    );
+  });
+});
+
+describe("matchSeries/{seriesId}/vipPlayers/{userId}", () => {
+  const SERIES_ID = "series-1";
+  const VIP = "vip-uid";
+
+  it("blocks every client read and write, organizer included", async () => {
+    await seed(async (firestore) => {
+      await setDoc(doc(firestore, "matchSeries", SERIES_ID), {organizerId: ORGANIZER, active: true});
+    });
+    await assertFails(getDoc(doc(asUser(ORGANIZER), "matchSeries", SERIES_ID, "vipPlayers", VIP)));
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "matchSeries", SERIES_ID, "vipPlayers", VIP), {
+        addedAt: serverTimestamp(),
+        addedBy: ORGANIZER,
+      }),
+    );
+  });
+});
+
 describe("matches/participants — a trava contra overbooking", () => {
   it("qualquer autenticado lê a lista, ninguém escreve pelo cliente", async () => {
     await seed(async (database) => {
@@ -613,6 +668,46 @@ describe("avaliações recebidas — profiles/{uid}/ratings", () => {
 
     await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {rating: 5}));
     await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {ratingCount: 999}));
+  });
+});
+
+describe("nota de habilidade — profiles/{uid}/skillRatings", () => {
+  it("qualquer usuário logado lê, mas ninguém escreve — só a callable submitSkillRating", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "skillRatings", ORGANIZER), {
+        matchId: MATCH_ID,
+        ratedUserId: PLAYER,
+        organizerId: ORGANIZER,
+        rating: 8,
+        createdAtMs: Date.now(),
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "skillRatings", ORGANIZER)));
+    await assertFails(getDoc(doc(asAnonymous(), "profiles", PLAYER, "skillRatings", ORGANIZER)));
+
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "skillRatings", ORGANIZER), {
+        ratedUserId: PLAYER,
+        organizerId: ORGANIZER,
+        rating: 10,
+      }),
+    );
+  });
+
+  it("o dono não consegue mexer na própria média nem na contagem", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), {
+        fullName: "Jogador",
+        rating: 3,
+        ratingCount: 10,
+        matchesPlayed: 4,
+        isBanned: false,
+      });
+    });
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {skillRating: 9}));
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {skillRatingCount: 999}));
   });
 });
 

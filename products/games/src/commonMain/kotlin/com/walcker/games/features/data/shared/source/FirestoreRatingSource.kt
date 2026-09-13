@@ -8,6 +8,9 @@ import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
 import com.walcker.match.firestore.DocumentSnapshot
 import com.walcker.match.firestore.FirestoreClient
 import com.walcker.match.firestore.FirestoreQueryBuilder
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 internal class FirestoreRatingSource(
     private val firestore: FirestoreClient,
@@ -48,6 +51,40 @@ internal class FirestoreRatingSource(
                 SUBMIT_ORGANIZER_RATING_FUNCTION,
                 mapOf("matchId" to matchId, "rating" to rating),
             ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
+    override suspend fun submitSkillRating(
+        matchId: String,
+        ratedUserId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> =
+        firestore
+            .callFunction(
+                SUBMIT_SKILL_RATING_FUNCTION,
+                mapOf("matchId" to matchId, "ratedUserId" to ratedUserId, "rating" to rating),
+            ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
+    override suspend fun getMySkillRatings(
+        organizerId: String,
+        userIds: List<String>,
+    ): Result<Map<String, Int>> =
+        runCatching {
+            coroutineScope {
+                userIds
+                    .distinct()
+                    .map { userId ->
+                        async {
+                            val snapshot =
+                                firestore
+                                    .document("profiles/$userId/skillRatings/$organizerId")
+                                    .get()
+                                    .getOrNull()
+                            userId to snapshot?.getLong("rating")?.toInt()
+                        }
+                    }.awaitAll()
+                    .mapNotNull { (userId, rating) -> rating?.let { userId to it } }
+                    .toMap()
+            }
+        }
 
     private fun Map<String, Any?>.toSubmitRatingOutcome(): SubmitRatingOutcome {
         val averageRating = (this["averageRating"] as? Number)?.toFloat() ?: 0f
@@ -165,6 +202,7 @@ internal class FirestoreRatingSource(
         const val SUBMIT_RATING_FUNCTION = "submitPlayerRating"
         const val SUBMIT_MATCH_RATING_FUNCTION = "submitMatchRating"
         const val SUBMIT_ORGANIZER_RATING_FUNCTION = "submitOrganizerRating"
+        const val SUBMIT_SKILL_RATING_FUNCTION = "submitSkillRating"
         const val ASCENDING = "asc"
         const val DESCENDING = "desc"
 

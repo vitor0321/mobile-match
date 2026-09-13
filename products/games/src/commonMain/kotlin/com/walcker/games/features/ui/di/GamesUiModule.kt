@@ -8,10 +8,12 @@ import com.walcker.games.features.ui.myMatches.MyMatchesStepModel
 import com.walcker.games.features.ui.playerProfile.PlayerProfileStepModel
 import com.walcker.games.features.ui.search.SearchStepModel
 import com.walcker.games.features.ui.shared.manageMatch.ManageMatchStepModel
+import com.walcker.games.features.ui.shared.managePlayers.ManagePlayersStepModel
 import com.walcker.games.features.ui.shared.notifications.NotificationHistoryStepModel
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsStepModel
 import com.walcker.games.features.ui.shared.playerRatings.PlayerRatingsListStepModel
 import com.walcker.games.features.ui.shared.playerSearch.PlayerSearchStepModel
+import com.walcker.games.features.ui.shared.teamShuffle.TeamShuffleStepModel
 import org.koin.dsl.module
 
 internal val gamesUiModule =
@@ -124,9 +126,38 @@ internal val gamesUiModule =
                 observeParticipants = get(),
                 cancelMatch = get(),
                 cancelMatchSeries = get(),
+                sessionHolder = get(),
+                stringsHolder = get(),
+                analytics = get(),
+                crashReporter = get(),
+            )
+        }
+        factory { (matchId: String) ->
+            TeamShuffleStepModel(
+                matchId = matchId,
+                getGameById = get(),
+                observeMatch = get(),
+                observeParticipants = get(),
                 setTeamAssignments = get(),
+                submitSkillRating = get(),
+                playerRepository = get(),
+                ratingRepository = get(),
+                sessionHolder = get(),
+                stringsHolder = get(),
+                crashReporter = get(),
+            )
+        }
+        factory { (matchId: String) ->
+            ManagePlayersStepModel(
+                matchId = matchId,
+                getGameById = get(),
+                observeMatch = get(),
+                observeParticipants = get(),
                 submitRating = get(),
                 submitReport = get(),
+                setVipStatus = get(),
+                confirmWaitlistedPlayer = get(),
+                banPlayerFromMatch = get(),
                 playerRepository = get(),
                 ratingRepository = get(),
                 sessionHolder = get(),

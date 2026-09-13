@@ -2,11 +2,14 @@ package com.walcker.games.features.ui.shared.manageMatch.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material3.Icon
@@ -20,10 +23,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.Participant
 import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
+import com.walcker.match.cedar.components.CedarIcons
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
+
+private val RateActionSize = 48.dp
 
 @Composable
 internal fun ParticipantRow(
@@ -37,6 +43,11 @@ internal fun ParticipantRow(
     ratingsCountLabel: (Int) -> String,
     onRatePlayer: (userId: String, displayName: String) -> Unit,
     modifier: Modifier = Modifier,
+    banLabel: String? = null,
+    onBanPlayer: ((userId: String, displayName: String) -> Unit)? = null,
+    isVip: Boolean = false,
+    vipLabel: String? = null,
+    onToggleVip: ((userId: String, displayName: String, currentlyVip: Boolean) -> Unit)? = null,
 ) {
     Row(
         modifier =
@@ -80,15 +91,41 @@ internal fun ParticipantRow(
             )
         }
 
-        if (canRate) {
-            IconButton(
-                onClick = { onRatePlayer(participant.userId, participant.displayName) },
-            ) {
-                Icon(
-                    imageVector = if (alreadyRated) Icons.Filled.RateReview else Icons.Outlined.RateReview,
-                    contentDescription = rateLabel,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+        Box(modifier = Modifier.size(RateActionSize), contentAlignment = Alignment.Center) {
+            if (canRate) {
+                IconButton(
+                    onClick = { onRatePlayer(participant.userId, participant.displayName) },
+                ) {
+                    Icon(
+                        imageVector = if (alreadyRated) Icons.Filled.RateReview else Icons.Outlined.RateReview,
+                        contentDescription = rateLabel,
+                        tint = if (alreadyRated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        if (onBanPlayer != null && banLabel != null) {
+            Box(modifier = Modifier.size(RateActionSize), contentAlignment = Alignment.Center) {
+                IconButton(onClick = { onBanPlayer(participant.userId, participant.displayName) }) {
+                    Icon(
+                        imageVector = Icons.Default.PersonRemove,
+                        contentDescription = banLabel,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+
+        if (onToggleVip != null && vipLabel != null) {
+            Box(modifier = Modifier.size(RateActionSize), contentAlignment = Alignment.Center) {
+                IconButton(onClick = { onToggleVip(participant.userId, participant.displayName, isVip) }) {
+                    Icon(
+                        imageVector = CedarIcons.Crown,
+                        contentDescription = vipLabel,
+                        tint = if (isVip) CedarTokens.colors.vip else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

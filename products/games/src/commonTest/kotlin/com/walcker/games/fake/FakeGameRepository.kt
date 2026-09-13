@@ -15,6 +15,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 
+internal data class SetTeamAssignmentsCall(
+    val matchId: String,
+    val teamCount: Int,
+    val playersPerTeam: Int,
+    val assignments: Map<String, Int>,
+)
+
 internal class FakeGameRepository(
     var myMatches: Result<List<MyMatch>> = Result.success(emptyList()),
     var refreshResult: Result<Unit> = Result.success(Unit),
@@ -24,6 +31,9 @@ internal class FakeGameRepository(
     var cancelMatchResult: Result<CancelMatchOutcome> = Result.success(CancelMatchOutcome.Cancelled("match-1")),
     var cancelMatchSeriesResult: Result<Unit> = Result.success(Unit),
     var leaveMatchResult: Result<LeaveMatchOutcome> = Result.success(LeaveMatchOutcome("match-1")),
+    var setVipStatusResult: Result<Unit> = Result.success(Unit),
+    var confirmWaitlistedPlayerResult: Result<Unit> = Result.success(Unit),
+    var banPlayerFromMatchResult: Result<String?> = Result.success(null),
     var setTeamAssignmentsResult: Result<Unit> = Result.success(Unit),
     var getGameByIdResult: Result<Game> = Result.success(game()),
     var loadMoreMatchesResult: Result<Unit> = Result.success(Unit),
@@ -46,7 +56,10 @@ internal class FakeGameRepository(
     val cancelMatchCalls: MutableList<String> = mutableListOf()
     val cancelMatchSeriesCalls: MutableList<String> = mutableListOf()
     val leaveMatchCalls: MutableList<String> = mutableListOf()
-    val setTeamAssignmentsCalls: MutableList<Triple<String, Int, Map<String, Int>>> = mutableListOf()
+    val setVipStatusCalls: MutableList<Triple<String, String, Boolean>> = mutableListOf()
+    val confirmWaitlistedPlayerCalls: MutableList<Pair<String, String>> = mutableListOf()
+    val banPlayerFromMatchCalls: MutableList<Pair<String, String>> = mutableListOf()
+    val setTeamAssignmentsCalls: MutableList<SetTeamAssignmentsCall> = mutableListOf()
     val getGameByIdCalls: MutableList<String> = mutableListOf()
 
     fun emitMatches(games: List<Game>) {
@@ -132,12 +145,38 @@ internal class FakeGameRepository(
         return leaveMatchResult
     }
 
+    override suspend fun setVipStatus(
+        matchId: String,
+        targetUserId: String,
+        isVip: Boolean,
+    ): Result<Unit> {
+        setVipStatusCalls += Triple(matchId, targetUserId, isVip)
+        return setVipStatusResult
+    }
+
+    override suspend fun confirmWaitlistedPlayer(
+        matchId: String,
+        targetUserId: String,
+    ): Result<Unit> {
+        confirmWaitlistedPlayerCalls += matchId to targetUserId
+        return confirmWaitlistedPlayerResult
+    }
+
+    override suspend fun banPlayerFromMatch(
+        matchId: String,
+        targetUserId: String,
+    ): Result<String?> {
+        banPlayerFromMatchCalls += matchId to targetUserId
+        return banPlayerFromMatchResult
+    }
+
     override suspend fun setTeamAssignments(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
     ): Result<Unit> {
-        setTeamAssignmentsCalls += Triple(matchId, teamCount, assignments)
+        setTeamAssignmentsCalls += SetTeamAssignmentsCall(matchId, teamCount, playersPerTeam, assignments)
         return setTeamAssignmentsResult
     }
 

@@ -3,21 +3,27 @@ package com.walcker.games.features.ui.shared.manageMatch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -25,29 +31,27 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
+import com.walcker.games.features.domain.shared.model.isInProgress
 import com.walcker.games.features.domain.shared.model.supportsTeamShuffle
 import com.walcker.games.features.ui.create.CreateMatchStep
-import com.walcker.games.features.ui.shared.manageMatch.component.RateablePlayersList
-import com.walcker.games.features.ui.shared.manageMatch.component.TeamShuffleSection
+import com.walcker.games.features.ui.shared.manageMatch.component.MatchActionCard
+import com.walcker.games.features.ui.shared.manageMatch.component.MatchHeaderCard
+import com.walcker.games.features.ui.shared.managePlayers.ManagePlayersStep
 import com.walcker.games.features.ui.shared.matchDetail.component.Banner
 import com.walcker.games.features.ui.shared.matchDetail.component.ConfirmDialog
 import com.walcker.games.features.ui.shared.matchDetail.component.LoadingBlock
-import com.walcker.games.features.ui.shared.ratings.RatingBottomSheet
+import com.walcker.games.features.ui.shared.teamShuffle.TeamShuffleStep
 import com.walcker.games.strings.GamesStrings
 import com.walcker.games.strings.ManageMatchStrings
 import com.walcker.games.strings.rememberGamesStrings
 import com.walcker.match.cedar.CedarTopBar
-import com.walcker.match.cedar.components.CedarLoading
-import com.walcker.match.cedar.components.CedarSecondaryButton
-import com.walcker.match.cedar.components.CedarSectionHeader
-import com.walcker.match.cedar.components.CedarTextButton
+import com.walcker.match.cedar.components.CedarTag
+import com.walcker.match.cedar.components.CedarTagTone
 import com.walcker.match.cedar.components.EmptyState
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.navigator.BottomBarVisibilityCoordinator
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
-
-private val ActionLoadingSize = 28.dp
 
 internal class ManageMatchStep(
     private val matchId: String,
@@ -83,6 +87,8 @@ internal class ManageMatchStep(
             strings = strings,
             onEvent = stepModel::onEvent,
             onEditMatch = { navigator.push(CreateMatchStep(matchId)) },
+            onManageTeams = { navigator.push(TeamShuffleStep(matchId)) },
+            onManagePlayers = { navigator.push(ManagePlayersStep(matchId)) },
             onDismiss = { navigator.pop() },
         )
     }
@@ -95,10 +101,13 @@ internal fun ManageMatchContent(
     onEvent: (ManageMatchEvent) -> Unit,
     modifier: Modifier = Modifier,
     onEditMatch: () -> Unit = {},
+    onManageTeams: () -> Unit = {},
+    onManagePlayers: () -> Unit = {},
     onDismiss: () -> Unit = {},
 ) {
     val manage = strings.manageMatch
     val match = state.match
+    val nowSeconds = remember { kotlin.time.Clock.System.now().epochSeconds }
 
     Column(
         modifier =
@@ -111,6 +120,16 @@ internal fun ManageMatchContent(
             onBack = onDismiss,
             backContentDescription = manage.backContentDescription,
             leadingIcon = Icons.Default.Close,
+            actions = {
+                if (match != null) {
+                    val (label, tone) = match.statusLabelAndTone(nowSeconds, manage)
+                    CedarTag(
+                        label = label.uppercase(),
+                        tone = tone,
+                        modifier = Modifier.padding(end = CedarTokens.spacing.md),
+                    )
+                }
+            },
         )
 
         Column(
@@ -138,24 +157,6 @@ internal fun ManageMatchContent(
                     onDismiss = { onEvent(ManageMatchEvent.DismissActionError) },
                 )
             }
-            state.ratingSuccessMessage?.let { message ->
-                Banner(
-                    message = message,
-                    container = CedarTokens.colors.availableContainer,
-                    onContainer = CedarTokens.colors.availableText,
-                    dismissContentDescription = manage.dismissContentDescription,
-                    onDismiss = { onEvent(ManageMatchEvent.DismissRatingSuccess) },
-                )
-            }
-            state.ratingErrorMessage?.let { message ->
-                Banner(
-                    message = message,
-                    container = MaterialTheme.colorScheme.errorContainer,
-                    onContainer = MaterialTheme.colorScheme.onErrorContainer,
-                    dismissContentDescription = manage.dismissContentDescription,
-                    onDismiss = { onEvent(ManageMatchEvent.DismissRatingError) },
-                )
-            }
 
             when {
                 state.isLoading -> LoadingBlock(contentDescription = manage.loadingLabel)
@@ -175,6 +176,8 @@ internal fun ManageMatchContent(
                         manage = manage,
                         onEvent = onEvent,
                         onEditMatch = onEditMatch,
+                        onManageTeams = onManageTeams,
+                        onManagePlayers = onManagePlayers,
                     )
 
                 else ->
@@ -209,21 +212,19 @@ internal fun ManageMatchContent(
             onDismiss = { onEvent(ManageMatchEvent.CancelCancelSeries) },
         )
     }
-
-    RatingBottomSheet(
-        isVisible = state.showRatingSheet,
-        playerName = state.selectedPlayerForRating?.second ?: "",
-        strings = strings.ratings,
-        reportStrings = strings.reports,
-        onDismiss = { onEvent(ManageMatchEvent.CloseRatingSheet) },
-        onSubmit = { rating, comment, reportReason, reportDetails ->
-            onEvent(ManageMatchEvent.SubmitRating(rating, comment, reportReason, reportDetails))
-        },
-        initialRating = state.existingRatingForSelectedPlayer?.rating ?: 5,
-        initialComment = state.existingRatingForSelectedPlayer?.comment ?: "",
-        isLoading = state.isSubmittingRating,
-    )
 }
+
+private fun Game.statusLabelAndTone(
+    nowSeconds: Long,
+    manage: ManageMatchStrings,
+): Pair<String, CedarTagTone> =
+    when {
+        status == MatchStatus.CANCELLED -> manage.statusCancelled to CedarTagTone.Danger
+        status == MatchStatus.FINISHED || isOver(nowSeconds) -> manage.statusFinished to CedarTagTone.Neutral
+        isInProgress(nowSeconds) -> manage.statusInProgress to CedarTagTone.Available
+        status == MatchStatus.FULL -> manage.statusFull to CedarTagTone.Warning
+        else -> manage.statusOpen to CedarTagTone.Info
+    }
 
 @Composable
 private fun ManageMatchBody(
@@ -232,6 +233,8 @@ private fun ManageMatchBody(
     manage: ManageMatchStrings,
     onEvent: (ManageMatchEvent) -> Unit,
     onEditMatch: () -> Unit,
+    onManageTeams: () -> Unit,
+    onManagePlayers: () -> Unit,
 ) {
     val isClosed = match.status == MatchStatus.FINISHED || match.status == MatchStatus.CANCELLED
 
@@ -245,76 +248,101 @@ private fun ManageMatchBody(
                 ),
         verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
     ) {
-        Text(
-            text = match.venueName,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
+        MatchHeaderCard(
+            match = match,
+            vipCount = state.vipCount,
+            manage = manage,
+            onEditMatch = onEditMatch,
+            canEdit = !isClosed,
         )
 
-        CedarSecondaryButton(
-            text = manage.editMatch,
-            onClick = onEditMatch,
-            enabled = !isClosed,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        if (state.isCancellingMatch) {
-            CedarLoading(contentDescription = manage.cancelMatch, size = ActionLoadingSize)
-        } else {
-            CedarSecondaryButton(
-                text = manage.cancelMatch,
-                onClick = { onEvent(ManageMatchEvent.RequestCancelMatch) },
-                enabled = !isClosed,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        if (match.recurrence != RecurrenceOption.NONE) {
-            if (state.isCancellingSeries) {
-                CedarLoading(contentDescription = manage.cancelMatchSeries, size = ActionLoadingSize)
-            } else {
-                CedarTextButton(
-                    text = manage.cancelMatchSeries,
-                    onClick = { onEvent(ManageMatchEvent.RequestCancelSeries) },
-                    modifier = Modifier.fillMaxWidth(),
+        val mainActions =
+            buildList {
+                if (match.supportsTeamShuffle()) {
+                    add(
+                        MatchAction(
+                            label = manage.teamsSectionTitle,
+                            icon = Icons.Filled.Shuffle,
+                            onClick = onManageTeams,
+                        ),
+                    )
+                }
+                add(
+                    MatchAction(
+                        label = manage.managePlayersAction,
+                        icon = Icons.Filled.Groups,
+                        onClick = onManagePlayers,
+                    ),
                 )
             }
-        }
 
-        if (match.supportsTeamShuffle()) {
-            TeamShuffleSection(
-                selectedTeamCount = state.selectedTeamCount,
-                teamCount = match.teamCount,
-                teamAssignments = match.teamAssignments,
-                confirmedPlayers = state.confirmedPlayers,
-                strings = manage,
-                isSaving = state.isSavingTeams,
-                onTeamCountSelected = { count -> onEvent(ManageMatchEvent.TeamCountSelected(count)) },
-                onShuffle = { onEvent(ManageMatchEvent.ShuffleTeams) },
-                onMovePlayer = { userId, teamIndex -> onEvent(ManageMatchEvent.MovePlayerToTeam(userId, teamIndex)) },
-            )
-        }
+        val cancelActions =
+            buildList {
+                add(
+                    MatchAction(
+                        label = manage.cancelMatch,
+                        icon = Icons.Filled.EventBusy,
+                        onClick = { onEvent(ManageMatchEvent.RequestCancelMatch) },
+                        enabled = !isClosed,
+                        isWorking = state.isCancellingMatch,
+                        isDanger = true,
+                    ),
+                )
+                if (match.recurrence != RecurrenceOption.NONE) {
+                    add(
+                        MatchAction(
+                            label = manage.cancelMatchSeries,
+                            icon = Icons.Filled.EventRepeat,
+                            onClick = { onEvent(ManageMatchEvent.RequestCancelSeries) },
+                            enabled = !isClosed,
+                            isWorking = state.isCancellingSeries,
+                            isDanger = true,
+                        ),
+                    )
+                }
+            }
 
-        if (state.canRatePlayers) {
-            CedarSectionHeader(title = manage.ratePlayersSection)
-            if (state.confirmedPlayers.isEmpty()) {
-                Text(
-                    text = manage.ratePlayersEmpty,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                RateablePlayersList(
-                    confirmedPlayers = state.confirmedPlayers,
-                    strings = manage,
-                    organizerRatingsGiven = state.organizerRatingsGiven,
-                    currentUserId = state.currentUserId,
-                    participantRatings = state.participantRatings,
-                    onRatePlayer = { userId, displayName ->
-                        onEvent(ManageMatchEvent.OpenRatingSheet(userId, displayName))
-                    },
-                )
+        ActionCardRows(actions = mainActions, isCompact = false)
+        ActionCardRows(actions = cancelActions, isCompact = true)
+    }
+}
+
+@Composable
+private fun ActionCardRows(
+    actions: List<MatchAction>,
+    isCompact: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm)) {
+        actions.chunked(2).forEach { rowActions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(CedarTokens.spacing.sm),
+            ) {
+                rowActions.forEach { action ->
+                    MatchActionCard(
+                        label = action.label,
+                        icon = action.icon,
+                        onClick = action.onClick,
+                        modifier = Modifier.weight(1f),
+                        enabled = action.enabled,
+                        isWorking = action.isWorking,
+                        isDanger = action.isDanger,
+                        isCompact = isCompact,
+                    )
+                }
+                if (rowActions.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }
 }
+
+private data class MatchAction(
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+    val enabled: Boolean = true,
+    val isWorking: Boolean = false,
+    val isDanger: Boolean = false,
+)

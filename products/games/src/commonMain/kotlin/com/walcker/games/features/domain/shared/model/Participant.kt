@@ -8,6 +8,7 @@ internal data class Participant(
     val isConfirmed: Boolean,
     val positionInWaitlist: Int? = null,
     val hasPaid: Boolean = false,
+    val isVip: Boolean = false,
 )
 
 internal data class ParticipantsSummary(

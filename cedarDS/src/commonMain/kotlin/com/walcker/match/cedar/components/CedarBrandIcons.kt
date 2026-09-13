@@ -8,6 +8,31 @@ import androidx.compose.ui.unit.dp
 import com.walcker.match.cedar.tokens.CedarPalette
 
 public object CedarIcons {
+    public val Crown: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "Crown",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            addPath(
+                pathData =
+                    PathParser()
+                        .parsePathString("M2.5 6 L7 11.5 L12 4 L17 11.5 L21.5 6 L21.5 16 L2.5 16 Z")
+                        .toNodes(),
+                fill = SolidColor(Color.Black),
+            )
+            addPath(
+                pathData =
+                    PathParser()
+                        .parsePathString("M2.5 17.5 L21.5 17.5 L21.5 20 L2.5 20 Z")
+                        .toNodes(),
+                fill = SolidColor(Color.Black),
+            )
+        }.build()
+    }
+
     public val Google: ImageVector by lazy {
         ImageVector.Builder(
             name = "GoogleLogo",

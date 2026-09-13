@@ -6,6 +6,7 @@ internal interface SetTeamAssignmentsUseCase {
     suspend operator fun invoke(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
     ): Result<Unit>
 }
@@ -16,6 +17,7 @@ internal class SetTeamAssignmentsUseCaseImpl(
     override suspend operator fun invoke(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
-    ): Result<Unit> = repository.setTeamAssignments(matchId, teamCount, assignments)
+    ): Result<Unit> = repository.setTeamAssignments(matchId, teamCount, playersPerTeam, assignments)
 }

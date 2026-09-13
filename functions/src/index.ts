@@ -5,6 +5,7 @@ import * as functionsV1 from "firebase-functions/v1";
 import {getMessaging} from "firebase-admin/messaging";
 import {onDocumentCreated, onDocumentWritten} from "firebase-functions/v2/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {boundsForRadius} from "./geo.js";
 import {
@@ -478,6 +479,11 @@ export const joinMatch = onCall(
       }
       const match = matchSnap.data() ?? {};
 
+      const bannedSnap = await txn.get(db.doc(`matches/${matchId}/bannedUsers/${uid}`));
+      if (bannedSnap.exists) {
+        throw new HttpsError("permission-denied", "You have been banned from this match.");
+      }
+
       const status = String(match.status ?? "OPEN");
       if (status === "CANCELLED" || status === "FINISHED") {
         throw new HttpsError("failed-precondition", `Cannot join match in status ${status}.`);
@@ -510,15 +516,21 @@ export const joinMatch = onCall(
       const displayName =
         request.auth?.token?.name ?? (typeof match.organizerName === "string" ? "Jogador" : "Jogador");
 
+      const seriesId = typeof match.seriesId === "string" ? match.seriesId : "";
+      const isVip =
+        seriesId.length > 0 &&
+        (await txn.get(db.doc(`matchSeries/${seriesId}/vipPlayers/${uid}`))).exists;
+
       const baseParticipant = {
         userId: uid,
         displayName,
         photoUrl: null,
         joinedAt: FieldValue.serverTimestamp(),
         hasPaid: false,
+        isVip,
       };
 
-      if (left > 0) {
+      if (isVip && left > 0) {
         // Slot available → join confirmed.
         txn.set(participantRef, {
           ...baseParticipant,
@@ -540,6 +552,7 @@ export const joinMatch = onCall(
         const position = waitlistSnapshot.size + 1;
         txn.set(participantRef, {
           ...baseParticipant,
+          isVip: false,
           isConfirmed: false,
           positionInWaitlist: position,
         });
@@ -999,6 +1012,396 @@ function parseSubmitRatingPayload(value: unknown, uid: string): SubmitRatingPayl
     comment,
   };
 }
+
+// ---------------------------------------------------------------------------
+// submitSkillRating — Callable (invocada por products/games)
+//
+// Nota de habilidade (1-10) que o organizador atribui a um jogador que jogou
+// com ele — inclusive a si mesmo, se também jogou a própria partida.
+// Independente de submitPlayerRating (reputação geral, qualquer avaliador) e
+// de profiles/{uid}.rating: aqui quem avalia é sempre o organizador, a nota
+// mede capacidade técnica pra montar times equilibrados. uid precisa ser o
+// organizerId da partida, e ratedUserId precisa ter isConfirmed em
+// matches/{matchId}/participants/{ratedUserId} — a mesma fonte que
+// observeParticipants usa pra montar a lista de times, não o array
+// matches/{matchId}.participants (que também guarda quem só entrou na fila).
+//
+// profiles/{ratedUserId}/skillRatings/{organizerId} — um documento por
+// organizador avaliador, id = uid de quem avalia, então reenviar edita em vez
+// de duplicar (mesmo padrão dos outros dois). profiles/{ratedUserId}
+// .skillRating/.skillRatingCount é a média recalculada aqui, exibida em
+// qualquer partida futura desse jogador — não só na que gerou a nota.
+//
+// Retorna {status: "recorded" | "updated", averageRating, ratingCount}.
+// ---------------------------------------------------------------------------
+
+const SKILL_RATING_MIN = 1;
+const SKILL_RATING_MAX = 10;
+
+export const submitSkillRating = onCall(
+  {region: REGION},
+  async (request): Promise<SubmitSkillRatingResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+
+    const {matchId, ratedUserId, rating} = parseSubmitSkillRatingPayload(request.data);
+
+    return db.runTransaction(async (txn) => {
+      await requireNotBlocked(txn, uid, Date.now());
+
+      const matchRef = db.doc(`matches/${matchId}`);
+      const skillRatingRef = db.doc(`profiles/${ratedUserId}/skillRatings/${uid}`);
+      const ratedProfileRef = db.doc(`profiles/${ratedUserId}`);
+      const ratedParticipantRef = db.doc(`matches/${matchId}/participants/${ratedUserId}`);
+
+      const [matchSnap, existingSnap, ratedProfileSnap, ratedParticipantSnap] = await txn.getAll(
+        matchRef,
+        skillRatingRef,
+        ratedProfileRef,
+        ratedParticipantRef,
+      );
+
+      if (!matchSnap.exists) {
+        logger.warn("submitSkillRating: match not found", {matchId, uid, ratedUserId});
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      if (match.organizerId !== uid) {
+        logger.warn("submitSkillRating: caller is not the organizer", {
+          matchId,
+          uid,
+          ratedUserId,
+          organizerId: match.organizerId,
+        });
+        throw new HttpsError("permission-denied", "Only the organizer can rate players' skill.");
+      }
+
+      // A fonte da verdade de "quem jogou" é o subdocumento de participante
+      // (o mesmo que a tela de sortear times lê via observeParticipants), não
+      // o array matches/{matchId}.participants — esse array também inclui
+      // quem só entrou na fila de espera, e partidas antigas podem tê-lo
+      // desatualizado.
+      if (ratedParticipantSnap.data()?.isConfirmed !== true) {
+        logger.warn("submitSkillRating: rated user is not a confirmed participant", {
+          matchId,
+          uid,
+          ratedUserId,
+          participantExists: ratedParticipantSnap.exists,
+          participantData: ratedParticipantSnap.data() ?? null,
+        });
+        throw new HttpsError("failed-precondition", "The rated user did not play this match.");
+      }
+
+      // Contas antigas podem ter ficado sem profiles/{uid} (onUserCreate nunca
+      // rodou ou falhou silenciosamente pra elas) — a pessoa consegue se
+      // autenticar e organizar partidas normalmente porque nada mais no app
+      // exige esse documento, mas a nota de habilidade precisa dele pra
+      // guardar a média. Em vez de travar, recria o perfil com o mesmo
+      // formato do onUserCreate a partir do registro real de Auth.
+      let ratedProfile = ratedProfileSnap.data();
+      if (ratedProfile === undefined) {
+        logger.warn("submitSkillRating: rated player profile missing, backfilling from Auth", {
+          matchId,
+          uid,
+          ratedUserId,
+        });
+        const ratedUser = await getAuth().getUser(ratedUserId);
+        ratedProfile = {
+          fullName: ratedUser.displayName ?? "",
+          nickname: null,
+          avatarUrl: ratedUser.photoURL ?? null,
+          position: null,
+          level: "Livre",
+          sports: [],
+          city: null,
+          neighborhood: null,
+          rating: 0,
+          ratingCount: 0,
+          matchesPlayed: 0,
+          isBanned: false,
+          createdAt: FieldValue.serverTimestamp(),
+        };
+        txn.set(ratedProfileRef, ratedProfile);
+      }
+
+      const previousCount = Number(ratedProfile.skillRatingCount ?? 0);
+      const previousAverage = Number(ratedProfile.skillRating ?? 0);
+
+      const isEdit = existingSnap.exists;
+      const previousRatingValue = isEdit ? Number(existingSnap.data()?.rating ?? 0) : null;
+
+      const nextCount = isEdit ? previousCount : previousCount + 1;
+      const nextAverage = isEdit
+        ? roundTo(
+            (previousAverage * previousCount - (previousRatingValue as number) + rating) / previousCount,
+            RATING_AVERAGE_DECIMALS,
+          )
+        : nextRatingAverage(previousAverage, previousCount, rating, RATING_AVERAGE_DECIMALS);
+
+      const now = Date.now();
+      txn.set(skillRatingRef, {
+        matchId,
+        ratedUserId,
+        organizerId: uid,
+        rating,
+        createdAtMs: now,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      txn.update(ratedProfileRef, {
+        skillRating: nextAverage,
+        skillRatingCount: nextCount,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      const responseStatus: "recorded" | "updated" = isEdit ? "updated" : "recorded";
+      return {
+        status: responseStatus,
+        matchId,
+        ratedUserId,
+        averageRating: nextAverage,
+        ratingCount: nextCount,
+      };
+    });
+  },
+);
+
+interface SubmitSkillRatingResponse {
+  status: "recorded" | "updated";
+  matchId: string;
+  ratedUserId: string;
+  averageRating: number;
+  ratingCount: number;
+}
+
+interface SubmitSkillRatingPayload {
+  matchId: string;
+  ratedUserId: string;
+  rating: number;
+}
+
+function parseSubmitSkillRatingPayload(value: unknown): SubmitSkillRatingPayload {
+  const data = (value ?? {}) as Partial<SubmitSkillRatingPayload>;
+
+  if (typeof data.matchId !== "string" || data.matchId.length === 0) {
+    throw new HttpsError("invalid-argument", "matchId is required.");
+  }
+  if (typeof data.ratedUserId !== "string" || data.ratedUserId.length === 0) {
+    throw new HttpsError("invalid-argument", "ratedUserId is required.");
+  }
+  if (
+    typeof data.rating !== "number" ||
+    !Number.isInteger(data.rating) ||
+    data.rating < SKILL_RATING_MIN ||
+    data.rating > SKILL_RATING_MAX
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      `rating must be an integer between ${SKILL_RATING_MIN} and ${SKILL_RATING_MAX}.`,
+    );
+  }
+
+  return {matchId: data.matchId, ratedUserId: data.ratedUserId, rating: data.rating};
+}
+
+async function promoteToConfirmed(
+  txn: FirebaseFirestore.Transaction,
+  matchId: string,
+  targetUserId: string,
+  currentConfirmedCount: number,
+  totalSlots: number,
+): Promise<void> {
+  const participantRef = db.doc(`matches/${matchId}/participants/${targetUserId}`);
+  const matchRef = db.doc(`matches/${matchId}`);
+  txn.update(participantRef, {
+    isConfirmed: true,
+    positionInWaitlist: null,
+    promotedAt: FieldValue.serverTimestamp(),
+  });
+  txn.update(matchRef, {
+    confirmedCount: FieldValue.increment(1),
+    status: currentConfirmedCount + 1 >= totalSlots ? "FULL" : "OPEN",
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+
+interface SetVipStatusRequest {
+  matchId: string;
+  targetUserId: string;
+  isVip: boolean;
+}
+
+type SetVipStatusResponse = {matchId: string; isVip: boolean};
+
+export const setVipStatus = onCall(
+  {region: REGION},
+  async (request): Promise<SetVipStatusResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data as Partial<SetVipStatusRequest>;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+      throw new HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data?.targetUserId !== "string" || data.targetUserId.length === 0) {
+      throw new HttpsError("invalid-argument", "targetUserId is required.");
+    }
+    if (typeof data?.isVip !== "boolean") {
+      throw new HttpsError("invalid-argument", "isVip is required.");
+    }
+    const matchId = data.matchId;
+    const targetUserId = data.targetUserId;
+    const isVip = data.isVip;
+
+    return db.runTransaction(async (txn) => {
+      await requireNotBlocked(txn, uid, Date.now());
+
+      const matchRef = db.doc(`matches/${matchId}`);
+      const targetParticipantRef = db.doc(`matches/${matchId}/participants/${targetUserId}`);
+      const [matchSnap, targetParticipantSnap] = await txn.getAll(matchRef, targetParticipantRef);
+
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      if (match.organizerId !== uid) {
+        throw new HttpsError("permission-denied", "Only the organizer can set VIP status.");
+      }
+
+      const seriesId = typeof match.seriesId === "string" ? match.seriesId : "";
+      if (!seriesId) {
+        throw new HttpsError("failed-precondition", "This match is not part of a recurring series.");
+      }
+
+      if (!targetParticipantSnap.exists) {
+        throw new HttpsError("failed-precondition", "Player is not in this match.");
+      }
+
+      const vipRef = db.doc(`matchSeries/${seriesId}/vipPlayers/${targetUserId}`);
+
+      if (isVip) {
+        txn.set(vipRef, {addedAt: FieldValue.serverTimestamp(), addedBy: uid});
+        txn.set(db.doc(`matchSeries/${seriesId}`), {organizerId: match.organizerId}, {merge: true});
+        txn.update(targetParticipantRef, {isVip: true});
+
+        const wasConfirmed = Boolean(targetParticipantSnap.data()?.isConfirmed);
+        if (!wasConfirmed) {
+          const totalSlots = Number(match.totalSlots ?? 0);
+          const confirmedCount = Number(match.confirmedCount ?? 0);
+          await promoteToConfirmed(txn, matchId, targetUserId, confirmedCount, totalSlots);
+        }
+      } else {
+        txn.delete(vipRef);
+        txn.update(targetParticipantRef, {isVip: false});
+      }
+
+      return {matchId, isVip};
+    });
+  },
+);
+
+interface ConfirmWaitlistedPlayerRequest {
+  matchId: string;
+  targetUserId: string;
+}
+
+type ConfirmWaitlistedPlayerResponse = {matchId: string};
+
+export const confirmWaitlistedPlayer = onCall(
+  {region: REGION},
+  async (request): Promise<ConfirmWaitlistedPlayerResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data as Partial<ConfirmWaitlistedPlayerRequest>;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+      throw new HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data?.targetUserId !== "string" || data.targetUserId.length === 0) {
+      throw new HttpsError("invalid-argument", "targetUserId is required.");
+    }
+    const matchId = data.matchId;
+    const targetUserId = data.targetUserId;
+
+    return db.runTransaction(async (txn) => {
+      await requireNotBlocked(txn, uid, Date.now());
+
+      const matchRef = db.doc(`matches/${matchId}`);
+      const targetParticipantRef = db.doc(`matches/${matchId}/participants/${targetUserId}`);
+      const [matchSnap, targetParticipantSnap] = await txn.getAll(matchRef, targetParticipantRef);
+
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      if (match.organizerId !== uid) {
+        throw new HttpsError("permission-denied", "Only the organizer can confirm waitlisted players.");
+      }
+
+      const isWaitlisted = targetParticipantSnap.exists && targetParticipantSnap.data()?.isConfirmed === false;
+      if (!isWaitlisted) {
+        throw new HttpsError("failed-precondition", "Player is not on the waitlist.");
+      }
+
+      const totalSlots = Number(match.totalSlots ?? 0);
+      const confirmedCount = Number(match.confirmedCount ?? 0);
+      await promoteToConfirmed(txn, matchId, targetUserId, confirmedCount, totalSlots);
+
+      return {matchId};
+    });
+  },
+);
+
+interface BanPlayerFromMatchRequest {
+  matchId: string;
+  targetUserId: string;
+}
+
+type BanPlayerFromMatchResponse = {matchId: string; promotedUserId?: string};
+
+export const banPlayerFromMatch = onCall(
+  {region: REGION},
+  async (request): Promise<BanPlayerFromMatchResponse> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    const data = request.data as Partial<BanPlayerFromMatchRequest>;
+    if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
+      throw new HttpsError("invalid-argument", "matchId is required.");
+    }
+    if (typeof data?.targetUserId !== "string" || data.targetUserId.length === 0) {
+      throw new HttpsError("invalid-argument", "targetUserId is required.");
+    }
+    const matchId = data.matchId;
+    const targetUserId = data.targetUserId;
+
+    return db.runTransaction(async (txn) => {
+      await requireNotBlocked(txn, uid, Date.now());
+
+      const matchRef = db.doc(`matches/${matchId}`);
+      const matchSnap = await txn.get(matchRef);
+      if (!matchSnap.exists) {
+        throw new HttpsError("not-found", "Match not found.");
+      }
+      const match = matchSnap.data() ?? {};
+
+      if (match.organizerId !== uid) {
+        throw new HttpsError("permission-denied", "Only the organizer can ban players.");
+      }
+      if (targetUserId === uid) {
+        throw new HttpsError("failed-precondition", "Organizer cannot ban themselves.");
+      }
+
+      const promotedUserId = await removeParticipant(txn, matchId, targetUserId);
+
+      txn.set(db.doc(`matches/${matchId}/bannedUsers/${targetUserId}`), {
+        bannedAt: FieldValue.serverTimestamp(),
+        bannedBy: uid,
+      });
+
+      return {matchId, promotedUserId};
+    });
+  },
+);
 
 /**
  * Avaliação é pós-partida. Não dá para exigir status FINISHED porque nada marca

@@ -142,13 +142,36 @@ internal class GameRepositoryImpl(
             }
         }.recoverCatching { error -> throw error.toGamesError() }
 
+    override suspend fun setVipStatus(
+        matchId: String,
+        targetUserId: String,
+        isVip: Boolean,
+    ): Result<Unit> =
+        runCatching { source.setVipStatus(matchId, targetUserId, isVip) }
+            .recoverCatching { error -> throw error.toGamesError() }
+
+    override suspend fun confirmWaitlistedPlayer(
+        matchId: String,
+        targetUserId: String,
+    ): Result<Unit> =
+        runCatching { source.confirmWaitlistedPlayer(matchId, targetUserId) }
+            .recoverCatching { error -> throw error.toGamesError() }
+
+    override suspend fun banPlayerFromMatch(
+        matchId: String,
+        targetUserId: String,
+    ): Result<String?> =
+        runCatching { source.banPlayerFromMatch(matchId, targetUserId) }
+            .recoverCatching { error -> throw error.toGamesError() }
+
     override suspend fun setTeamAssignments(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
     ): Result<Unit> =
         runCatching {
-            source.setTeamAssignments(matchId, teamCount, assignments)
+            source.setTeamAssignments(matchId, teamCount, playersPerTeam, assignments)
         }.recoverCatching { error -> throw error.toGamesError() }
 
     override suspend fun getGameById(gameId: String): Result<Game> =

@@ -17,6 +17,9 @@ internal class FakeGameSource(
     var openGamesRangeCursors: List<String?> = emptyList(),
     var joinGameResult: () -> JoinMatchOutcome = { JoinMatchOutcome.Confirmed(matchId = "match-1") },
     var leaveMatchResult: () -> LeaveMatchOutcome = { LeaveMatchOutcome(matchId = "match-1") },
+    var setVipStatusResult: () -> Unit = {},
+    var confirmWaitlistedPlayerResult: () -> Unit = {},
+    var banPlayerFromMatchResult: () -> String? = { null },
     var cancelMatchResult: () -> CancelMatchOutcome = { CancelMatchOutcome.Cancelled(matchId = "match-1") },
     var createMatchResult: () -> String = { "match-1" },
     var updateMatchResult: () -> Unit = {},
@@ -42,6 +45,12 @@ internal class FakeGameSource(
     var cancelMatchSeriesCallCount: Int = 0
         private set
     var leaveMatchCallCount: Int = 0
+        private set
+    var setVipStatusCallCount: Int = 0
+        private set
+    var confirmWaitlistedPlayerCallCount: Int = 0
+        private set
+    var banPlayerFromMatchCallCount: Int = 0
         private set
 
     override suspend fun openGames(
@@ -72,6 +81,31 @@ internal class FakeGameSource(
         return leaveMatchResult()
     }
 
+    override suspend fun setVipStatus(
+        matchId: String,
+        targetUserId: String,
+        isVip: Boolean,
+    ) {
+        setVipStatusCallCount++
+        setVipStatusResult()
+    }
+
+    override suspend fun confirmWaitlistedPlayer(
+        matchId: String,
+        targetUserId: String,
+    ) {
+        confirmWaitlistedPlayerCallCount++
+        confirmWaitlistedPlayerResult()
+    }
+
+    override suspend fun banPlayerFromMatch(
+        matchId: String,
+        targetUserId: String,
+    ): String? {
+        banPlayerFromMatchCallCount++
+        return banPlayerFromMatchResult()
+    }
+
     override suspend fun cancelMatch(gameId: String): CancelMatchOutcome {
         cancelMatchCallCount++
         return cancelMatchResult()
@@ -97,6 +131,7 @@ internal class FakeGameSource(
     override suspend fun setTeamAssignments(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
     ) {
         setTeamAssignmentsCallCount++

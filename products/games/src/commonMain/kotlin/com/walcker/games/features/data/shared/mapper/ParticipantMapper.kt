@@ -18,6 +18,7 @@ internal fun DocumentSnapshot.toParticipant(): Participant? =
             isConfirmed = isConfirmed,
             positionInWaitlist = (getLong("positionInWaitlist")?.toInt()),
             hasPaid = getBoolean("hasPaid") ?: false,
+            isVip = getBoolean("isVip") ?: false,
         )
     } catch (e: Exception) {
         null

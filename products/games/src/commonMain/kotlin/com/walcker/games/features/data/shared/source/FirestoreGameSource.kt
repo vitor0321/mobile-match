@@ -97,15 +97,61 @@ internal class FirestoreGameSource(
         )
     }
 
+    override suspend fun setVipStatus(
+        matchId: String,
+        targetUserId: String,
+        isVip: Boolean,
+    ) {
+        val result =
+            firestore.callFunction(
+                name = "setVipStatus",
+                data = mapOf("matchId" to matchId, "targetUserId" to targetUserId, "isVip" to isVip),
+            )
+        result.getOrThrow()
+    }
+
+    override suspend fun confirmWaitlistedPlayer(
+        matchId: String,
+        targetUserId: String,
+    ) {
+        val result =
+            firestore.callFunction(
+                name = "confirmWaitlistedPlayer",
+                data = mapOf("matchId" to matchId, "targetUserId" to targetUserId),
+            )
+        result.getOrThrow()
+    }
+
+    override suspend fun banPlayerFromMatch(
+        matchId: String,
+        targetUserId: String,
+    ): String? {
+        val result =
+            firestore.callFunction(
+                name = "banPlayerFromMatch",
+                data = mapOf("matchId" to matchId, "targetUserId" to targetUserId),
+            )
+        return result.fold(
+            onSuccess = { payload -> payload["promotedUserId"] as? String },
+            onFailure = { error -> throw error },
+        )
+    }
+
     override suspend fun setTeamAssignments(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
     ) {
         firestore
             .document("matches/$matchId")
-            .update(mapOf("teamCount" to teamCount, "teamAssignments" to assignments))
-            .getOrThrow()
+            .update(
+                mapOf(
+                    "teamCount" to teamCount,
+                    "playersPerTeam" to playersPerTeam,
+                    "teamAssignments" to assignments,
+                ),
+            ).getOrThrow()
     }
 
     override suspend fun cancelMatch(gameId: String): CancelMatchOutcome {

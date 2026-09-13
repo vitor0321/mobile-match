@@ -26,9 +26,26 @@ internal interface GameSource {
 
     suspend fun leaveMatch(gameId: String): LeaveMatchOutcome
 
+    suspend fun setVipStatus(
+        matchId: String,
+        targetUserId: String,
+        isVip: Boolean,
+    )
+
+    suspend fun confirmWaitlistedPlayer(
+        matchId: String,
+        targetUserId: String,
+    )
+
+    suspend fun banPlayerFromMatch(
+        matchId: String,
+        targetUserId: String,
+    ): String?
+
     suspend fun setTeamAssignments(
         matchId: String,
         teamCount: Int,
+        playersPerTeam: Int,
         assignments: Map<String, Int>,
     )
 

@@ -153,8 +153,20 @@ private fun AuthenticatedShell() {
                     Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
-                        .consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Bottom))
-                        .hazeSource(state = hazeState),
+                        .let { base ->
+                            // Só consome o inset do sistema quando a MatchBottomBar está de fato
+                            // na tela para absorvê-lo — ela mesma aplica o padding equivalente.
+                            // Uma tela que esconde a barra (BottomBarVisibilityCoordinator) e
+                            // aplica seu próprio .navigationBarsPadding() precisa do inset intacto
+                            // aqui, senão o consumo acontece antes de chegar nela e o padding local
+                            // vira um no-op — foi o caso do botão de sortear times cortado pela
+                            // barra de gestos do Android.
+                            if (isBottomBarVisible) {
+                                base.consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Bottom))
+                            } else {
+                                base
+                            }
+                        }.hazeSource(state = hazeState),
             ) {
                 val tabScreen =
                     when (selectedTab) {

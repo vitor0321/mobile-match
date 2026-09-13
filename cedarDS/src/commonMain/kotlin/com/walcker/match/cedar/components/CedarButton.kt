@@ -1,6 +1,7 @@
 package com.walcker.match.cedar.components
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -86,6 +87,14 @@ public fun CedarAvailabilityButton(
     }
 }
 
+public enum class CedarButtonTone {
+    Primary,
+
+    Danger,
+}
+
+private const val DisabledBorderAlpha = 0.38f
+
 @Composable
 public fun CedarSecondaryButton(
     text: String,
@@ -96,15 +105,30 @@ public fun CedarSecondaryButton(
     leadingIcon: ImageVector? = null,
     tintLeadingIcon: Boolean = true,
     fillWidth: Boolean = true,
+    tone: CedarButtonTone = CedarButtonTone.Primary,
 ) {
+    val toneColor =
+        when (tone) {
+            CedarButtonTone.Primary -> MaterialTheme.colorScheme.primary
+            CedarButtonTone.Danger -> MaterialTheme.colorScheme.error
+        }
+    val isActive = enabled && !loading
+    val defaultBorder = ButtonDefaults.outlinedButtonBorder(enabled = isActive)
+    val border =
+        when (tone) {
+            CedarButtonTone.Primary -> defaultBorder
+            CedarButtonTone.Danger ->
+                BorderStroke(
+                    width = defaultBorder.width,
+                    color = toneColor.copy(alpha = if (isActive) 1f else DisabledBorderAlpha),
+                )
+        }
     OutlinedButton(
         onClick = onClick,
-        enabled = enabled && !loading,
+        enabled = isActive,
         shape = CedarTokens.radius.mdShape,
-        colors =
-            ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary,
-            ),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = toneColor),
+        border = border,
         contentPadding = ButtonDefaults.ContentPadding,
         modifier =
             modifier

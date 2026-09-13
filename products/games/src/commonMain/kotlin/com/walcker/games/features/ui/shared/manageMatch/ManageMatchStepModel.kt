@@ -3,24 +3,11 @@ package com.walcker.games.features.ui.shared.manageMatch
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.shared.model.Game
-import com.walcker.games.features.domain.shared.model.Participant
-import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
-import com.walcker.games.features.domain.shared.model.Rating
-import com.walcker.games.features.domain.shared.model.ReportReason
-import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
-import com.walcker.games.features.domain.shared.model.SubmitReportOutcome
-import com.walcker.games.features.domain.shared.model.canOrganizerRate
-import com.walcker.games.features.domain.shared.repository.PlayerRepository
-import com.walcker.games.features.domain.shared.repository.RatingRepository
 import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCase
-import com.walcker.games.features.domain.shared.usecase.SetTeamAssignmentsUseCase
-import com.walcker.games.features.domain.shared.usecase.SubmitRatingUseCase
-import com.walcker.games.features.domain.shared.usecase.SubmitReportUseCase
-import com.walcker.games.features.domain.shared.util.shuffleIntoTeams
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
@@ -49,18 +36,7 @@ internal data class ManageMatchState(
     val isCancellingSeries: Boolean = false,
     val showCancelSeriesConfirmDialog: Boolean = false,
     val currentUserId: String? = null,
-    val canRatePlayers: Boolean = false,
-    val confirmedPlayers: List<Participant> = emptyList(),
-    val selectedTeamCount: Int = 2,
-    val isSavingTeams: Boolean = false,
-    val participantRatings: Map<String, PlayerRatingSummary> = emptyMap(),
-    val organizerRatingsGiven: Map<String, Rating> = emptyMap(),
-    val showRatingSheet: Boolean = false,
-    val selectedPlayerForRating: Pair<String, String>? = null,
-    val existingRatingForSelectedPlayer: Rating? = null,
-    val isSubmittingRating: Boolean = false,
-    val ratingErrorMessage: String? = null,
-    val ratingSuccessMessage: String? = null,
+    val vipCount: Int = 0,
 )
 
 internal sealed interface ManageMatchEvent {
@@ -81,35 +57,6 @@ internal sealed interface ManageMatchEvent {
     data object ConfirmCancelSeries : ManageMatchEvent
 
     data object CancelCancelSeries : ManageMatchEvent
-
-    data class TeamCountSelected(
-        val teamCount: Int,
-    ) : ManageMatchEvent
-
-    data object ShuffleTeams : ManageMatchEvent
-
-    data class MovePlayerToTeam(
-        val userId: String,
-        val teamIndex: Int,
-    ) : ManageMatchEvent
-
-    data class OpenRatingSheet(
-        val userId: String,
-        val displayName: String,
-    ) : ManageMatchEvent
-
-    data object CloseRatingSheet : ManageMatchEvent
-
-    data class SubmitRating(
-        val rating: Int,
-        val comment: String,
-        val reportReason: ReportReason?,
-        val reportDetails: String,
-    ) : ManageMatchEvent
-
-    data object DismissRatingError : ManageMatchEvent
-
-    data object DismissRatingSuccess : ManageMatchEvent
 }
 
 internal sealed interface ManageMatchEffect {
@@ -123,11 +70,6 @@ internal class ManageMatchStepModel(
     private val observeParticipants: ObserveParticipantsUseCase,
     private val cancelMatch: CancelMatchUseCase,
     private val cancelMatchSeries: CancelMatchSeriesUseCase,
-    private val setTeamAssignments: SetTeamAssignmentsUseCase,
-    private val submitRating: SubmitRatingUseCase,
-    private val submitReport: SubmitReportUseCase,
-    private val playerRepository: PlayerRepository,
-    private val ratingRepository: RatingRepository,
     private val sessionHolder: SessionHolder,
     private val stringsHolder: GamesStringsHolder,
     private val analytics: AnalyticsTracker,
@@ -141,20 +83,23 @@ internal class ManageMatchStepModel(
 
     private var currentUserId: String? = null
 
-    private fun ManageMatchState.withCanRatePlayers(): ManageMatchState {
-        val game = match ?: return copy(canRatePlayers = false)
-        return copy(canRatePlayers = game.canOrganizerRate(userId = currentUserId))
-    }
-
-    private fun ManageMatchState.withSelectedTeamCountFromMatch(): ManageMatchState {
-        val teamCount = match?.teamCount ?: return this
-        return if (teamCount > 0) copy(selectedTeamCount = teamCount) else this
-    }
-
     init {
         loadMatch()
         subscribeToMatch()
         subscribeToCurrentUser()
+        subscribeToVipCount()
+    }
+
+    private fun subscribeToVipCount() {
+        screenModelScope.launch {
+            observeParticipants(matchId)
+                .catch { }
+                .collect { result ->
+                    result.onSuccess { summary ->
+                        _state.update { it.copy(vipCount = summary.confirmed.count { player -> player.isVip }) }
+                    }
+                }
+        }
     }
 
     fun onEvent(event: ManageMatchEvent) {
@@ -180,34 +125,6 @@ internal class ManageMatchStepModel(
             ManageMatchEvent.CancelCancelSeries -> {
                 _state.update { it.copy(showCancelSeriesConfirmDialog = false) }
             }
-            is ManageMatchEvent.TeamCountSelected -> {
-                _state.update { it.copy(selectedTeamCount = event.teamCount) }
-            }
-            ManageMatchEvent.ShuffleTeams -> shuffleTeamsAction()
-            is ManageMatchEvent.MovePlayerToTeam -> movePlayerToTeamAction(event.userId, event.teamIndex)
-            is ManageMatchEvent.OpenRatingSheet -> {
-                _state.update {
-                    it.copy(
-                        showRatingSheet = true,
-                        selectedPlayerForRating = event.userId to event.displayName,
-                        existingRatingForSelectedPlayer = it.organizerRatingsGiven[event.userId],
-                    )
-                }
-            }
-            ManageMatchEvent.CloseRatingSheet -> {
-                _state.update {
-                    it.copy(showRatingSheet = false, selectedPlayerForRating = null, existingRatingForSelectedPlayer = null)
-                }
-            }
-            is ManageMatchEvent.SubmitRating -> {
-                submitPlayerRating(event.rating, event.comment, event.reportReason, event.reportDetails)
-            }
-            ManageMatchEvent.DismissRatingError -> {
-                _state.update { it.copy(ratingErrorMessage = null) }
-            }
-            ManageMatchEvent.DismissRatingSuccess -> {
-                _state.update { it.copy(ratingSuccessMessage = null) }
-            }
         }
     }
 
@@ -217,7 +134,7 @@ internal class ManageMatchStepModel(
             getGameById(matchId)
                 .onSuccess { game ->
                     _state.update {
-                        it.copy(isLoading = false, match = game).withCanRatePlayers().withSelectedTeamCountFromMatch()
+                        it.copy(isLoading = false, match = game)
                     }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
@@ -238,7 +155,7 @@ internal class ManageMatchStepModel(
                 .collect { result ->
                     result.onSuccess { game ->
                         _state.update {
-                            it.copy(match = game, isLoading = false).withCanRatePlayers().withSelectedTeamCountFromMatch()
+                            it.copy(match = game, isLoading = false)
                         }
                     }
                 }
@@ -248,114 +165,7 @@ internal class ManageMatchStepModel(
     private fun subscribeToCurrentUser() {
         screenModelScope.launch {
             currentUserId = sessionHolder.currentUser.first()?.uid
-            _state.update { it.copy(currentUserId = currentUserId).withCanRatePlayers() }
-            loadOrganizerRatingsGiven()
-            subscribeToParticipants()
-        }
-    }
-
-    private fun subscribeToParticipants() {
-        screenModelScope.launch {
-            observeParticipants(matchId)
-                .catch { }
-                .collect { result ->
-                    result.onSuccess { summary ->
-                        _state.update { it.copy(confirmedPlayers = summary.confirmed) }
-                        loadParticipantRatings(summary.confirmed.map { it.userId })
-                    }
-                }
-        }
-    }
-
-    private fun loadParticipantRatings(userIds: List<String>) {
-        if (userIds.isEmpty()) return
-        screenModelScope.launch {
-            playerRepository.getPlayersRatingSummary(userIds).onSuccess { ratings ->
-                _state.update { it.copy(participantRatings = ratings) }
-            }
-        }
-    }
-
-    private fun loadOrganizerRatingsGiven() {
-        val organizerId = currentUserId ?: return
-        screenModelScope.launch {
-            ratingRepository.getRatingsGivenForMatch(matchId, organizerId).onSuccess { ratings ->
-                _state.update {
-                    it.copy(organizerRatingsGiven = ratings.associateBy { rating -> rating.ratedUserId })
-                }
-            }
-        }
-    }
-
-    private fun submitPlayerRating(
-        rating: Int,
-        comment: String,
-        reportReason: ReportReason?,
-        reportDetails: String,
-    ) {
-        val ratedUserId = _state.value.selectedPlayerForRating?.first ?: return
-        val ratingStrings = stringsHolder.resolveStringsOrDefault().ratings
-        val reportStrings = stringsHolder.resolveStringsOrDefault().reports
-
-        screenModelScope.launch {
-            _state.update { it.copy(isSubmittingRating = true, ratingErrorMessage = null) }
-            submitRating(
-                matchId = matchId,
-                ratedUserId = ratedUserId,
-                rating = rating,
-                comment = comment,
-            ).onSuccess { outcome ->
-                analytics.track(AnalyticsEvent.PlayerRated(rating))
-                loadOrganizerRatingsGiven()
-
-                var message =
-                    when (outcome) {
-                        is SubmitRatingOutcome.Recorded -> ratingStrings.submitSuccess
-                        is SubmitRatingOutcome.Updated -> ratingStrings.updated
-                        is SubmitRatingOutcome.AlreadyRated -> ratingStrings.updated
-                    }
-
-                if (reportReason != null) {
-                    submitReport(matchId, ratedUserId, reportReason, reportDetails)
-                        .onSuccess { reportOutcome ->
-                            analytics.track(AnalyticsEvent.PlayerReported(reportReason.name))
-                            val reportMessage =
-                                when (reportOutcome) {
-                                    SubmitReportOutcome.Recorded -> reportStrings.success
-                                    SubmitReportOutcome.AlreadyReported -> reportStrings.alreadyReported
-                                }
-                            message = "$message $reportMessage"
-                        }.onFailure { error -> crashReporter.recordException(error) }
-                }
-
-                _state.update {
-                    it.copy(
-                        isSubmittingRating = false,
-                        showRatingSheet = false,
-                        selectedPlayerForRating = null,
-                        ratingSuccessMessage = message,
-                        participantRatings =
-                            it.participantRatings +
-                                (
-                                    ratedUserId to
-                                        PlayerRatingSummary(
-                                            rating = outcome.averageRating,
-                                            ratingCount = outcome.ratingCount,
-                                        )
-                                ),
-                    )
-                }
-            }.onFailure { error ->
-                crashReporter.recordException(error)
-                _state.update {
-                    it.copy(
-                        isSubmittingRating = false,
-                        showRatingSheet = false,
-                        selectedPlayerForRating = null,
-                        ratingErrorMessage = ratingStrings.submitError,
-                    )
-                }
-            }
+            _state.update { it.copy(currentUserId = currentUserId) }
         }
     }
 
@@ -411,43 +221,6 @@ internal class ManageMatchStepModel(
                         it.copy(
                             isCancellingSeries = false,
                             actionErrorMessage = strings.cancelSeriesError,
-                        )
-                    }
-                }
-        }
-    }
-
-    private fun shuffleTeamsAction() {
-        val playerIds = _state.value.confirmedPlayers.map { it.userId }
-        val teamCount = _state.value.selectedTeamCount
-        val assignments = shuffleIntoTeams(playerIds, teamCount)
-        writeTeamAssignments(teamCount, assignments)
-    }
-
-    private fun movePlayerToTeamAction(
-        userId: String,
-        teamIndex: Int,
-    ) {
-        val match = _state.value.match ?: return
-        val updatedAssignments = match.teamAssignments + (userId to teamIndex)
-        writeTeamAssignments(match.teamCount, updatedAssignments)
-    }
-
-    private fun writeTeamAssignments(
-        teamCount: Int,
-        assignments: Map<String, Int>,
-    ) {
-        screenModelScope.launch {
-            _state.update { it.copy(isSavingTeams = true, actionErrorMessage = null) }
-            setTeamAssignments(matchId, teamCount, assignments)
-                .onSuccess {
-                    _state.update { it.copy(isSavingTeams = false) }
-                }.onFailure { error ->
-                    crashReporter.recordException(error)
-                    _state.update {
-                        it.copy(
-                            isSavingTeams = false,
-                            actionErrorMessage = stringsHolder.resolveStringsOrDefault().manageMatch.teamsSaveError,
                         )
                     }
                 }

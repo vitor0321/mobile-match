@@ -3,6 +3,7 @@ package com.walcker.games.features.data.shared.mapper
 import com.walcker.match.firestore.DocumentSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 private fun snapshot(
@@ -59,5 +60,20 @@ class ParticipantMapperTest {
         assertNull(participant.photoUrl)
         assertNull(participant.positionInWaitlist)
         assertEquals(false, participant.hasPaid)
+    }
+
+    @Test
+    fun `toParticipant defaults isVip to false when the field is missing`() {
+        val participant = snapshot(data = mapOf("userId" to "player-1")).toParticipant()!!
+
+        assertFalse(participant.isVip)
+    }
+
+    @Test
+    fun `toParticipant reads isVip true`() {
+        val participant =
+            snapshot(data = mapOf("userId" to "player-1", "isVip" to true)).toParticipant()!!
+
+        assertEquals(true, participant.isVip)
     }
 }

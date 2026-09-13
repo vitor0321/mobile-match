@@ -30,6 +30,20 @@ internal class RatingRepositoryImpl(
         rating: Int,
     ): Result<SubmitRatingOutcome> = ratingSource.submitOrganizerRating(matchId, rating)
 
+    override suspend fun submitSkillRating(
+        matchId: String,
+        ratedUserId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> =
+        ratingSource
+            .submitSkillRating(matchId, ratedUserId, rating)
+            .onSuccess { playerCache.invalidatePlayer(ratedUserId) }
+
+    override suspend fun getMySkillRatings(
+        organizerId: String,
+        userIds: List<String>,
+    ): Result<Map<String, Int>> = ratingSource.getMySkillRatings(organizerId, userIds)
+
     override suspend fun getUserRatings(
         userId: String,
         limit: Int,

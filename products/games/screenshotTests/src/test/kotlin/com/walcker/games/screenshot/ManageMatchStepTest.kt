@@ -4,7 +4,6 @@ package com.walcker.games.screenshot
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
-import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.domain.shared.model.RecurrenceOption
 import com.walcker.games.features.ui.shared.manageMatch.ManageMatchContent
 import com.walcker.games.features.ui.shared.manageMatch.ManageMatchState
@@ -44,6 +43,15 @@ class ManageMatchStepTest {
     fun content_lightMode() = snapshot(loadedState)
 
     @Test
+    fun contentWithStats_lightMode() =
+        snapshot(
+            loadedState.copy(
+                match = loadedState.match?.copy(confirmedPlayers = 10, teamCount = 2),
+                vipCount = 2,
+            ),
+        )
+
+    @Test
     fun content_darkMode() = snapshot(loadedState, darkTheme = true)
 
     @Test
@@ -53,52 +61,16 @@ class ManageMatchStepTest {
         )
 
     @Test
-    fun ratePlayersEmpty_lightMode() =
-        snapshot(loadedState.copy(canRatePlayers = true))
-
-    @Test
-    fun ratePlayers_lightMode() =
-        snapshot(
-            loadedState.copy(
-                canRatePlayers = true,
-                confirmedPlayers = listOf(fakeParticipant(userId = "player-2", displayName = "Bruno Lima")),
-                participantRatings = mapOf("player-2" to PlayerRatingSummary(rating = 4.5f, ratingCount = 3)),
-            ),
-        )
-
-    @Test
     fun cancelDialog_lightMode() = snapshot(loadedState.copy(showCancelConfirmDialog = true))
 
     @Test
-    fun teamsSelector_lightMode() =
-        snapshot(loadedState.copy(selectedTeamCount = 3))
-
-    @Test
-    fun teamsFormed_lightMode() =
+    fun statusInProgress_lightMode() =
         snapshot(
             loadedState.copy(
                 match =
                     loadedState.match?.copy(
-                        teamCount = 2,
-                        teamAssignments = mapOf("player-2" to 0, "player-3" to 1),
-                    ),
-                confirmedPlayers =
-                    listOf(
-                        fakeParticipant(userId = "player-2", displayName = "Bruno Lima"),
-                        fakeParticipant(userId = "player-3", displayName = "Carla Dias"),
-                    ),
-            ),
-        )
-
-    @Test
-    fun teamsWithUnassignedPlayer_lightMode() =
-        snapshot(
-            loadedState.copy(
-                match = loadedState.match?.copy(teamCount = 2, teamAssignments = mapOf("player-2" to 0)),
-                confirmedPlayers =
-                    listOf(
-                        fakeParticipant(userId = "player-2", displayName = "Bruno Lima"),
-                        fakeParticipant(userId = "player-3", displayName = "Carla Dias"),
+                        startsAtSeconds = kotlin.time.Clock.System.now().epochSeconds - 600,
+                        durationMin = 60,
                     ),
             ),
         )

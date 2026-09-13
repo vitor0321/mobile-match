@@ -49,6 +49,13 @@ internal class PlayerRepositoryImpl(
             .getPlayersRatingSummary(userIds)
             .recoverCatching { error -> throw mapToGamesError(error) }
 
+    override suspend fun getPlayersSkillRatingSummary(
+        userIds: List<String>,
+    ): Result<Map<String, PlayerRatingSummary>> =
+        source
+            .getPlayersSkillRatingSummary(userIds)
+            .recoverCatching { error -> throw mapToGamesError(error) }
+
     override suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?> =
         source
             .getOrganizerRatingSummary(organizerId)

@@ -6,12 +6,14 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.MatchStatus
+import com.walcker.games.features.domain.shared.model.PlayerRatingSummary
 import com.walcker.games.features.ui.home.component.GameList
 import com.walcker.games.features.ui.home.map.component.MapMatchPreviewCard
 import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.myMatches.component.MyMatchCard
 import com.walcker.games.features.ui.playerProfile.component.AvailabilityCard
 import com.walcker.games.features.ui.shared.manageMatch.component.ParticipantRow
+import com.walcker.games.features.ui.shared.manageMatch.component.TeamMemberRow
 import com.walcker.games.features.ui.shared.matchDetail.component.JoinBar
 import com.walcker.games.features.ui.shared.matchDetail.component.StatusBadge
 import com.walcker.games.features.ui.shared.notifications.component.NotificationItemRow
@@ -289,6 +291,72 @@ class GamesComponentsTest {
                 onRatePlayer = { _, _ -> },
                 ratingSummary = null,
                 ratingsCountLabel = { n -> "$n avaliações" },
+            )
+        }
+
+    @Test
+    fun teamMemberRow_dragging_lightMode() =
+        snapshot {
+            TeamMemberRow(
+                participant = fakeParticipant(displayName = "Bruno Lima"),
+                otherTeamIndices = listOf(1),
+                strings = PtBrGamesStrings.manageMatch,
+                isSaving = false,
+                isDragging = true,
+                dragOffset = androidx.compose.ui.geometry.Offset(0f, 24f),
+                skillRating = null,
+                myRating = null,
+                canRateSkill = false,
+                onMoveToTeam = {},
+                onRateSkill = {},
+                onRowPositioned = {},
+                onDragStart = {},
+                onDragBy = {},
+                onDragEnd = {},
+            )
+        }
+
+    @Test
+    fun teamMemberRow_skillRating_lightMode() =
+        snapshot {
+            TeamMemberRow(
+                participant = fakeParticipant(displayName = "Bruno Lima"),
+                otherTeamIndices = listOf(1),
+                strings = PtBrGamesStrings.manageMatch,
+                isSaving = false,
+                isDragging = false,
+                dragOffset = androidx.compose.ui.geometry.Offset.Zero,
+                skillRating = PlayerRatingSummary(rating = 8.5f, ratingCount = 3),
+                myRating = 8,
+                canRateSkill = true,
+                onMoveToTeam = {},
+                onRateSkill = {},
+                onRowPositioned = {},
+                onDragStart = {},
+                onDragBy = {},
+                onDragEnd = {},
+            )
+        }
+
+    @Test
+    fun teamMemberRow_skillRatingUnrated_lightMode() =
+        snapshot {
+            TeamMemberRow(
+                participant = fakeParticipant(displayName = "Vitor Walcker"),
+                otherTeamIndices = listOf(1),
+                strings = PtBrGamesStrings.manageMatch,
+                isSaving = false,
+                isDragging = false,
+                dragOffset = androidx.compose.ui.geometry.Offset.Zero,
+                skillRating = null,
+                myRating = null,
+                canRateSkill = true,
+                onMoveToTeam = {},
+                onRateSkill = {},
+                onRowPositioned = {},
+                onDragStart = {},
+                onDragBy = {},
+                onDragEnd = {},
             )
         }
 

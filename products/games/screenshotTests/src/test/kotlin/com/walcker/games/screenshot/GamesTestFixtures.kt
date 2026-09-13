@@ -34,6 +34,7 @@ internal fun fakeGame(
     participants: List<String> = emptyList(),
     teamCount: Int = 0,
     teamAssignments: Map<String, Int> = emptyMap(),
+    playersPerTeam: Int = 0,
 ): Game =
     Game(
         id = id,
@@ -57,6 +58,7 @@ internal fun fakeGame(
         participants = participants,
         teamCount = teamCount,
         teamAssignments = teamAssignments,
+        playersPerTeam = playersPerTeam,
     )
 
 internal fun fakeRating(

@@ -327,6 +327,557 @@ describe("submitPlayerRating", () => {
   });
 });
 
+describe("submitSkillRating", () => {
+  const RATED = "rated-player-skill";
+  const MATCH = "match-skill-rating";
+
+  async function seedMatch(overrides: Record<string, unknown> = {}, ratedParticipantOverrides: Record<string, unknown> = {}) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: uid,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 2,
+        participants: [uid, RATED],
+        ...overrides,
+      });
+      await setDoc(doc(database, "matches", MATCH, "participants", RATED), {
+        userId: RATED,
+        isConfirmed: true,
+        ...ratedParticipantOverrides,
+      });
+      await setDoc(doc(database, "profiles", RATED), {
+        fullName: "Avaliado",
+        skillRating: 0,
+        skillRatingCount: 0,
+      });
+    });
+  }
+
+  async function readProfile() {
+    let snapshot: Awaited<ReturnType<typeof getDoc>> | undefined;
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      snapshot = await getDoc(doc(context.firestore(), "profiles", RATED));
+    });
+    return snapshot as Awaited<ReturnType<typeof getDoc>>;
+  }
+
+  it("rejects unauthenticated requests", async () => {
+    const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating: 8}, null);
+    expect(response.status).toBe(401);
+  });
+
+  it("allows the organizer to rate their own skill when they are also a confirmed participant", async () => {
+    await seedMatch();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH, "participants", uid), {
+        userId: uid,
+        isConfirmed: true,
+      });
+      await setDoc(doc(database, "profiles", uid), {
+        fullName: "Organizador",
+        skillRating: 0,
+        skillRatingCount: 0,
+      });
+    });
+
+    const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: uid, rating: 8});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({
+      result: {status: "recorded", averageRating: 8, ratingCount: 1},
+    });
+  });
+
+  it("backfills a missing profile document instead of failing (legacy accounts without profiles/{uid})", async () => {
+    await seedMatch();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH, "participants", uid), {
+        userId: uid,
+        isConfirmed: true,
+      });
+      // De propósito: NÃO cria profiles/{uid} — reproduz a conta legada sem
+      // esse documento que causava "Rated player profile not found." em
+      // produção mesmo com o organizador autenticado e confirmado na partida.
+    });
+
+    const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: uid, rating: 9});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({
+      result: {status: "recorded", averageRating: 9, ratingCount: 1},
+    });
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const backfilled = await getDoc(doc(context.firestore(), "profiles", uid));
+      expect(backfilled.exists()).toBe(true);
+      expect(backfilled.data()).toMatchObject({
+        rating: 0,
+        ratingCount: 0,
+        matchesPlayed: 0,
+        isBanned: false,
+        skillRating: 9,
+        skillRatingCount: 1,
+      });
+    });
+  });
+
+  it("rejects a rating outside 1..10", async () => {
+    await seedMatch();
+    for (const rating of [0, 11, 5.5]) {
+      const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating});
+      expect(response.status).toBe(400);
+      expect(await response.text()).toContain("INVALID_ARGUMENT");
+    }
+  });
+
+  it("rejects a caller who is not the organizer", async () => {
+    await seedMatch({organizerId: "someone-else", participants: [uid, RATED]});
+    const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating: 8});
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("PERMISSION_DENIED");
+  });
+
+  it("rejects rating someone who is not a confirmed participant", async () => {
+    await seedMatch({}, {isConfirmed: false});
+    const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating: 8});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("rejects rating someone with no participant record for this match", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: uid,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 0,
+        participants: [uid],
+      });
+      await setDoc(doc(database, "profiles", RATED), {fullName: "Avaliado", skillRating: 0, skillRatingCount: 0});
+    });
+    const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating: 8});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("writes the per-organizer document and the profile average on the first rating", async () => {
+    await seedMatch();
+
+    const response = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating: 8});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({
+      result: {status: "recorded", averageRating: 8, ratingCount: 1},
+    });
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const skillRating = await getDoc(doc(context.firestore(), "profiles", RATED, "skillRatings", uid));
+      expect(skillRating.data()).toMatchObject({matchId: MATCH, ratedUserId: RATED, organizerId: uid, rating: 8});
+      expect(typeof skillRating.data()?.createdAtMs).toBe("number");
+    });
+
+    expect((await readProfile()).data()).toMatchObject({skillRating: 8, skillRatingCount: 1});
+  });
+
+  it("resubmitting updates the average instead of duplicating the vote", async () => {
+    await seedMatch();
+
+    const first = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating: 6});
+    expect(await first.json()).toMatchObject({result: {status: "recorded", averageRating: 6, ratingCount: 1}});
+
+    const second = await call("submitSkillRating", {matchId: MATCH, ratedUserId: RATED, rating: 10});
+    expect(await second.json()).toMatchObject({result: {status: "updated", averageRating: 10, ratingCount: 1}});
+
+    expect((await readProfile()).data()).toMatchObject({skillRating: 10, skillRatingCount: 1});
+  });
+});
+
+async function signUpUser(prefix: string): Promise<{uid: string; idToken: string}> {
+  const email = `${prefix}-${Date.now()}-${Math.random()}@match.test`;
+  const response = await fetch(authUrl, {
+    method: "POST",
+    headers: {"content-type": "application/json"},
+    body: JSON.stringify({email, password: "correct-horse-battery-staple", returnSecureToken: true}),
+  });
+  const payload = await response.json() as {idToken: string; localId: string};
+  expect(response.ok).toBe(true);
+  return {uid: payload.localId, idToken: payload.idToken};
+}
+
+describe("joinMatch VIP behavior", () => {
+  const MATCH = "match-join-vip";
+  const SERIES = "series-join-vip";
+
+  async function seedMatch(overrides: Record<string, unknown> = {}) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const data: Record<string, unknown> = {
+        organizerId: "someone-else",
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 1,
+        confirmedCount: 0,
+        participants: [],
+        seriesId: SERIES,
+        ...overrides,
+      };
+      for (const key of Object.keys(data)) {
+        if (data[key] === undefined) delete data[key];
+      }
+      await setDoc(doc(context.firestore(), "matches", MATCH), data);
+    });
+  }
+
+  it("a non-VIP joiner always waitlists, even with an open slot", async () => {
+    await seedMatch();
+    const response = await call("joinMatch", {matchId: MATCH});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({result: {status: "waitlist", matchId: MATCH, position: 1}});
+  });
+
+  it("a VIP-for-the-series joiner confirms directly when a slot is open", async () => {
+    await seedMatch();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matchSeries", SERIES, "vipPlayers", uid), {
+        addedAt: new Date(),
+        addedBy: "someone-else",
+      });
+    });
+
+    const response = await call("joinMatch", {matchId: MATCH});
+    expect(await response.json()).toMatchObject({result: {status: "confirmed", matchId: MATCH}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const participant = await getDoc(doc(context.firestore(), "matches", MATCH, "participants", uid));
+      expect(participant.data()).toMatchObject({isConfirmed: true, isVip: true});
+    });
+  });
+
+  it("a VIP-for-the-series joiner still waitlists when the match is full", async () => {
+    await seedMatch({totalSlots: 1, confirmedCount: 1, participants: ["already-confirmed"]});
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matchSeries", SERIES, "vipPlayers", uid), {
+        addedAt: new Date(),
+        addedBy: "someone-else",
+      });
+    });
+
+    const response = await call("joinMatch", {matchId: MATCH});
+    expect(await response.json()).toMatchObject({result: {status: "waitlist", matchId: MATCH}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const participant = await getDoc(doc(context.firestore(), "matches", MATCH, "participants", uid));
+      expect(participant.data()?.isVip).toBe(false);
+    });
+  });
+
+  it("a one-off match (no seriesId) never auto-confirms, even for someone who is VIP elsewhere", async () => {
+    await seedMatch({seriesId: undefined, totalSlots: 10, confirmedCount: 0});
+    const response = await call("joinMatch", {matchId: MATCH});
+    expect(await response.json()).toMatchObject({result: {status: "waitlist", matchId: MATCH, position: 1}});
+  });
+});
+
+describe("setVipStatus", () => {
+  const MATCH = "match-set-vip";
+  const SERIES = "series-set-vip";
+  const TARGET = "target-uid";
+
+  async function seedMatch(overrides: Record<string, unknown> = {}) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const data: Record<string, unknown> = {
+        organizerId: uid,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 5,
+        confirmedCount: 1,
+        participants: [TARGET],
+        seriesId: SERIES,
+        ...overrides,
+      };
+      for (const key of Object.keys(data)) {
+        if (data[key] === undefined) delete data[key];
+      }
+      await setDoc(doc(context.firestore(), "matches", MATCH), data);
+    });
+  }
+
+  it("rejects unauthenticated requests", async () => {
+    const response = await call("setVipStatus", {matchId: MATCH, targetUserId: TARGET, isVip: true}, null);
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a caller who is not the organizer", async () => {
+    await seedMatch({organizerId: "someone-else"});
+    const response = await call("setVipStatus", {matchId: MATCH, targetUserId: TARGET, isVip: true});
+    expect(response.status).toBe(403);
+  });
+
+  it("rejects a match with no seriesId", async () => {
+    await seedMatch({seriesId: undefined});
+    const response = await call("setVipStatus", {matchId: MATCH, targetUserId: TARGET, isVip: true});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("rejects a target who is not a participant in this match", async () => {
+    await seedMatch();
+    const response = await call("setVipStatus", {matchId: MATCH, targetUserId: "never-joined", isVip: true});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("marks a confirmed participant VIP without changing their placement", async () => {
+    await seedMatch();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH, "participants", TARGET), {
+        userId: TARGET,
+        isConfirmed: true,
+      });
+    });
+
+    const response = await call("setVipStatus", {matchId: MATCH, targetUserId: TARGET, isVip: true});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({result: {matchId: MATCH, isVip: true}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const participant = await getDoc(doc(database, "matches", MATCH, "participants", TARGET));
+      expect(participant.data()).toMatchObject({isConfirmed: true, isVip: true});
+      const vip = await getDoc(doc(database, "matchSeries", SERIES, "vipPlayers", TARGET));
+      expect(vip.exists()).toBe(true);
+      const match = await getDoc(doc(database, "matches", MATCH));
+      expect(match.data()?.confirmedCount).toBe(1);
+    });
+  });
+
+  it("marking a waitlisted participant VIP promotes them immediately, even past totalSlots", async () => {
+    await seedMatch({totalSlots: 1, confirmedCount: 1, participants: ["already-confirmed", TARGET]});
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH, "participants", TARGET), {
+        userId: TARGET,
+        isConfirmed: false,
+        positionInWaitlist: 1,
+      });
+    });
+
+    const response = await call("setVipStatus", {matchId: MATCH, targetUserId: TARGET, isVip: true});
+    expect(response.ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const participant = await getDoc(doc(database, "matches", MATCH, "participants", TARGET));
+      expect(participant.data()).toMatchObject({isConfirmed: true, positionInWaitlist: null, isVip: true});
+      const match = await getDoc(doc(database, "matches", MATCH));
+      expect(match.data()?.confirmedCount).toBe(2);
+      expect(match.data()?.status).toBe("FULL");
+    });
+  });
+
+  it("unmarking VIP on a confirmed participant clears the flag without removing them", async () => {
+    await seedMatch();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH, "participants", TARGET), {
+        userId: TARGET,
+        isConfirmed: true,
+        isVip: true,
+      });
+      await setDoc(doc(database, "matchSeries", SERIES, "vipPlayers", TARGET), {
+        addedAt: new Date(),
+        addedBy: uid,
+      });
+    });
+
+    const response = await call("setVipStatus", {matchId: MATCH, targetUserId: TARGET, isVip: false});
+    expect(await response.json()).toMatchObject({result: {matchId: MATCH, isVip: false}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const participant = await getDoc(doc(database, "matches", MATCH, "participants", TARGET));
+      expect(participant.data()).toMatchObject({isConfirmed: true, isVip: false});
+      const vip = await getDoc(doc(database, "matchSeries", SERIES, "vipPlayers", TARGET));
+      expect(vip.exists()).toBe(false);
+    });
+  });
+});
+
+describe("confirmWaitlistedPlayer", () => {
+  const MATCH = "match-confirm-waitlisted";
+  const TARGET = "target-uid";
+
+  async function seedMatch(overrides: Record<string, unknown> = {}) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH), {
+        organizerId: uid,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 1,
+        confirmedCount: 1,
+        participants: ["already-confirmed", TARGET],
+        ...overrides,
+      });
+      await setDoc(doc(database, "matches", MATCH, "participants", TARGET), {
+        userId: TARGET,
+        isConfirmed: false,
+        positionInWaitlist: 1,
+      });
+    });
+  }
+
+  it("rejects a caller who is not the organizer", async () => {
+    await seedMatch({organizerId: "someone-else"});
+    const response = await call("confirmWaitlistedPlayer", {matchId: MATCH, targetUserId: TARGET});
+    expect(response.status).toBe(403);
+  });
+
+  it("rejects a target who is already confirmed", async () => {
+    await seedMatch();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH, "participants", TARGET), {
+        userId: TARGET,
+        isConfirmed: true,
+      });
+    });
+    const response = await call("confirmWaitlistedPlayer", {matchId: MATCH, targetUserId: TARGET});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("promotes the target to confirmed, even past totalSlots, without touching VIP", async () => {
+    await seedMatch();
+    const response = await call("confirmWaitlistedPlayer", {matchId: MATCH, targetUserId: TARGET});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({result: {matchId: MATCH}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const participant = await getDoc(doc(database, "matches", MATCH, "participants", TARGET));
+      expect(participant.data()).toMatchObject({isConfirmed: true, positionInWaitlist: null});
+      const match = await getDoc(doc(database, "matches", MATCH));
+      expect(match.data()?.confirmedCount).toBe(2);
+      expect(match.data()?.status).toBe("FULL");
+    });
+  });
+});
+
+describe("banPlayerFromMatch", () => {
+  const MATCH = "match-ban";
+
+  async function seedMatch(overrides: Record<string, unknown> = {}) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH), {
+        organizerId: uid,
+        status: "OPEN",
+        startsAtSeconds: Math.floor(Date.now() / 1000) + 3600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 0,
+        participants: [],
+        ...overrides,
+      });
+    });
+  }
+
+  it("rejects unauthenticated requests", async () => {
+    const response = await call("banPlayerFromMatch", {matchId: MATCH, targetUserId: "someone"}, null);
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a caller who is not the organizer", async () => {
+    await seedMatch({organizerId: "someone-else"});
+    const response = await call("banPlayerFromMatch", {matchId: MATCH, targetUserId: "someone"});
+    expect(response.status).toBe(403);
+  });
+
+  it("rejects the organizer trying to ban themselves", async () => {
+    await seedMatch();
+    const response = await call("banPlayerFromMatch", {matchId: MATCH, targetUserId: uid});
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("FAILED_PRECONDITION");
+  });
+
+  it("removes a confirmed participant, decrements confirmedCount, and records the ban", async () => {
+    await seedMatch({totalSlots: 10, confirmedCount: 1, participants: ["target-uid"]});
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "matches", MATCH, "participants", "target-uid"), {
+        userId: "target-uid",
+        isConfirmed: true,
+      });
+    });
+
+    const response = await call("banPlayerFromMatch", {matchId: MATCH, targetUserId: "target-uid"});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({result: {matchId: MATCH}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const participant = await getDoc(doc(database, "matches", MATCH, "participants", "target-uid"));
+      expect(participant.exists()).toBe(false);
+      const match = await getDoc(doc(database, "matches", MATCH));
+      expect(match.data()?.confirmedCount).toBe(0);
+      const ban = await getDoc(doc(database, "matches", MATCH, "bannedUsers", "target-uid"));
+      expect(ban.exists()).toBe(true);
+      expect(ban.data()?.bannedBy).toBe(uid);
+    });
+  });
+
+  it("promotes the first waitlisted player when it bans a confirmed player", async () => {
+    await seedMatch({totalSlots: 1, confirmedCount: 1, participants: ["target-uid", "waiting-uid"]});
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, "matches", MATCH, "participants", "target-uid"), {
+        userId: "target-uid",
+        isConfirmed: true,
+      });
+      await setDoc(doc(database, "matches", MATCH, "participants", "waiting-uid"), {
+        userId: "waiting-uid",
+        isConfirmed: false,
+        positionInWaitlist: 1,
+      });
+    });
+
+    const response = await call("banPlayerFromMatch", {matchId: MATCH, targetUserId: "target-uid"});
+    expect(await response.json()).toMatchObject({result: {matchId: MATCH, promotedUserId: "waiting-uid"}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const promoted = await getDoc(doc(context.firestore(), "matches", MATCH, "participants", "waiting-uid"));
+      expect(promoted.data()).toMatchObject({isConfirmed: true, positionInWaitlist: null});
+    });
+  });
+
+  it("is a no-op removal (still records the ban) when the target is not in the match", async () => {
+    await seedMatch();
+    const response = await call("banPlayerFromMatch", {matchId: MATCH, targetUserId: "never-joined"});
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toMatchObject({result: {matchId: MATCH}});
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const ban = await getDoc(doc(context.firestore(), "matches", MATCH, "bannedUsers", "never-joined"));
+      expect(ban.exists()).toBe(true);
+    });
+  });
+
+  it("blocks the banned player from rejoining via joinMatch", async () => {
+    await seedMatch({totalSlots: 10, confirmedCount: 0});
+    const target = await signUpUser("ban-rejoin");
+    await call("banPlayerFromMatch", {matchId: MATCH, targetUserId: target.uid});
+
+    const response = await call("joinMatch", {matchId: MATCH}, target.idToken);
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("PERMISSION_DENIED");
+  });
+});
+
 describe("submitOrganizerRating", () => {
   const ORGANIZER = "organizer-to-rate";
   const MATCH = "match-organizer-rating";

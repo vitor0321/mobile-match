@@ -86,6 +86,35 @@ internal class FirestorePlayerSource(
         return PlayerRatingSummary(rating = rating, ratingCount = count)
     }
 
+    override suspend fun getPlayersSkillRatingSummary(
+        userIds: List<String>,
+    ): Result<Map<String, PlayerRatingSummary>> =
+        runCatching {
+            coroutineScope {
+                userIds
+                    .distinct()
+                    .map { userId ->
+                        async {
+                            val snapshot =
+                                firestore
+                                    .document("$PROFILES_COLLECTION/$userId")
+                                    .get()
+                                    .getOrNull()
+                            userId to snapshot?.toSkillRatingSummary()
+                        }
+                    }.awaitAll()
+                    .mapNotNull { (userId, summary) -> summary?.let { userId to it } }
+                    .toMap()
+            }
+        }
+
+    private fun DocumentSnapshot.toSkillRatingSummary(): PlayerRatingSummary? {
+        val count = (getLong(FIELD_SKILL_RATING_COUNT) ?: 0L).toInt()
+        if (count <= 0) return null
+        val rating = getDouble(FIELD_SKILL_RATING)?.toFloat() ?: return null
+        return PlayerRatingSummary(rating = rating, ratingCount = count)
+    }
+
     override suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?> =
         runCatching {
             firestore
@@ -172,6 +201,8 @@ internal class FirestorePlayerSource(
         const val FIELD_AVATAR_URL = "avatarUrl"
         const val FIELD_RATING = "rating"
         const val FIELD_RATING_COUNT = "ratingCount"
+        const val FIELD_SKILL_RATING = "skillRating"
+        const val FIELD_SKILL_RATING_COUNT = "skillRatingCount"
         const val FIELD_ORGANIZER_RATING = "asOrganizerRating"
         const val FIELD_ORGANIZER_RATING_COUNT = "asOrganizerRatingCount"
         const val FIELD_SPORTS = "sports"
