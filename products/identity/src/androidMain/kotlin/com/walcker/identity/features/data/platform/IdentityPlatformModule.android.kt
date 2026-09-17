@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.google.firebase.auth.FirebaseAuth
 import com.walcker.identity.features.data.remote.AndroidGoogleAuthSource
+import com.walcker.identity.features.data.remote.AndroidPhoneAuthSource
 import com.walcker.identity.features.data.remote.GoogleAuthSource
+import com.walcker.identity.features.data.remote.PhoneAuthSource
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.match.core.navigation.CurrentActivityHolder
 import okio.Path.Companion.toPath
@@ -43,5 +45,11 @@ private class AndroidIdentityPlatformServices(
             credentialManager = CredentialManager.create(application),
             activityHolder = activityHolder,
             stringsHolder = stringsHolder,
+        )
+
+    override fun phoneAuthSource(): PhoneAuthSource =
+        AndroidPhoneAuthSource(
+            firebaseAuth = FirebaseAuth.getInstance(),
+            activityHolder = activityHolder,
         )
 }

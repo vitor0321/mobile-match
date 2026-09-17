@@ -59,6 +59,26 @@ internal class FakeFirebaseAuthSource(
         return sendPasswordResetEmailResult
     }
 
+    var refreshSessionResult: Result<UserSession>? = null
+    var refreshSessionCallCount: Int = 0
+    var sendEmailVerificationResult: Result<Unit> = Result.success(Unit)
+    var sendEmailVerificationCallCount: Int = 0
+
+    override suspend fun refreshSession(): Result<UserSession> {
+        refreshSessionCallCount++
+        val result =
+            refreshSessionResult
+                ?: currentUserState.value?.let { Result.success(it) }
+                ?: Result.failure(IllegalStateException("refreshSession without a user"))
+        result.onSuccess { currentUserState.value = it }
+        return result
+    }
+
+    override suspend fun sendEmailVerification(): Result<Unit> {
+        sendEmailVerificationCallCount++
+        return sendEmailVerificationResult
+    }
+
     fun emitCurrentUser(userSession: UserSession?) {
         currentUserState.value = userSession
     }

@@ -137,7 +137,12 @@ class MapStepModelTest {
             repository.emitMatches(listOf(futureGame("match-1"), futureGame("match-2")))
             advanceUntilIdle()
 
-            assertEquals("match-1", model.state.value.previewMatch?.game?.id)
+            assertEquals(
+                "match-1",
+                model.state.value.previewMatch
+                    ?.game
+                    ?.id,
+            )
         }
 
     @Test
@@ -152,7 +157,12 @@ class MapStepModelTest {
 
             model.onPinSelected("match-2")
 
-            assertEquals("match-2", model.state.value.previewMatch?.game?.id)
+            assertEquals(
+                "match-2",
+                model.state.value.previewMatch
+                    ?.game
+                    ?.id,
+            )
         }
 
     @Test
@@ -169,7 +179,12 @@ class MapStepModelTest {
             assertEquals(null, model.state.value.previewMatch)
 
             model.onPinSelected("match-1")
-            assertEquals("match-1", model.state.value.previewMatch?.game?.id)
+            assertEquals(
+                "match-1",
+                model.state.value.previewMatch
+                    ?.game
+                    ?.id,
+            )
         }
 
     @Test

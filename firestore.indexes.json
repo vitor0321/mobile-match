@@ -173,5 +173,66 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "ratings",
+      "fieldPath": "raterUserId",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION"},
+        {"arrayConfig": "CONTAINS", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    },
+    {
+      "collectionGroup": "matchRatings",
+      "fieldPath": "raterUserId",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION"},
+        {"arrayConfig": "CONTAINS", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    },
+    {
+      "collectionGroup": "organizerRatings",
+      "fieldPath": "raterUserId",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION"},
+        {"arrayConfig": "CONTAINS", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    },
+    {
+      "collectionGroup": "skillRatings",
+      "fieldPath": "organizerId",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION"},
+        {"arrayConfig": "CONTAINS", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    },
+    {
+      "collectionGroup": "vipPlayers",
+      "fieldPath": "userId",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION"},
+        {"arrayConfig": "CONTAINS", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    },
+    {
+      "collectionGroup": "bannedUsers",
+      "fieldPath": "userId",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION"},
+        {"arrayConfig": "CONTAINS", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    }
+  ]
 }

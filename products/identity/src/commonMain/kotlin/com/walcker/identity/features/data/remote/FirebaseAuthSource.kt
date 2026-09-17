@@ -23,6 +23,10 @@ internal interface FirebaseAuthSource {
     suspend fun signOut(): Result<Unit>
 
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>
+
+    suspend fun refreshSession(): Result<UserSession>
+
+    suspend fun sendEmailVerification(): Result<Unit>
 }
 
 internal expect fun createFirebaseAuthSource(stringsHolder: IdentityStringsHolder): FirebaseAuthSource

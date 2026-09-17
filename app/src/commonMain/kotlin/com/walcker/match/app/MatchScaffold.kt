@@ -31,6 +31,9 @@ import cafe.adriel.voyager.navigator.Navigator
 import com.walcker.games.features.ui.shared.matchDetail.MatchDetailBottomSheet
 import com.walcker.games.features.ui.shared.notifications.rememberHasUnreadNotifications
 import com.walcker.identity.api.SessionHolder
+import com.walcker.identity.api.UserSession
+import com.walcker.identity.api.VerificationSync
+import com.walcker.identity.api.needsVerification
 import com.walcker.match.app.notifications.DeviceTokenRegistrar
 import com.walcker.match.app.strings.AppShellStrings
 import com.walcker.match.app.strings.rememberAppShellStrings
@@ -51,12 +54,17 @@ import com.walcker.match.navigator.MatchDetailCoordinator
 import com.walcker.match.navigator.TabCoordinator
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 
 @Composable
 internal fun MatchScaffold() {
     AuthenticatedShell()
 }
+
+private data class SessionSnapshot(
+    val user: UserSession?,
+)
 
 internal fun MatchBottomBarTab.toMainTab(): MainTab = MainTab.entries[ordinal]
 
@@ -96,6 +104,7 @@ private fun AuthenticatedShell() {
     val navigatorHolder = koinInject<NavigatorHolder>()
     val sessionHolder = koinInject<SessionHolder>()
     val deviceTokenRegistrar = koinInject<DeviceTokenRegistrar>()
+    val verificationSync = koinInject<VerificationSync>()
     val bottomBarVisibility = koinInject<BottomBarVisibilityCoordinator>()
     val isBottomBarVisible by bottomBarVisibility.isVisible.collectAsState()
     val hasUnreadNotifications by rememberHasUnreadNotifications()
@@ -107,9 +116,18 @@ private fun AuthenticatedShell() {
     val isAuthenticated: Boolean? by remember(sessionHolder) {
         sessionHolder.isAuthenticated
     }.collectAsState(initial = null)
+    val sessionSnapshot: SessionSnapshot? by remember(sessionHolder) {
+        sessionHolder.currentUser.map { SessionSnapshot(it) }
+    }.collectAsState(initial = null)
+    val isSessionResolved = sessionSnapshot != null
+    val needsVerification = sessionSnapshot?.user?.needsVerification() == true
 
     LaunchedEffect(deviceTokenRegistrar) {
         deviceTokenRegistrar.start()
+    }
+
+    LaunchedEffect(verificationSync) {
+        verificationSync.start()
     }
 
     LaunchedEffect(tabCoordinator) {
@@ -168,25 +186,27 @@ private fun AuthenticatedShell() {
                             }
                         }.hazeSource(state = hazeState),
             ) {
-                val tabScreen =
-                    when (selectedTab) {
-                        MainTab.Home -> gamesDestination.gameList()
-                        MainTab.Search -> gamesDestination.search()
-                        MainTab.Create -> gamesDestination.create()
-                        MainTab.MyMatches -> gamesDestination.myMatches()
-                        MainTab.PlayerProfile -> gamesDestination.playerProfile()
+                if (isSessionResolved && !needsVerification) {
+                    val tabScreen =
+                        when (selectedTab) {
+                            MainTab.Home -> gamesDestination.gameList()
+                            MainTab.Search -> gamesDestination.search()
+                            MainTab.Create -> gamesDestination.create()
+                            MainTab.MyMatches -> gamesDestination.myMatches()
+                            MainTab.PlayerProfile -> gamesDestination.playerProfile()
+                        }
+                    key(selectedTab) {
+                        AttachedNavigator(
+                            screen = tabScreen,
+                            navigatorHolder = navigatorHolder,
+                            attachEnabled = !showLogin,
+                        )
                     }
-                key(selectedTab) {
-                    AttachedNavigator(
-                        screen = tabScreen,
-                        navigatorHolder = navigatorHolder,
-                        attachEnabled = !showLogin,
-                    )
                 }
             }
         }
 
-        if (!imeVisible && isBottomBarVisible) {
+        if (!imeVisible && isBottomBarVisible && isSessionResolved && !needsVerification) {
             MatchBottomBar(
                 modifier =
                     Modifier
@@ -221,6 +241,24 @@ private fun AuthenticatedShell() {
             }
         }
 
-        MatchDetailBottomSheet()
+        if (needsVerification) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(CedarTokens.colors.canvas),
+            ) {
+                AttachedNavigator(
+                    screen = identityDestination.verification(),
+                    navigatorHolder = navigatorHolder,
+                    attachEnabled = true,
+                    onBackPressed = { false },
+                )
+            }
+        }
+
+        if (!needsVerification) {
+            MatchDetailBottomSheet()
+        }
     }
 }

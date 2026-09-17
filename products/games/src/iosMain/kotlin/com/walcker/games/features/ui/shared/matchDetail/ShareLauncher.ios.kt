@@ -8,8 +8,8 @@ import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 
 @Composable
-internal actual fun rememberShareLauncher(): (subject: String, text: String) -> Unit {
-    return remember {
+internal actual fun rememberShareLauncher(): (subject: String, text: String) -> Unit =
+    remember {
         { _: String, text: String ->
             val activityController =
                 UIActivityViewController(
@@ -23,10 +23,10 @@ internal actual fun rememberShareLauncher(): (subject: String, text: String) -> 
             )
         }
     }
-}
 
 private fun currentRootViewController(): UIViewController? {
     val app = UIApplication.sharedApplication
+
     @Suppress("DEPRECATION")
     val window = app.keyWindow ?: app.windows.firstOrNull() as? UIWindow
     return window?.rootViewController

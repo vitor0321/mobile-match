@@ -9,6 +9,8 @@ import cocoapods.FirebaseAuth.FIRAuth
 import cocoapods.GoogleSignIn.GIDSignIn
 import com.walcker.identity.features.data.remote.GoogleAuthSource
 import com.walcker.identity.features.data.remote.IosGoogleAuthSource
+import com.walcker.identity.features.data.remote.IosPhoneAuthSource
+import com.walcker.identity.features.data.remote.PhoneAuthSource
 import com.walcker.identity.strings.IdentityStringsHolder
 import okio.Path.Companion.toPath
 import org.koin.core.module.Module
@@ -47,4 +49,6 @@ private class IosIdentityPlatformServices(
             signIn = GIDSignIn.sharedInstance,
             stringsHolder = stringsHolder,
         )
+
+    override fun phoneAuthSource(): PhoneAuthSource = IosPhoneAuthSource(auth = FIRAuth.auth())
 }

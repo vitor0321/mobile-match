@@ -19,6 +19,7 @@ class PlayerProfileStepTest {
             userId = "user-1",
             userName = "Ana Souza",
             userEmail = "ana@example.com",
+            userPhone = "+55 (11) 98765-4321",
             matchesOrganized = 5,
             matchesParticipated = 12,
             ratings = listOf(fakeRating(id = "1"), fakeRating(id = "2")),

@@ -303,7 +303,9 @@ class GamesComponentsTest {
                 strings = PtBrGamesStrings.manageMatch,
                 isSaving = false,
                 isDragging = true,
-                dragOffset = androidx.compose.ui.geometry.Offset(0f, 24f),
+                dragOffset =
+                    androidx.compose.ui.geometry
+                        .Offset(0f, 24f),
                 skillRating = null,
                 myRating = null,
                 canRateSkill = false,

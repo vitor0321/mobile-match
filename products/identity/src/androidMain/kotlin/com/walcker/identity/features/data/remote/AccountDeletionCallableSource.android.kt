@@ -16,7 +16,7 @@ private class AndroidAccountDeletionCallableSource(
         runCatching {
             functions
                 .getHttpsCallable("deleteAccount")
-                .call()
+                .call(emptyMap<String, Any>())
                 .await()
             Unit
         }.recoverCatching { error ->

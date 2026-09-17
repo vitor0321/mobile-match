@@ -33,10 +33,22 @@
 				<string>joinplay</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app-1-74830277039-ios-28a7ec088e1c0171bca75a</string>
+			</array>
+		</dict>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Match needs your location to show matches near you on the map</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Match needs your location to show matches near you on the map</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

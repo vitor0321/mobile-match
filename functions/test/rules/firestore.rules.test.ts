@@ -725,3 +725,104 @@ describe("fechamento padrão", () => {
     expect(rules).not.toMatch(/verse|book_explanations|favorites/i);
   });
 });
+
+describe("verificação de conta", () => {
+  const VERIFIED_CLAIMS = {email_verified: true, phone_number: "+5511912345678"};
+
+  function asVerifiedUser(userId: string) {
+    return testEnvironment.authenticatedContext(userId, VERIFIED_CLAIMS).firestore();
+  }
+
+  function asEmailOnlyUser(userId: string) {
+    return testEnvironment.authenticatedContext(userId, {email_verified: true}).firestore();
+  }
+
+  async function setEnforcement(enforced: boolean) {
+    await seed(async (database) => {
+      await setDoc(doc(database, "config", "verification"), {enforced});
+    });
+  }
+
+  const profileEdit = () => ({fullName: "Novo Nome", updatedAt: Timestamp.now()});
+  const teamsEdit = () => ({teamCount: 2, teamAssignments: {[PLAYER]: 0, "player-2": 1}});
+
+  it("exigência ligada: conta sem verificação não edita o perfil público", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(true);
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência ligada: só o e-mail verificado não basta", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(true);
+
+    await assertFails(updateDoc(doc(asEmailOnlyUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência ligada: conta verificada edita o perfil público", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(true);
+
+    await assertSucceeds(updateDoc(doc(asVerifiedUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência desligada: conta sem verificação edita como antes", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(false);
+
+    await assertSucceeds(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência ligada: organizador sem verificação não edita a partida; verificado edita", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 4}));
+    });
+    await setEnforcement(true);
+
+    await assertFails(updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), teamsEdit()));
+    await assertSucceeds(updateDoc(doc(asVerifiedUser(ORGANIZER), "matches", MATCH_ID), teamsEdit()));
+  });
+
+  it("exigência ligada: criar partida sem verificação é negado; verificado cria", async () => {
+    await setEnforcement(true);
+
+    await assertFails(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
+    await assertSucceeds(setDoc(doc(asVerifiedUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
+  });
+
+  it("o dono não grava o telefone nos próprios dados privados, nem criando nem alterando", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "private", "data"), {phone: "+5511999999999", isAvailable: true});
+    });
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER, "private", "data"), {phone: "+5511000000000"}));
+    await assertFails(setDoc(doc(asUser(ORGANIZER), "profiles", ORGANIZER, "private", "data"), {phone: "+5511000000000"}));
+    await assertSucceeds(setDoc(doc(asUser(ORGANIZER), "profiles", ORGANIZER, "private", "data"), {isAvailable: true}));
+  });
+
+  it("exigência ligada: dados privados continuam livres para o dono", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "private", "data"), {
+        phone: "+5511999999999",
+        pixKey: "player@email.com",
+        lat: -23.55,
+        lng: -46.63,
+        geohash: "6gyf4bf8m",
+        radiusKm: 15,
+        isAvailable: true,
+      });
+    });
+    await setEnforcement(true);
+
+    await assertSucceeds(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER, "private", "data"), {isAvailable: false}));
+  });
+});

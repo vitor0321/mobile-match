@@ -9,6 +9,7 @@ internal data class PlayerProfileState(
     val userId: String? = null,
     val userName: String? = null,
     val userEmail: String? = null,
+    val userPhone: String? = null,
     val matchesOrganized: Int = 0,
     val matchesParticipated: Int = 0,
     val nextMatch: MyMatch? = null,
@@ -24,6 +25,8 @@ internal data class PlayerProfileState(
     val availableUntilMs: Long? = null,
     val availableSports: Set<Sport> = emptySet(),
     val sportsErrorMessage: String? = null,
+    val showDeleteAccountDialog: Boolean = false,
+    val isDeletingAccount: Boolean = false,
 )
 
 internal sealed interface PlayerProfileEvent {
@@ -52,6 +55,12 @@ internal sealed interface PlayerProfileEvent {
     data class NextMatchClicked(
         val matchId: String,
     ) : PlayerProfileEvent
+
+    data object DeleteAccountRequested : PlayerProfileEvent
+
+    data object ConfirmDeleteAccount : PlayerProfileEvent
+
+    data object CancelDeleteAccount : PlayerProfileEvent
 }
 
 internal sealed interface PlayerProfileEffect {

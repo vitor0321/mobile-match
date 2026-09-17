@@ -31,6 +31,14 @@ internal data class PlayerProfileStrings(
     val fallbackAccountName: String,
     val myMatchesMenuLabel: String,
     val aboutMenuLabel: String,
+    val phoneMenuLabel: String,
+    val deleteAccount: String,
+    val deleteAccountDialogTitle: String,
+    val deleteAccountDialogBody: String,
+    val deleteAccountDialogConfirm: String,
+    val deleteAccountDialogDismiss: String,
+    val deleteAccountError: String,
+    val deleteAccountRequiresRecentLogin: String,
 )
 
 internal val playerProfileStringsPt =
@@ -65,6 +73,17 @@ internal val playerProfileStringsPt =
         fallbackAccountName = "Jogador",
         myMatchesMenuLabel = "Minhas partidas",
         aboutMenuLabel = "Sobre",
+        phoneMenuLabel = "Celular",
+        deleteAccount = "Excluir minha conta",
+        deleteAccountDialogTitle = "Excluir sua conta?",
+        deleteAccountDialogBody =
+            "Suas partidas, avaliações e dados de perfil são apagados para sempre. " +
+                "Não dá para desfazer.",
+        deleteAccountDialogConfirm = "Excluir para sempre",
+        deleteAccountDialogDismiss = "Manter minha conta",
+        deleteAccountError = "Não foi possível excluir sua conta. Tente de novo.",
+        deleteAccountRequiresRecentLogin =
+            "Por segurança, saia da conta e entre de novo antes de excluir.",
     )
 
 internal val playerProfileStringsEn =
@@ -99,4 +118,15 @@ internal val playerProfileStringsEn =
         fallbackAccountName = "Player",
         myMatchesMenuLabel = "My matches",
         aboutMenuLabel = "About",
+        phoneMenuLabel = "Mobile phone",
+        deleteAccount = "Delete my account",
+        deleteAccountDialogTitle = "Delete your account?",
+        deleteAccountDialogBody =
+            "Your matches, ratings and profile data are erased for good. " +
+                "This can't be undone.",
+        deleteAccountDialogConfirm = "Delete forever",
+        deleteAccountDialogDismiss = "Keep my account",
+        deleteAccountError = "Couldn't delete your account. Please try again.",
+        deleteAccountRequiresRecentLogin =
+            "For security, log out and sign in again before deleting.",
     )

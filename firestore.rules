@@ -89,6 +89,24 @@ service cloud.firestore {
     // disponibilidade NÃO moram aqui — ver profiles/{userId}/private/data.
     // ---------------------------------------------------------------------
 
+    // Interruptor da exigência de conta verificada. Mora num documento para
+    // ligar e desligar sem deploy — o mesmo que as Functions leem.
+    function verificationEnforced() {
+      let path = /databases/$(database)/documents/config/verification;
+      return exists(path) && get(path).data.get('enforced', false) == true;
+    }
+
+    // As claims são assinadas pelo Firebase Auth. `phone_number` só existe
+    // depois do SMS; `.get` evita erro de avaliação quando a claim falta.
+    function isVerified() {
+      return request.auth.token.get('email_verified', false) == true
+        && request.auth.token.get('phone_number', null) is string;
+    }
+
+    function passesVerification() {
+      return !verificationEnforced() || isVerified();
+    }
+
     function profileEditableFields() {
       return [
         'fullName', 'nickname', 'avatarUrl', 'position', 'level',
@@ -124,7 +142,8 @@ service cloud.firestore {
       // só Functions mexem.
       allow update: if isOwner(userId)
         && changedKeys().hasOnly(profileEditableFields())
-        && isValidProfileContent(incoming());
+        && isValidProfileContent(incoming())
+        && passesVerification();
 
       allow update: if isAdmin();
 
@@ -139,7 +158,15 @@ service cloud.firestore {
       // isolado porque a permissão do Firestore é por documento.
       // -------------------------------------------------------------------
       match /private/{documentId} {
-        allow read, write: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+
+        // O telefone vem da claim assinada, espelhado pelo servidor
+        // (syncVerificationStatus). Se o cliente pudesse gravá-lo, o número
+        // deixaria de ser confiável.
+        allow create: if isOwner(userId)
+          && !('phone' in request.resource.data);
+        allow update: if isOwner(userId)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['phone']);
       }
 
       // -------------------------------------------------------------------
@@ -260,6 +287,7 @@ service cloud.firestore {
       // qualquer outro participante usa.
       allow create: if isSignedIn()
         && !isRestrictedUser()
+        && passesVerification()
         && incoming().organizerId == uid()
         && isValidMatchContent(incoming())
         && incoming().startsAtSeconds > request.time.toMillis() / 1000
@@ -272,6 +300,7 @@ service cloud.firestore {
       // Functions joinMatch/leaveMatch.
       allow update: if isSignedIn()
         && current().organizerId == uid()
+        && passesVerification()
         && changedKeys().hasOnly(matchEditableFields())
         && isValidMatchUpdate(incoming())
         && incoming().totalSlots >= current().confirmedCount

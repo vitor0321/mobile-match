@@ -10,4 +10,5 @@ internal val PtBrIdentityStrings =
         nativeAuth = nativeAuthStringsPt,
         signUp = signUpStringsPt,
         forgotPassword = forgotPasswordStringsPt,
+        verification = verificationStringsPt,
     )

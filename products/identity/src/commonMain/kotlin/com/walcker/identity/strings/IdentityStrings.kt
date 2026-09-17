@@ -5,4 +5,5 @@ internal data class IdentityStrings(
     val nativeAuth: NativeAuthStrings,
     val signUp: SignUpStrings,
     val forgotPassword: ForgotPasswordStrings,
+    val verification: VerificationStrings,
 )

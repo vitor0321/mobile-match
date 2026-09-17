@@ -10,6 +10,7 @@ import com.walcker.games.features.domain.shared.usecase.CancelMatchSeriesUseCase
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.GetGameByIdUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.ObserveMatchUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.ObserveParticipantsUseCaseImpl
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,7 @@ class ManageMatchStepModelTest {
         matchId = matchId,
         getGameById = GetGameByIdUseCaseImpl(gameRepository),
         observeMatch = ObserveMatchUseCaseImpl(gameRepository),
+        observeParticipants = ObserveParticipantsUseCaseImpl(gameRepository),
         cancelMatch = CancelMatchUseCaseImpl(gameRepository),
         cancelMatchSeries = CancelMatchSeriesUseCaseImpl(gameRepository),
         sessionHolder = sessionHolder,

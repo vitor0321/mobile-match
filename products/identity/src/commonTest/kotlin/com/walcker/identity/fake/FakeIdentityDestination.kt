@@ -11,6 +11,12 @@ internal class FakeIdentityDestination : IdentityDestination {
     var signUpCallCount: Int = 0
         private set
 
+    var verificationCallCount: Int = 0
+        private set
+
+    var changePhoneCallCount: Int = 0
+        private set
+
     override fun login(): Screen {
         loginCallCount += 1
         return TestIdentityScreen("login")
@@ -19,6 +25,16 @@ internal class FakeIdentityDestination : IdentityDestination {
     override fun signUp(): Screen {
         signUpCallCount += 1
         return TestIdentityScreen("signup")
+    }
+
+    override fun verification(): Screen {
+        verificationCallCount += 1
+        return TestIdentityScreen("verification")
+    }
+
+    override fun changePhone(): Screen {
+        changePhoneCallCount += 1
+        return TestIdentityScreen("change-phone")
     }
 }
 

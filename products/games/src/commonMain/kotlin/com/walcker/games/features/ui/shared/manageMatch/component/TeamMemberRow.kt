@@ -50,9 +50,9 @@ import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.tokens.CedarTokens
 
-private const val DraggingScale = 1.04f
+private const val DRAGGING_SCALE = 1.04f
 private val DraggingElevation = 8.dp
-private const val TappableBadgeAlpha = 0.14f
+private const val TAPPABLE_BADGE_ALPHA = 0.14f
 
 @Composable
 internal fun TeamMemberRow(
@@ -75,7 +75,7 @@ internal fun TeamMemberRow(
 ) {
     var showMoveMenu by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
-    val scale by animateFloatAsState(if (isDragging) DraggingScale else 1f, spring())
+    val scale by animateFloatAsState(if (isDragging) DRAGGING_SCALE else 1f, spring())
     val elevation by animateDpAsState(if (isDragging) DraggingElevation else 0.dp, spring())
     val rowShape = CedarTokens.radius.smShape
 
@@ -109,7 +109,10 @@ internal fun TeamMemberRow(
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onDragStart()
                             },
-                            onDrag = { change, dragAmount -> change.consume(); onDragBy(dragAmount) },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                onDragBy(dragAmount)
+                            },
                             onDragEnd = onDragEnd,
                         )
                     },
@@ -232,7 +235,7 @@ private fun SkillRatingLine(
                     base
                         .minimumInteractiveComponentSize()
                         .background(
-                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = TappableBadgeAlpha),
+                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = TAPPABLE_BADGE_ALPHA),
                             shape = CedarTokens.radius.pill,
                         ).clickable(enabled = !isSaving) { showRatingDialog = true }
                         .padding(horizontal = CedarTokens.spacing.xxs)

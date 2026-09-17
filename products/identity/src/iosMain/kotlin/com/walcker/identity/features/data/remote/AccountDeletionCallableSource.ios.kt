@@ -17,7 +17,7 @@ private class IosAccountDeletionCallableSource(
 ) : AccountDeletionCallableSource {
     override suspend fun deleteRemoteData(): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
-            functions.HTTPSCallableWithName("deleteAccount").callWithCompletion { _, error: NSError? ->
+            functions.HTTPSCallableWithName("deleteAccount").callWithObject(emptyMap<Any?, Any?>()) { _, error: NSError? ->
                 continuation.resume(
                     if (error == null) {
                         Result.success(Unit)

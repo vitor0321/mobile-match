@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Notifications
@@ -28,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +53,7 @@ import com.walcker.games.features.ui.playerProfile.component.MySportsSection
 import com.walcker.games.features.ui.playerProfile.component.ProfileHeader
 import com.walcker.games.features.ui.playerProfile.component.RatingItemCard
 import com.walcker.games.features.ui.shared.common.LoginRequiredBottomSheet
+import com.walcker.games.features.ui.shared.matchDetail.component.ConfirmDialog
 import com.walcker.games.features.ui.shared.notifications.NotificationHistoryStep
 import com.walcker.games.features.ui.shared.notifications.rememberHasUnreadNotifications
 import com.walcker.games.strings.PlayerProfileStrings
@@ -65,6 +69,7 @@ import com.walcker.match.cedar.components.CedarStatRow
 import com.walcker.match.cedar.components.LocalBottomBarInset
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
+import com.walcker.match.navigator.IdentityDestination
 import com.walcker.match.navigator.LoginCoordinator
 import com.walcker.match.navigator.MainTab
 import com.walcker.match.navigator.MatchDetailCoordinator
@@ -75,6 +80,7 @@ import org.koin.compose.koinInject
 private val PreLoginAnimationSize = 280.dp
 private val FeatureBadgeSize = 32.dp
 private val FeatureIconSize = 18.dp
+private val DeleteAccountMinHeight = 48.dp
 
 internal class PlayerProfileStep : Screen {
     @Composable
@@ -86,6 +92,7 @@ internal class PlayerProfileStep : Screen {
         val loginCoordinator: LoginCoordinator = koinInject()
         val matchDetailCoordinator: MatchDetailCoordinator = koinInject()
         val tabCoordinator: TabCoordinator = koinInject()
+        val identityDestination: IdentityDestination = koinInject()
         val navigator = LocalNavigator.currentOrThrow
         val loginRequired = rememberGamesStrings().strings.loginRequired
         var showLoginSheet by remember { mutableStateOf(false) }
@@ -132,6 +139,7 @@ internal class PlayerProfileStep : Screen {
             onNotificationsClicked = { showNotifications = true },
             onMyMatchesClicked = { tabCoordinator.requestTab(MainTab.MyMatches) },
             onAboutClicked = { navigator.push(AboutStep()) },
+            onChangePhoneClicked = { navigator.push(identityDestination.changePhone()) },
             snackbarHostState = snackbarHostState,
         )
 
@@ -163,6 +171,7 @@ internal fun PlayerProfileContent(
     onNotificationsClicked: () -> Unit = {},
     onMyMatchesClicked: () -> Unit = {},
     onAboutClicked: () -> Unit = {},
+    onChangePhoneClicked: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Scaffold(
@@ -192,8 +201,7 @@ internal fun PlayerProfileContent(
                         .padding(
                             horizontal = CedarTokens.spacing.lg,
                             vertical = CedarTokens.spacing.md,
-                        )
-                        .padding(bottom = LocalBottomBarInset.current),
+                        ).padding(bottom = LocalBottomBarInset.current),
                 verticalArrangement = Arrangement.spacedBy(CedarTokens.spacing.md),
             ) {
                 CedarScreenTitle(title = strings.title)
@@ -378,6 +386,12 @@ internal fun PlayerProfileContent(
                         onClick = onMyMatchesClicked,
                     )
                     CedarMenuRow(
+                        icon = Icons.Default.Phone,
+                        label = strings.phoneMenuLabel,
+                        value = state.userPhone,
+                        onClick = onChangePhoneClicked,
+                    )
+                    CedarMenuRow(
                         icon = Icons.Outlined.Info,
                         label = strings.aboutMenuLabel,
                         onClick = onAboutClicked,
@@ -395,7 +409,35 @@ internal fun PlayerProfileContent(
                             .padding(top = CedarTokens.spacing.sm),
                 )
             }
+
+            item {
+                TextButton(
+                    onClick = { onEvent(PlayerProfileEvent.DeleteAccountRequested) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = DeleteAccountMinHeight),
+                ) {
+                    Text(
+                        text = strings.deleteAccount,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         }
+    }
+
+    if (state.showDeleteAccountDialog) {
+        ConfirmDialog(
+            title = strings.deleteAccountDialogTitle,
+            body = strings.deleteAccountDialogBody,
+            confirmLabel = strings.deleteAccountDialogConfirm,
+            dismissLabel = strings.deleteAccountDialogDismiss,
+            isWorking = state.isDeletingAccount,
+            onConfirm = { onEvent(PlayerProfileEvent.ConfirmDeleteAccount) },
+            onDismiss = { onEvent(PlayerProfileEvent.CancelDeleteAccount) },
+        )
     }
 }
 

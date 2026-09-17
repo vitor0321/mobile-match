@@ -228,7 +228,11 @@ class TeamShuffleStepModelTest {
             gameRepository.emitParticipants(Result.success(fakeParticipantsSummaryFor(listOf("p1", "p2"))))
             advanceUntilIdle()
 
-            assertEquals(8f, model.state.value.skillRatings["p1"]?.rating)
+            assertEquals(
+                8f,
+                model.state.value.skillRatings["p1"]
+                    ?.rating,
+            )
             assertEquals(8, model.state.value.mySkillRatings["p1"])
         }
 
@@ -249,7 +253,11 @@ class TeamShuffleStepModelTest {
             advanceUntilIdle()
 
             assertEquals(listOf("skill:p1"), ratingRepository.submitCalls)
-            assertEquals(7f, model.state.value.skillRatings["p1"]?.rating)
+            assertEquals(
+                7f,
+                model.state.value.skillRatings["p1"]
+                    ?.rating,
+            )
             assertEquals(7, model.state.value.mySkillRatings["p1"])
         }
 

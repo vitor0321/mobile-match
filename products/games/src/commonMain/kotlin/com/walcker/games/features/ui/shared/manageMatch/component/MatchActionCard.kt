@@ -26,7 +26,7 @@ import com.walcker.match.cedar.tokens.CedarTokens
 private val ActionIconSize = 28.dp
 private val CompactIconSize = 20.dp
 private val CompactHeight = 72.dp
-private const val DisabledAlpha = 0.4f
+private const val DISABLED_ALPHA = 0.4f
 
 @Composable
 internal fun MatchActionCard(
@@ -41,7 +41,7 @@ internal fun MatchActionCard(
 ) {
     val contentColor =
         if (isDanger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-    val effectiveColor = if (enabled) contentColor else contentColor.copy(alpha = DisabledAlpha)
+    val effectiveColor = if (enabled) contentColor else contentColor.copy(alpha = DISABLED_ALPHA)
     val iconSize = if (isCompact) CompactIconSize else ActionIconSize
 
     Surface(
@@ -51,7 +51,7 @@ internal fun MatchActionCard(
                 .clickable(enabled = enabled && !isWorking, onClick = onClick),
         shape = CedarTokens.radius.lgShape,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, effectiveColor.copy(alpha = DisabledAlpha)),
+        border = BorderStroke(1.dp, effectiveColor.copy(alpha = DISABLED_ALPHA)),
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(CedarTokens.spacing.md),

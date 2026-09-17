@@ -1,6 +1,7 @@
 package com.walcker.games.features.ui.playerProfile
 
 import app.cash.turbine.test
+import com.walcker.games.fake.FakeAccountDeletionService
 import com.walcker.games.fake.FakeAnalyticsTracker
 import com.walcker.games.fake.FakeAvailabilityRepository
 import com.walcker.games.fake.FakeCrashReporter
@@ -11,6 +12,7 @@ import com.walcker.games.fake.FakeRatingRepository
 import com.walcker.games.fake.FakeSessionHolder
 import com.walcker.games.fake.game
 import com.walcker.games.fake.rating
+import com.walcker.games.fake.testUserSession
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailabilityUseCaseImpl
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSportsUseCaseImpl
@@ -22,6 +24,7 @@ import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCaseImpl
 import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
+import com.walcker.identity.api.AccountDeletionOutcome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -60,6 +63,7 @@ class PlayerProfileStepModelTest {
         availabilityRepository: FakeAvailabilityRepository = FakeAvailabilityRepository(),
         sessionHolder: FakeSessionHolder = FakeSessionHolder(),
         logoutService: FakeLogoutService = FakeLogoutService(),
+        accountDeletionService: FakeAccountDeletionService = FakeAccountDeletionService(),
     ) = PlayerProfileStepModel(
         sessionHolder = sessionHolder,
         getMyMatches = GetMyMatchesUseCaseImpl(gameRepository),
@@ -67,6 +71,7 @@ class PlayerProfileStepModelTest {
         playerRepository = playerRepository,
         stringsHolder = stringsHolder,
         logoutService = logoutService,
+        accountDeletionService = accountDeletionService,
         observeAvailability = ObserveAvailabilityUseCaseImpl(availabilityRepository),
         setAvailability = SetAvailabilityUseCaseImpl(availabilityRepository),
         setAvailableSports = SetAvailableSportsUseCaseImpl(availabilityRepository),
@@ -110,6 +115,20 @@ class PlayerProfileStepModelTest {
             assertEquals("ana@example.com", state.userEmail)
             assertEquals(1, state.matchesOrganized)
             assertEquals(1, state.matchesParticipated)
+        }
+
+    @Test
+    fun `shows the formatted phone number from the session`() =
+        runTest(testDispatcher) {
+            val sessionHolder = FakeSessionHolder(session = testUserSession(phoneNumber = "+5511987654321"))
+            val model = buildModel(sessionHolder = sessionHolder)
+
+            advanceUntilIdle()
+            assertEquals("+55 (11) 98765-4321", model.state.value.userPhone)
+
+            sessionHolder.setSession(null)
+            advanceUntilIdle()
+            assertNull(model.state.value.userPhone)
         }
 
     @Test
@@ -298,4 +317,87 @@ class PlayerProfileStepModelTest {
             }
         }
 
+    @Test
+    fun `requesting account deletion opens the confirmation dialog`() =
+        runTest(testDispatcher) {
+            val model = buildModel()
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
+
+            assertTrue(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `cancelling account deletion closes the dialog without deleting`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = FakeAccountDeletionService()
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+            model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
+
+            model.onEvent(PlayerProfileEvent.CancelDeleteAccount)
+            advanceUntilIdle()
+
+            assertFalse(model.state.value.showDeleteAccountDialog)
+            assertEquals(0, accountDeletionService.deleteCallCount)
+        }
+
+    @Test
+    fun `a successful deletion sends the user back to login`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = FakeAccountDeletionService()
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+                advanceUntilIdle()
+
+                assertIs<PlayerProfileEffect.RequireLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, accountDeletionService.deleteCallCount)
+            assertFalse(model.state.value.isDeletingAccount)
+            assertFalse(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `a deletion needing a recent login asks the user to sign in again`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                FakeAccountDeletionService(outcome = AccountDeletionOutcome.RequiresRecentLogin)
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+            advanceUntilIdle()
+
+            assertEquals(
+                stringsHolder.strings.playerProfile.deleteAccountRequiresRecentLogin,
+                model.state.value.errorMessage,
+            )
+            assertFalse(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `a failed deletion surfaces the generic error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                FakeAccountDeletionService(
+                    outcome = AccountDeletionOutcome.Failure(IllegalStateException("boom")),
+                )
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+            advanceUntilIdle()
+
+            assertEquals(
+                stringsHolder.strings.playerProfile.deleteAccountError,
+                model.state.value.errorMessage,
+            )
+            assertFalse(model.state.value.isDeletingAccount)
+        }
 }

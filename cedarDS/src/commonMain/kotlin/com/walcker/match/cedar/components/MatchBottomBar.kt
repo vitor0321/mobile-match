@@ -43,9 +43,9 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 
-private const val BottomBarContainerAlpha = 0.96f
-private const val SelectedPillAlpha = 0.16f
-private const val HazeTintAlpha = 0.35f
+private const val BOTTOM_BAR_CONTAINER_ALPHA = 0.96f
+private const val SELECTED_PILL_ALPHA = 0.16f
+private const val HAZE_TINT_ALPHA = 0.35f
 private val MinTouchTarget = 48.dp
 private val HazeBlurRadius = 20.dp
 
@@ -87,7 +87,7 @@ public fun MatchBottomBar(
                                     HazeStyle(
                                         backgroundColor = surfaceColor,
                                         blurRadius = HazeBlurRadius,
-                                        tints = listOf(HazeTint(color = surfaceColor.copy(alpha = HazeTintAlpha))),
+                                        tints = listOf(HazeTint(color = surfaceColor.copy(alpha = HAZE_TINT_ALPHA))),
                                     ),
                             )
                     } else {
@@ -95,7 +95,7 @@ public fun MatchBottomBar(
                     }
                 },
         shape = CedarTokens.radius.pill,
-        color = if (hazeState != null) Color.Transparent else surfaceColor.copy(alpha = BottomBarContainerAlpha),
+        color = if (hazeState != null) Color.Transparent else surfaceColor.copy(alpha = BOTTOM_BAR_CONTAINER_ALPHA),
         shadowElevation = CedarTokens.elevation.overlay,
     ) {
         Row(
@@ -144,7 +144,7 @@ private fun MatchBottomBarItem(
                 .clip(CedarTokens.radius.pill)
                 .background(
                     if (selected) {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = SelectedPillAlpha)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = SELECTED_PILL_ALPHA)
                     } else {
                         Color.Transparent
                     },

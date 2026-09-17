@@ -35,7 +35,7 @@ import com.walcker.match.cedar.tokens.CedarTokens
 
 private val BadgeSize = 48.dp
 private val BadgeIconSize = 22.dp
-private const val DisabledAlpha = 0.38f
+private const val DISABLED_ALPHA = 0.38f
 
 internal fun Sport.icon(): ImageVector =
     when (this) {
@@ -113,7 +113,7 @@ private fun SportBadgeBase(
     Column(
         modifier =
             modifier
-                .alpha(if (enabled) 1f else DisabledAlpha)
+                .alpha(if (enabled) 1f else DISABLED_ALPHA)
                 .toggleable(
                     value = selected,
                     onValueChange = { onClick() },

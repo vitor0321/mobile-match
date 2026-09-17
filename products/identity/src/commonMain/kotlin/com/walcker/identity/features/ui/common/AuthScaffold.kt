@@ -38,8 +38,8 @@ private val MinTouchTarget = 48.dp
 internal fun AuthScaffold(
     title: String,
     subtitle: String,
-    backContentDescription: String,
-    onBack: () -> Unit,
+    backContentDescription: String?,
+    onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {

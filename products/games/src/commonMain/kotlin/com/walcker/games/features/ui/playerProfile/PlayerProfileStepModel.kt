@@ -13,8 +13,11 @@ import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
+import com.walcker.identity.api.AccountDeletionOutcome
+import com.walcker.identity.api.AccountDeletionService
 import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.SessionHolder
+import com.walcker.identity.api.formattedPhoneNumber
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.analytics.CrashReporter
@@ -40,6 +43,7 @@ internal class PlayerProfileStepModel(
     private val playerRepository: PlayerRepository,
     private val stringsHolder: GamesStringsHolder,
     private val logoutService: LogoutService,
+    private val accountDeletionService: AccountDeletionService,
     private val observeAvailability: ObserveAvailabilityUseCase,
     private val setAvailability: SetAvailabilityUseCase,
     private val setAvailableSports: SetAvailableSportsUseCase,
@@ -60,7 +64,12 @@ internal class PlayerProfileStepModel(
                 if (session != null) {
                     currentUserId = session.uid
                     _state.update {
-                        it.copy(userId = session.uid, userName = session.displayName, userEmail = session.email)
+                        it.copy(
+                            userId = session.uid,
+                            userName = session.displayName,
+                            userEmail = session.email,
+                            userPhone = session.formattedPhoneNumber(),
+                        )
                     }
                     loadStats(session.uid)
                     observeAvailabilityOf(session.uid)
@@ -72,6 +81,7 @@ internal class PlayerProfileStepModel(
                             userId = null,
                             userName = null,
                             userEmail = null,
+                            userPhone = null,
                             matchesOrganized = 0,
                             matchesParticipated = 0,
                             nextMatch = null,
@@ -208,6 +218,47 @@ internal class PlayerProfileStepModel(
                 analytics.track(AnalyticsEvent.PlayerProfileViewed(PlayerProfileSource.NEXT_MATCH))
                 screenModelScope.launch {
                     _effects.send(PlayerProfileEffect.NavigateToMatchDetail(event.matchId))
+                }
+            }
+            PlayerProfileEvent.DeleteAccountRequested ->
+                _state.update { it.copy(showDeleteAccountDialog = true, errorMessage = null) }
+            PlayerProfileEvent.CancelDeleteAccount ->
+                _state.update { it.copy(showDeleteAccountDialog = false) }
+            PlayerProfileEvent.ConfirmDeleteAccount -> deleteAccount()
+        }
+    }
+
+    private fun deleteAccount() {
+        val strings = stringsHolder.resolveStringsOrDefault().playerProfile
+
+        screenModelScope.launch {
+            _state.update { it.copy(isDeletingAccount = true, errorMessage = null) }
+
+            when (val outcome = accountDeletionService.deleteAccount()) {
+                AccountDeletionOutcome.Success -> {
+                    analytics.track(AnalyticsEvent.SignedOut())
+                    _state.update {
+                        it.copy(isDeletingAccount = false, showDeleteAccountDialog = false)
+                    }
+                    _effects.send(PlayerProfileEffect.RequireLogin)
+                }
+                AccountDeletionOutcome.RequiresRecentLogin ->
+                    _state.update {
+                        it.copy(
+                            isDeletingAccount = false,
+                            showDeleteAccountDialog = false,
+                            errorMessage = strings.deleteAccountRequiresRecentLogin,
+                        )
+                    }
+                is AccountDeletionOutcome.Failure -> {
+                    crashReporter.recordException(outcome.cause)
+                    _state.update {
+                        it.copy(
+                            isDeletingAccount = false,
+                            showDeleteAccountDialog = false,
+                            errorMessage = strings.deleteAccountError,
+                        )
+                    }
                 }
             }
         }

@@ -69,7 +69,10 @@ class ManageMatchStepTest {
             loadedState.copy(
                 match =
                     loadedState.match?.copy(
-                        startsAtSeconds = kotlin.time.Clock.System.now().epochSeconds - 600,
+                        startsAtSeconds =
+                            kotlin.time.Clock.System
+                                .now()
+                                .epochSeconds - 600,
                         durationMin = 60,
                     ),
             ),

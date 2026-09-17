@@ -27,8 +27,7 @@ internal class AuthRepositoryImpl(
         email: String,
         password: String,
         displayName: String,
-    ): Result<UserSession> =
-        firebaseAuthSource.signUp(email = email, password = password, displayName = displayName)
+    ): Result<UserSession> = firebaseAuthSource.signUp(email = email, password = password, displayName = displayName)
 
     override suspend fun deleteAccount(): Result<Unit> = firebaseAuthSource.deleteCurrentUser()
 

@@ -16,10 +16,11 @@ import {
   selectRecipients,
 } from "./notifications.js";
 import {
-  VERIFICATION_POLICY,
-  isEnforcementEnabled,
+  FULL_VERIFICATION,
   meetsRequirement,
   missingVerification,
+  parseEnforcementFlag,
+  phoneNumberFromClaims,
   verificationFromClaims,
 } from "./verification.js";
 import {
@@ -122,8 +123,13 @@ export const onUserCreate = functionsV1
 // ---------------------------------------------------------------------------
 // deleteAccount — Callable (invocada por products/identity)
 //
-// Apaga o perfil público, os dados privados e tudo sob users/{uid}. Em fases
-// futuras (LGPD, §6) será estendida para limpar partidas e participações.
+// Tira o uid de todo lugar onde ele aparece: sai das partidas dos outros,
+// apaga as que organizou e as séries delas, remove VIP e banimento, tira o
+// nome do que escreveu e derruba perfil, dados privados e users/{uid}.
+//
+// O que sobrevive é o que também é dado de terceiro — a avaliação que ele deu
+// continua existindo sem autor, porque a média dela está guardada no perfil de
+// quem foi avaliado, e apagá-la deixaria a nota de outra pessoa errada.
 // ---------------------------------------------------------------------------
 
 export const deleteAccount = onCall(
@@ -138,7 +144,8 @@ export const deleteAccount = onCall(
     // libera vagas; apagar o usuário do Auth por último, para que uma falha no
     // meio deixe a pessoa capaz de repetir a chamada.
     await leaveAllMatches(uid);
-    await cleanUpOrganizedMatches(uid);
+    await deleteOrganizedMatches(uid);
+    await deleteUidKeyedRecords(uid);
     await anonymizeAuthoredContent(uid);
     await deleteModerationTrail(uid);
 
@@ -289,11 +296,13 @@ export const syncVerificationStatus = onCall(
     requireAuthentication(uid);
     requireEmptyPayload(request.data);
 
-    const status = verificationFromClaims(
-      request.auth?.token as unknown as Record<string, unknown>,
-    );
+    const claims = request.auth?.token as unknown as Record<string, unknown>;
+    const status = verificationFromClaims(claims);
+    const phone = phoneNumberFromClaims(claims);
 
-    await db.doc(`profiles/${uid}`).set(
+    const batch = db.batch();
+    batch.set(
+      db.doc(`profiles/${uid}`),
       {
         emailVerified: status.emailVerified,
         phoneVerified: status.phoneVerified,
@@ -302,6 +311,18 @@ export const syncVerificationStatus = onCall(
       },
       {merge: true},
     );
+
+    // O número vem da claim assinada, nunca do payload: é o que o torna
+    // confiável para uso futuro. Fica em private/data, que só o dono lê.
+    if (phone !== null) {
+      batch.set(
+        db.doc(`profiles/${uid}/private/data`),
+        {phone, updatedAt: FieldValue.serverTimestamp()},
+        {merge: true},
+      );
+    }
+
+    await batch.commit();
 
     return status;
   },
@@ -312,27 +333,53 @@ interface VerificationSyncResponse {
   phoneVerified: boolean;
 }
 
+/** Quanto tempo uma leitura de `config/verification` vale na instância. */
+const VERIFICATION_CONFIG_CACHE_MILLIS = 60_000;
+
+let verificationEnforcementCache: {enforced: boolean; readAtMs: number} | null = null;
+
 /**
- * Barra a ação quando a política exigir verificação que a conta não tem.
- *
- * Lê direto das claims do token, e não do espelho no perfil: o espelho pode
- * estar desatualizado se o app ainda não chamou `syncVerificationStatus`, e
- * recusar alguém que já verificou seria pior que o contrário.
- *
- * Com a política toda desligada (o padrão), sai antes de fazer qualquer coisa.
+ * O interruptor mora num documento, não numa constante: ligar e desligar a
+ * exigência vira mudar um campo no console, sem deploy. O cache poupa uma
+ * leitura por chamada; no emulador ele é zerado para os testes poderem
+ * alternar o valor entre um caso e outro.
  */
-function requireVerification(
-  token: unknown,
-  requirement: {email: boolean; phone: boolean},
-): void {
-  if (!isEnforcementEnabled(requirement)) return;
+async function isVerificationEnforced(): Promise<boolean> {
+  const cacheMillis = process.env.FUNCTIONS_EMULATOR === "true" ? 0 : VERIFICATION_CONFIG_CACHE_MILLIS;
+  const nowMs = Date.now();
+  if (verificationEnforcementCache && nowMs - verificationEnforcementCache.readAtMs < cacheMillis) {
+    return verificationEnforcementCache.enforced;
+  }
+  // Uma leitura que falha (Firestore fora do ar, permissão, timeout) não pode
+  // derrubar as 11 callables que passam por aqui: o interruptor é um detalhe
+  // operacional, não a função em si. Cai no último valor conhecido e, sem ele,
+  // no modo desligado — negar tudo por causa de uma leitura seria pior.
+  let enforced: boolean;
+  try {
+    const snapshot = await db.doc("config/verification").get();
+    enforced = parseEnforcementFlag(snapshot.data());
+  } catch (error) {
+    logger.error("isVerificationEnforced: falha ao ler config/verification", error);
+    return verificationEnforcementCache?.enforced ?? false;
+  }
+  verificationEnforcementCache = {enforced, readAtMs: nowMs};
+  return enforced;
+}
+
+/**
+ * Barra a ação quando a exigência está ligada e a conta não tem e-mail e
+ * telefone verificados. Lê das claims do token, não do espelho no perfil: o
+ * espelho pode estar atrasado, e recusar quem já verificou seria pior.
+ */
+async function requireVerification(token: unknown): Promise<void> {
+  if (!(await isVerificationEnforced())) return;
 
   const status = verificationFromClaims(token as Record<string, unknown>);
-  if (meetsRequirement(status, requirement)) return;
+  if (meetsRequirement(status, FULL_VERIFICATION)) return;
 
   throw new HttpsError(
     "failed-precondition",
-    `Verification required: ${missingVerification(status, requirement)}`,
+    `Verification required: ${missingVerification(status, FULL_VERIFICATION)}`,
   );
 }
 
@@ -457,6 +504,7 @@ export const joinMatch = onCall(
   async (request): Promise<JoinMatchResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
     const data = request.data as Partial<JoinMatchRequest>;
     if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
       throw new HttpsError("invalid-argument", "matchId is required.");
@@ -468,7 +516,6 @@ export const joinMatch = onCall(
       // fazer. Sair e cancelar continuam liberados de propósito: bloquear a
       // saída prenderia a pessoa segurando uma vaga.
       await requireNotBlocked(txn, uid, Date.now());
-      requireVerification(request.auth?.token, VERIFICATION_POLICY.joinMatch);
 
       const matchRef = db.doc(`matches/${matchId}`);
       const participantRef = db.doc(`matches/${matchId}/participants/${uid}`);
@@ -655,6 +702,7 @@ export const cancelMatch = onCall(
   async (request): Promise<CancelMatchResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
     const data = request.data as Partial<{matchId: string}>;
     if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
       throw new HttpsError("invalid-argument", "matchId is required.");
@@ -728,6 +776,7 @@ export const submitPlayerRating = onCall(
   async (request): Promise<SubmitPlayerRatingResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
 
       const {matchId, ratedUserId, rating, comment} = parseSubmitRatingPayload(
       request.data,
@@ -855,6 +904,7 @@ export const submitOrganizerRating = onCall(
   async (request): Promise<SubmitOrganizerRatingResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
 
     const {matchId, rating} = parseSubmitOrganizerRatingPayload(request.data);
 
@@ -1043,6 +1093,7 @@ export const submitSkillRating = onCall(
   async (request): Promise<SubmitSkillRatingResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
 
     const {matchId, ratedUserId, rating} = parseSubmitSkillRatingPayload(request.data);
 
@@ -1238,6 +1289,7 @@ export const setVipStatus = onCall(
   async (request): Promise<SetVipStatusResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
     const data = request.data as Partial<SetVipStatusRequest>;
     if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
       throw new HttpsError("invalid-argument", "matchId is required.");
@@ -1280,7 +1332,11 @@ export const setVipStatus = onCall(
       const vipRef = db.doc(`matchSeries/${seriesId}/vipPlayers/${targetUserId}`);
 
       if (isVip) {
-        txn.set(vipRef, {addedAt: FieldValue.serverTimestamp(), addedBy: uid});
+        txn.set(vipRef, {
+          userId: targetUserId,
+          addedAt: FieldValue.serverTimestamp(),
+          addedBy: uid,
+        });
         txn.set(db.doc(`matchSeries/${seriesId}`), {organizerId: match.organizerId}, {merge: true});
         txn.update(targetParticipantRef, {isVip: true});
 
@@ -1312,6 +1368,7 @@ export const confirmWaitlistedPlayer = onCall(
   async (request): Promise<ConfirmWaitlistedPlayerResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
     const data = request.data as Partial<ConfirmWaitlistedPlayerRequest>;
     if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
       throw new HttpsError("invalid-argument", "matchId is required.");
@@ -1364,6 +1421,7 @@ export const banPlayerFromMatch = onCall(
   async (request): Promise<BanPlayerFromMatchResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
     const data = request.data as Partial<BanPlayerFromMatchRequest>;
     if (typeof data?.matchId !== "string" || data.matchId.length === 0) {
       throw new HttpsError("invalid-argument", "matchId is required.");
@@ -1394,6 +1452,7 @@ export const banPlayerFromMatch = onCall(
       const promotedUserId = await removeParticipant(txn, matchId, targetUserId);
 
       txn.set(db.doc(`matches/${matchId}/bannedUsers/${targetUserId}`), {
+        userId: targetUserId,
         bannedAt: FieldValue.serverTimestamp(),
         bannedBy: uid,
       });
@@ -1443,6 +1502,7 @@ export const submitMatchRating = onCall(
   async (request): Promise<SubmitMatchRatingResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
 
     const {matchId, rating} = parseSubmitMatchRatingPayload(request.data);
 
@@ -1594,6 +1654,7 @@ export const submitReport = onCall(
   async (request): Promise<SubmitReportResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
 
     const {matchId, reportedUserId, reason, details} = parseReportPayload(request.data, uid);
     const nowMs = Date.now();
@@ -1870,6 +1931,7 @@ export const cancelMatchSeries = onCall(
   async (request): Promise<CancelMatchSeriesResponse> => {
     const uid = request.auth?.uid;
     requireAuthentication(uid);
+    await requireVerification(request.auth?.token);
 
     const {matchId} = parseCancelMatchSeriesPayload(request.data);
 
@@ -2253,6 +2315,7 @@ async function removeParticipant(
   txn.delete(participantRef);
   txn.update(matchRef, {
     participants: FieldValue.arrayRemove(uid),
+    [`teamAssignments.${uid}`]: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   });
 
@@ -2301,6 +2364,34 @@ async function firstInWaitlist(
 const DELETION_PAGE_SIZE = 200;
 
 /**
+ * Percorre a consulta inteira, uma página por vez.
+ *
+ * O `.limit()` sozinho abandonava em silêncio tudo acima do teto: quem passasse
+ * de [DELETION_PAGE_SIZE] partidas saía do app deixando o excedente no banco,
+ * sem erro nenhum para denunciar. O cursor anda sobre o último documento lido,
+ * e não reinicia a consulta, para que um documento que falhou ao ser apagado
+ * não prenda o laço nele para sempre.
+ */
+async function forEachPage(
+  query: FirebaseFirestore.Query,
+  handle: (documents: FirebaseFirestore.QueryDocumentSnapshot[]) => Promise<void>,
+): Promise<void> {
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+
+  for (;;) {
+    const page = await (cursor ? query.startAfter(cursor) : query)
+      .limit(DELETION_PAGE_SIZE)
+      .get();
+    if (page.empty) return;
+
+    await handle(page.docs);
+
+    if (page.size < DELETION_PAGE_SIZE) return;
+    cursor = page.docs[page.size - 1];
+  }
+}
+
+/**
  * Sai de toda partida em que a pessoa aparece.
  *
  * Uma transação por partida, e não uma só para todas: elas são independentes, e
@@ -2309,68 +2400,115 @@ const DELETION_PAGE_SIZE = 200;
  * comum — a vaga não fica presa.
  */
 async function leaveAllMatches(uid: string): Promise<void> {
-  const participations = await db
-    .collectionGroup("participants")
-    .where("userId", "==", uid)
-    .limit(DELETION_PAGE_SIZE)
-    .get();
+  await forEachPage(
+    db.collectionGroup("participants").where("userId", "==", uid),
+    async (participations) => {
+      for (const participation of participations) {
+        const matchId = participation.ref.parent.parent?.id;
+        if (!matchId) continue;
 
-  for (const participation of participations.docs) {
-    const matchId = participation.ref.parent.parent?.id;
-    if (!matchId) continue;
+        await db
+          .runTransaction(async (txn) => {
+            const matchSnap = await txn.get(db.doc(`matches/${matchId}`));
+            if (!matchSnap.exists) return;
+            // Organizador não "sai" da própria partida — ela é tratada adiante.
+            if (matchSnap.data()?.organizerId === uid) return;
 
-    await db
-      .runTransaction(async (txn) => {
-        const matchSnap = await txn.get(db.doc(`matches/${matchId}`));
-        if (!matchSnap.exists) return;
-        // Organizador não "sai" da própria partida — ela é tratada adiante.
-        if (matchSnap.data()?.organizerId === uid) return;
+            await removeParticipant(txn, matchId, uid);
+          })
+          // Uma partida problemática não pode impedir o resto da exclusão.
+          .catch((error) => console.error(`leaveAllMatches ${matchId}`, error));
 
-        await removeParticipant(txn, matchId, uid);
-      })
-      // Uma partida problemática não pode impedir o resto da exclusão.
-      .catch((error) => console.error(`leaveAllMatches ${matchId}`, error));
-  }
+        await deleteSeriesVip(matchId, uid);
+      }
+    },
+  );
 }
 
 /**
- * Cancela o que ainda vai acontecer e despersonaliza o que já passou.
+ * Tira o VIP da série a que a partida pertence.
  *
- * Apagar as partidas levaria junto o histórico de todo mundo que jogou. O que
- * precisa sumir é o nome do organizador, não o registro do jogo.
+ * Existe ao lado da varredura por `userId` porque os documentos gravados antes
+ * desse campo existir não aparecem em consulta nenhuma — o uid está só no id,
+ * e o id não é consultável em collection group. Pelo caminho eles somem.
  */
-async function cleanUpOrganizedMatches(uid: string): Promise<void> {
-  const organized = await db
-    .collection("matches")
-    .where("organizerId", "==", uid)
-    .limit(DELETION_PAGE_SIZE)
-    .get();
-  if (organized.empty) return;
+async function deleteSeriesVip(matchId: string, uid: string): Promise<void> {
+  const seriesId = (await db.doc(`matches/${matchId}`).get()).data()?.seriesId;
+  if (typeof seriesId !== "string" || seriesId.length === 0) return;
 
+  await db
+    .doc(`matchSeries/${seriesId}/vipPlayers/${uid}`)
+    .delete()
+    .catch((error) => console.error(`deleteSeriesVip ${seriesId}`, error));
+}
+
+/**
+ * Apaga as partidas que a pessoa organizou, com tudo que pendurava nelas.
+ *
+ * A partida que ainda vai acontecer avisa antes de sumir. Não existe push de
+ * cancelamento no app: quem ia jogar descobria pelo próprio documento, que
+ * passa a não existir — sem o aviso, a pessoa só descobriria na quadra.
+ */
+async function deleteOrganizedMatches(uid: string): Promise<void> {
   const nowMs = Date.now();
-  const batch = db.batch();
 
-  for (const match of organized.docs) {
-    const data = match.data();
-    const anonymous = {
-      organizerName: ANONYMOUS_NAME,
-      organizerAvatarUrl: null,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
+  await forEachPage(
+    db.collection("matches").where("organizerId", "==", uid),
+    async (organized) => {
+      for (const match of organized) {
+        const data = match.data();
 
-    if (shouldCancelOnOrganizerDeletion(data, nowMs)) {
-      batch.update(match.ref, {
-        ...anonymous,
-        status: "CANCELLED",
-        cancelledAt: FieldValue.serverTimestamp(),
-        cancelledBy: "account_deleted",
-      });
-    } else {
-      batch.update(match.ref, anonymous);
-    }
-  }
+        if (shouldCancelOnOrganizerDeletion(data, nowMs)) {
+          await warnMatchIsGone(match.id, data, uid);
+        }
 
-  await batch.commit();
+        // recursiveDelete leva participants, bannedUsers, ratings,
+        // matchRatings e organizerRatings junto — teamAssignments é campo do
+        // próprio documento e vai com ele.
+        await db
+          .recursiveDelete(match.ref)
+          .catch((error) => console.error(`deleteOrganizedMatches ${match.id}`, error));
+      }
+    },
+  );
+
+  await forEachPage(
+    db.collection("matchSeries").where("organizerId", "==", uid),
+    async (series) => {
+      for (const document of series) {
+        await db
+          .recursiveDelete(document.ref)
+          .catch((error) => console.error(`deleteOrganizedSeries ${document.id}`, error));
+      }
+    },
+  );
+}
+
+/** Avisa quem estava escalado que a partida deixou de existir. */
+async function warnMatchIsGone(
+  matchId: string,
+  match: FirebaseFirestore.DocumentData,
+  organizerId: string,
+): Promise<void> {
+  const participants: string[] = Array.isArray(match.participants)
+    ? match.participants.filter(
+        (id): id is string => typeof id === "string" && id !== organizerId,
+      )
+    : [];
+  if (participants.length === 0) return;
+
+  const body = [match.sport, match.venueName, match.neighborhood]
+    .filter((part): part is string => typeof part === "string" && part.length > 0)
+    .join(" · ");
+
+  await writeNotifications(participants, {
+    type: "match_cancelled",
+    title: "Partida cancelada",
+    body,
+    matchId,
+  })
+    // O aviso não pode travar a exclusão: a conta tem de sumir de qualquer jeito.
+    .catch((error) => console.error(`warnMatchIsGone ${matchId}`, error));
 }
 
 /**
@@ -2401,37 +2539,48 @@ const ANONYMOUS_NAME = "Jogador removido";
  * de removê-lo é recriar o documento com id novo.
  */
 async function anonymizeAuthoredContent(uid: string): Promise<void> {
-  const [ratings, reports] = await Promise.all([
-    db
-      .collectionGroup("ratings")
-      .where("raterUserId", "==", uid)
-      .limit(DELETION_PAGE_SIZE)
-      .get(),
-    db.collection("reports").where("reporterId", "==", uid).limit(DELETION_PAGE_SIZE).get(),
-  ]);
+  for (const source of AUTHORED_CONTENT_SOURCES) {
+    await forEachPage(
+      db.collectionGroup(source.group).where(source.authorField, "==", uid),
+      (documents) => anonymizePage(documents, source.authorField),
+    );
+  }
 
+  await forEachPage(db.collection("reports").where("reporterId", "==", uid), (documents) =>
+    anonymizePage(documents, "reporterId"),
+  );
+}
+
+/**
+ * Onde o uid aparece como autor. As três coleções de avaliação guardam a média
+ * no perfil de quem foi avaliado: apagar o documento deixaria a nota de outra
+ * pessoa errada para sempre, então o que sai é o autor, não o registro.
+ */
+const AUTHORED_CONTENT_SOURCES = [
+  {group: "ratings", authorField: "raterUserId"},
+  {group: "matchRatings", authorField: "raterUserId"},
+  {group: "organizerRatings", authorField: "raterUserId"},
+  {group: "skillRatings", authorField: "organizerId"},
+] as const;
+
+async function anonymizePage(
+  documents: FirebaseFirestore.QueryDocumentSnapshot[],
+  authorField: string,
+): Promise<void> {
   const batch = db.batch();
   const anonymizedAtMs = Date.now();
 
-  for (const rating of ratings.docs) {
-    batch.set(rating.ref.parent.doc(), {
-      ...rating.data(),
-      raterUserId: null,
+  for (const document of documents) {
+    // O uid está no id do documento nessas coleções, e id não se edita: o
+    // único jeito de removê-lo é recriar o registro com id novo.
+    batch.set(document.ref.parent.doc(), {
+      ...document.data(),
+      [authorField]: null,
       anonymizedAtMs,
     });
-    batch.delete(rating.ref);
+    batch.delete(document.ref);
   }
 
-  for (const report of reports.docs) {
-    batch.set(report.ref.parent.doc(), {
-      ...report.data(),
-      reporterId: null,
-      anonymizedAtMs,
-    });
-    batch.delete(report.ref);
-  }
-
-  if (ratings.empty && reports.empty) return;
   await batch.commit();
 }
 
@@ -2443,15 +2592,32 @@ async function anonymizeAuthoredContent(uid: string): Promise<void> {
  * mais conta para restringir — e seria dado pessoal sem finalidade.
  */
 async function deleteModerationTrail(uid: string): Promise<void> {
-  const against = await db
-    .collection("reports")
-    .where("reportedUserId", "==", uid)
-    .limit(DELETION_PAGE_SIZE)
-    .get();
+  await forEachPage(
+    db.collection("reports").where("reportedUserId", "==", uid),
+    (documents) => deletePage(documents),
+  );
 
+  await db.doc(`moderation/${uid}`).delete();
+}
+
+/**
+ * Apaga o que só faz sentido enquanto a conta existe: o VIP de uma série e o
+ * banimento de uma partida. Sem conta para privilegiar ou barrar, os dois
+ * registros viram dado pessoal sem finalidade.
+ */
+async function deleteUidKeyedRecords(uid: string): Promise<void> {
+  for (const group of ["vipPlayers", "bannedUsers"] as const) {
+    await forEachPage(db.collectionGroup(group).where("userId", "==", uid), (documents) =>
+      deletePage(documents),
+    );
+  }
+}
+
+async function deletePage(
+  documents: FirebaseFirestore.QueryDocumentSnapshot[],
+): Promise<void> {
   const batch = db.batch();
-  for (const report of against.docs) batch.delete(report.ref);
-  batch.delete(db.doc(`moderation/${uid}`));
+  for (const document of documents) batch.delete(document.ref);
   await batch.commit();
 }
 

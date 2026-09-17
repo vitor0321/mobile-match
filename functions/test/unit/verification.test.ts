@@ -1,9 +1,14 @@
+import {readFileSync} from "node:fs";
 import {describe, expect, it} from "vitest";
 import {
-  VERIFICATION_POLICY,
-  isEnforcementEnabled,
+  ADMIN_CALLABLES,
+  FULL_VERIFICATION,
+  VERIFICATION_EXEMPT_CALLABLES,
+  VERIFIED_CALLABLES,
   meetsRequirement,
   missingVerification,
+  parseEnforcementFlag,
+  phoneNumberFromClaims,
   verificationFromClaims,
 } from "../../src/verification.js";
 
@@ -14,67 +19,125 @@ describe("verificationFromClaims", () => {
   });
 
   it("exige o booleano, não um valor parecido", () => {
-    // O token é assinado, mas ler frouxo aqui aceitaria "false" como verdadeiro.
     expect(verificationFromClaims({email_verified: "true"}).emailVerified).toBe(false);
     expect(verificationFromClaims({email_verified: 1}).emailVerified).toBe(false);
   });
 
   it("telefone presente é telefone verificado", () => {
-    // Não existe telefone não verificado no Firebase Auth: a claim só aparece
-    // depois do SMS.
     expect(verificationFromClaims({phone_number: "+5551999999999"}).phoneVerified).toBe(true);
     expect(verificationFromClaims({phone_number: ""}).phoneVerified).toBe(false);
     expect(verificationFromClaims({}).phoneVerified).toBe(false);
   });
 
   it("token ausente não verifica nada", () => {
-    expect(verificationFromClaims(undefined)).toEqual({
-      emailVerified: false,
-      phoneVerified: false,
-    });
+    expect(verificationFromClaims(undefined)).toEqual({emailVerified: false, phoneVerified: false});
   });
 });
 
-describe("política", () => {
-  it("nasce toda desligada", () => {
-    // Ligar tranca de uma hora para outra quem já usa o app e nunca verificou.
-    // A capacidade existe; exigir é decisão de produto, com aviso antes.
-    expect(isEnforcementEnabled(VERIFICATION_POLICY.joinMatch)).toBe(false);
-    expect(isEnforcementEnabled(VERIFICATION_POLICY.createMatch)).toBe(false);
+describe("phoneNumberFromClaims", () => {
+  it("devolve o telefone assinado", () => {
+    expect(phoneNumberFromClaims({phone_number: "+5511912345678"})).toBe("+5511912345678");
   });
 
-  it("sem exigência, qualquer conta passa", () => {
+  it("sem telefone válido devolve null", () => {
+    expect(phoneNumberFromClaims({phone_number: ""})).toBeNull();
+    expect(phoneNumberFromClaims({phone_number: 5511912345678})).toBeNull();
+    expect(phoneNumberFromClaims(undefined)).toBeNull();
+  });
+});
+
+describe("parseEnforcementFlag", () => {
+  it("só liga com o booleano true", () => {
+    expect(parseEnforcementFlag({enforced: true})).toBe(true);
+    expect(parseEnforcementFlag({enforced: "true"})).toBe(false);
+    expect(parseEnforcementFlag({enforced: false})).toBe(false);
+  });
+
+  it("documento ausente é exigência desligada", () => {
+    expect(parseEnforcementFlag(undefined)).toBe(false);
+    expect(parseEnforcementFlag({})).toBe(false);
+  });
+});
+
+describe("exigência completa", () => {
+  it("exige e-mail e telefone", () => {
+    expect(FULL_VERIFICATION).toEqual({email: true, phone: true});
+  });
+
+  it("aponta o e-mail primeiro quando falta tudo", () => {
     const nada = {emailVerified: false, phoneVerified: false};
 
-    expect(meetsRequirement(nada, {email: false, phone: false})).toBe(true);
-    expect(missingVerification(nada, {email: false, phone: false})).toBeNull();
+    expect(meetsRequirement(nada, FULL_VERIFICATION)).toBe(false);
+    expect(missingVerification(nada, FULL_VERIFICATION)).toBe("email");
   });
 
-  it("exigência de e-mail barra quem não verificou", () => {
-    const sóTelefone = {emailVerified: false, phoneVerified: true};
-
-    expect(meetsRequirement(sóTelefone, {email: true, phone: false})).toBe(false);
-    expect(missingVerification(sóTelefone, {email: true, phone: false})).toBe("email");
-  });
-
-  it("exigência de telefone barra quem não verificou", () => {
+  it("com e-mail verificado, falta o telefone", () => {
     const sóEmail = {emailVerified: true, phoneVerified: false};
 
-    expect(meetsRequirement(sóEmail, {email: false, phone: true})).toBe(false);
-    expect(missingVerification(sóEmail, {email: false, phone: true})).toBe("phone");
+    expect(missingVerification(sóEmail, FULL_VERIFICATION)).toBe("phone");
   });
 
-  it("com as duas exigidas, aponta o e-mail primeiro", () => {
-    const nada = {emailVerified: false, phoneVerified: false};
-
-    // Uma pendência de cada vez: verificar e-mail é mais barato que SMS.
-    expect(missingVerification(nada, {email: true, phone: true})).toBe("email");
-  });
-
-  it("conta completa passa em qualquer exigência", () => {
+  it("conta completa passa", () => {
     const tudo = {emailVerified: true, phoneVerified: true};
 
-    expect(meetsRequirement(tudo, {email: true, phone: true})).toBe(true);
-    expect(missingVerification(tudo, {email: true, phone: true})).toBeNull();
+    expect(meetsRequirement(tudo, FULL_VERIFICATION)).toBe(true);
+    expect(missingVerification(tudo, FULL_VERIFICATION)).toBeNull();
+  });
+});
+
+describe("callables exigidas e isentas", () => {
+  const source = readFileSync(new URL("../../src/index.ts", import.meta.url), "utf8");
+
+  function bodyOf(name: string): string {
+    const start = source.indexOf(`export const ${name} = onCall(`);
+    expect(start, `callable ${name} não encontrada em index.ts`).toBeGreaterThanOrEqual(0);
+    const end = source.indexOf("\n);", start);
+    expect(end, `fim da callable ${name} não encontrado`).toBeGreaterThan(start);
+    return source.slice(start, end);
+  }
+
+  it("nenhuma callable está nas duas listas", () => {
+    const exempt = new Set<string>(VERIFICATION_EXEMPT_CALLABLES);
+
+    expect(VERIFIED_CALLABLES.filter((name) => exempt.has(name))).toEqual([]);
+  });
+
+  it("excluir, exportar, sair e sincronizar continuam isentas", () => {
+    expect([...VERIFICATION_EXEMPT_CALLABLES].sort()).toEqual(
+      ["deleteAccount", "exportUserData", "leaveMatch", "syncVerificationStatus"].sort(),
+    );
+  });
+
+  it("toda callable exportada está em exatamente uma lista", () => {
+    const exported = [...source.matchAll(/export const (\w+) = onCall\(/g)].map((match) => match[1]);
+    const lists: readonly (readonly string[])[] = [VERIFIED_CALLABLES, VERIFICATION_EXEMPT_CALLABLES, ADMIN_CALLABLES];
+
+    for (const name of exported) {
+      const listsContaining = lists.filter((list) => list.includes(name)).length;
+      expect(listsContaining, `callable ${name} precisa estar em exatamente uma lista`).toBe(1);
+    }
+
+    for (const name of lists.flat()) {
+      expect(exported, `callable ${name} listada mas não exportada em index.ts`).toContain(name);
+    }
+  });
+
+  it("toda callable exigida chama requireVerification", () => {
+    for (const name of VERIFIED_CALLABLES) {
+      const body = bodyOf(name);
+      const auth = body.indexOf("requireAuthentication(uid);");
+      const check = body.indexOf("await requireVerification(request.auth?.token)");
+      const txn = body.indexOf("runTransaction(");
+
+      expect(auth, `${name}: requireAuthentication ausente`).toBeGreaterThanOrEqual(0);
+      expect(check, `${name}: requireVerification ausente ou antes da autenticação`).toBeGreaterThan(auth);
+      expect(txn === -1 || check < txn, `${name}: requireVerification dentro da transação`).toBe(true);
+    }
+  });
+
+  it("nenhuma callable isenta chama requireVerification", () => {
+    for (const name of [...VERIFICATION_EXEMPT_CALLABLES, ...ADMIN_CALLABLES]) {
+      expect(bodyOf(name), name).not.toContain("requireVerification(");
+    }
   });
 });

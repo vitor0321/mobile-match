@@ -13,7 +13,6 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.walcker.identity.api.UserSession
 import com.walcker.identity.features.domain.error.IdentityError
@@ -171,11 +170,3 @@ internal class AndroidGoogleAuthSource(
         return error
     }
 }
-
-private fun FirebaseUser.toUserSession(): UserSession =
-    UserSession(
-        uid = uid,
-        email = email,
-        displayName = displayName,
-        creationTimestamp = metadata?.creationTimestamp,
-    )

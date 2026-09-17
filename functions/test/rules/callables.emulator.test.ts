@@ -1762,6 +1762,8 @@ describe("leaveMatch — contador de confirmados", () => {
 describe("deleteAccount — limpeza completa", () => {
   const FUTURE = "m-futura";
   const PAST = "m-passada";
+  const ALHEIA = "m-de-outro";
+  const SERIES = "serie-1";
   const OTHER = "outra-pessoa";
 
   async function seedEverything() {
@@ -1777,7 +1779,7 @@ describe("deleteAccount — limpeza completa", () => {
         organizerName: "Eu",
         status: "OPEN",
         startsAtSeconds: nowSeconds + 7_200,
-        participants: [uid],
+        participants: [uid, OTHER],
       });
       await setDoc(doc(database, "matches", PAST), {
         organizerId: uid,
@@ -1785,6 +1787,58 @@ describe("deleteAccount — limpeza completa", () => {
         status: "OPEN",
         startsAtSeconds: nowSeconds - 7_200,
         participants: [uid],
+      });
+      await setDoc(doc(database, "matches", FUTURE, "participants", OTHER), {
+        userId: OTHER,
+        isConfirmed: true,
+      });
+      await setDoc(doc(database, "matchSeries", SERIES), {organizerId: uid, active: true});
+
+      // Joga na partida de outra pessoa: escalado num time, VIP da série dela,
+      // banido, e tendo avaliado o jogo, o organizador e um jogador.
+      await setDoc(doc(database, "matches", ALHEIA), {
+        organizerId: OTHER,
+        organizerName: "Outro",
+        status: "OPEN",
+        startsAtSeconds: nowSeconds + 7_200,
+        participants: [uid],
+        confirmedCount: 1,
+        totalSlots: 10,
+        seriesId: "serie-alheia",
+        teamAssignments: {[uid]: 0, [OTHER]: 1},
+      });
+      await setDoc(doc(database, "matches", ALHEIA, "participants", uid), {
+        userId: uid,
+        isConfirmed: true,
+        isVip: true,
+      });
+      await setDoc(doc(database, "matchSeries", "serie-alheia", "vipPlayers", uid), {
+        userId: uid,
+        addedBy: OTHER,
+      });
+      await setDoc(doc(database, "matches", ALHEIA, "bannedUsers", uid), {
+        userId: uid,
+        bannedBy: OTHER,
+      });
+      await setDoc(doc(database, "matches", ALHEIA, "matchRatings", uid), {
+        matchId: ALHEIA,
+        raterUserId: uid,
+        rating: 4,
+        createdAtMs: Date.now(),
+      });
+      await setDoc(doc(database, "matches", ALHEIA, "organizerRatings", uid), {
+        matchId: ALHEIA,
+        organizerId: OTHER,
+        raterUserId: uid,
+        rating: 5,
+        createdAtMs: Date.now(),
+      });
+      await setDoc(doc(database, "profiles", OTHER, "skillRatings", uid), {
+        matchId: PAST,
+        ratedUserId: OTHER,
+        organizerId: uid,
+        rating: 3,
+        createdAtMs: Date.now(),
       });
 
       // Avaliação que escreveu sobre outra pessoa.
@@ -1812,20 +1866,124 @@ describe("deleteAccount — limpeza completa", () => {
     });
   }
 
-  it("cancela a partida futura e despersonaliza a passada", async () => {
+  it("apaga toda partida que organizou, futura ou passada", async () => {
     await seedEverything();
 
     expect((await call("deleteAccount", {})).ok).toBe(true);
 
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
-      const future = await getDoc(doc(database, "matches", FUTURE));
-      const past = await getDoc(doc(database, "matches", PAST));
 
-      // Partida futura sem organizador não tem como acontecer.
-      expect(future.data()).toMatchObject({status: "CANCELLED", organizerName: "Jogador removido"});
-      // A passada é histórico de quem jogou: fica, sem o nome.
-      expect(past.data()).toMatchObject({status: "OPEN", organizerName: "Jogador removido"});
+      expect((await getDoc(doc(database, "matches", FUTURE))).exists()).toBe(false);
+      expect((await getDoc(doc(database, "matches", PAST))).exists()).toBe(false);
+      // recursiveDelete tem de levar as subcoleções junto, senão sobram órfãs
+      // sem pai — invisíveis no console e vivas na consulta de collection group.
+      expect(
+        (await getDocs(collection(database, "matches", FUTURE, "participants"))).size,
+      ).toBe(0);
+      // A série é dele: sem partidas e sem organizador, não gera mais nada.
+      expect((await getDoc(doc(database, "matchSeries", SERIES))).exists()).toBe(false);
+    });
+  });
+
+  it("avisa quem ia jogar antes de a partida futura sumir", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const history = await getDocs(
+        collection(context.firestore(), "users", OTHER, "notificationHistory"),
+      );
+
+      // Não existe push de cancelamento no app: sem este aviso, o jogador
+      // descobriria que a partida sumiu só na quadra.
+      expect(history.size).toBe(1);
+      expect(history.docs[0].data()).toMatchObject({
+        type: "match_cancelled",
+        data: {matchId: FUTURE},
+      });
+    });
+  });
+
+  it("não avisa sobre a partida que já aconteceu", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const history = await getDocs(
+        collection(context.firestore(), "users", OTHER, "notificationHistory"),
+      );
+
+      expect(history.docs.every((entry) => entry.data().data?.matchId !== PAST)).toBe(true);
+    });
+  });
+
+  it("sai da partida alheia, some do time e libera a vaga", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const match = await getDoc(doc(database, "matches", ALHEIA));
+
+      // A partida é de outra pessoa: continua de pé, sem ele.
+      expect(match.exists()).toBe(true);
+      expect(match.data()?.participants ?? []).not.toContain(uid);
+      expect((await getDoc(doc(database, "matches", ALHEIA, "participants", uid))).exists())
+        .toBe(false);
+      // A chave no mapa de times sobrevivia à saída e escalava um fantasma.
+      expect(Object.keys(match.data()?.teamAssignments ?? {})).not.toContain(uid);
+    });
+  });
+
+  it("tira o VIP da série e o banimento da partida", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+
+      expect(
+        (await getDoc(doc(database, "matchSeries", "serie-alheia", "vipPlayers", uid))).exists(),
+      ).toBe(false);
+      expect(
+        (await getDoc(doc(database, "matches", ALHEIA, "bannedUsers", uid))).exists(),
+      ).toBe(false);
+    });
+  });
+
+  it("tira o autor das avaliações em que o uid era o id do documento", async () => {
+    await seedEverything();
+
+    expect((await call("deleteAccount", {})).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const matchRatings = await getDocs(
+        collection(database, "matches", ALHEIA, "matchRatings"),
+      );
+      const organizerRatings = await getDocs(
+        collection(database, "matches", ALHEIA, "organizerRatings"),
+      );
+      const skillRatings = await getDocs(collection(database, "profiles", OTHER, "skillRatings"));
+
+      // A média está guardada no perfil de quem foi avaliado: apagar o
+      // documento deixaria a nota de outra pessoa errada para sempre.
+      expect(matchRatings.size).toBe(1);
+      expect(matchRatings.docs[0].id).not.toContain(uid);
+      expect(matchRatings.docs[0].data().raterUserId).toBeNull();
+
+      expect(organizerRatings.size).toBe(1);
+      expect(organizerRatings.docs[0].id).not.toContain(uid);
+      expect(organizerRatings.docs[0].data().raterUserId).toBeNull();
+
+      expect(skillRatings.size).toBe(1);
+      expect(skillRatings.docs[0].id).not.toContain(uid);
+      expect(skillRatings.docs[0].data().organizerId).toBeNull();
     });
   });
 
@@ -1897,5 +2055,129 @@ describe("deleteAccount — limpeza completa", () => {
     expect((await call("deleteAccount", {})).ok).toBe(true);
     // O token ainda é válido por um tempo; repetir não pode explodir.
     expect((await call("deleteAccount", {})).ok).toBe(true);
+  });
+});
+
+describe("verificação de conta", () => {
+  let verifiedPhone: string;
+  let phoneSequence = 0;
+
+  // O emulador de Auth recusa o mesmo telefone em duas contas, e as contas dos
+  // casos anteriores continuam lá: cada caso usa um número próprio.
+  beforeEach(() => {
+    phoneSequence += 1;
+    verifiedPhone = `+55119123${45678 + phoneSequence}`;
+  });
+
+  async function setEnforcement(enforced: boolean | null) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const ref = doc(context.firestore(), "config", "verification");
+      if (enforced === null) {
+        await setDoc(ref, {});
+      } else {
+        await setDoc(ref, {enforced});
+      }
+    });
+  }
+
+  /**
+   * O emulador de Auth grava e-mail verificado e telefone pelo endpoint de
+   * admin; as claims só entram no próximo token, por isso o login de novo.
+   */
+  async function verifyAccount(changes: {emailVerified?: boolean; phoneNumber?: string}): Promise<string> {
+    const update = await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:update?key=fake-api-key", {
+      method: "POST",
+      headers: {"content-type": "application/json", authorization: "Bearer owner"},
+      body: JSON.stringify({localId: uid, ...changes}),
+    });
+    expect(update.ok, await update.clone().text()).toBe(true);
+    const response = await fetch(
+      "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key",
+      {
+        method: "POST",
+        headers: {"content-type": "application/json"},
+        body: JSON.stringify({email: userEmail, password: "correct-horse-battery-staple", returnSecureToken: true}),
+      },
+    );
+    expect(response.ok, await response.clone().text()).toBe(true);
+    return ((await response.json()) as {idToken: string}).idToken;
+  }
+
+  async function errorOf(response: Response): Promise<{status?: string; message?: string}> {
+    return ((await response.json()) as {error?: {status?: string; message?: string}}).error ?? {};
+  }
+
+  it("com a exigência ligada, conta sem verificação não entra em partida", async () => {
+    await setEnforcement(true);
+
+    const response = await call("joinMatch", {matchId: "partida-inexistente"});
+    const error = await errorOf(response);
+
+    expect(error.status).toBe("FAILED_PRECONDITION");
+    expect(error.message).toBe("Verification required: email");
+  });
+
+  it("com só o e-mail verificado, o que falta é o telefone", async () => {
+    await setEnforcement(true);
+    const token = await verifyAccount({emailVerified: true});
+
+    const error = await errorOf(await call("joinMatch", {matchId: "partida-inexistente"}, token));
+
+    expect(error.message).toBe("Verification required: phone");
+  });
+
+  it("conta verificada passa pela exigência e segue para a validação normal", async () => {
+    await setEnforcement(true);
+    const token = await verifyAccount({emailVerified: true, phoneNumber: verifiedPhone});
+
+    const error = await errorOf(await call("joinMatch", {matchId: "partida-inexistente"}, token));
+
+    expect(error.status).toBe("NOT_FOUND");
+  });
+
+  it("com a exigência desligada ou ausente, ninguém é barrado", async () => {
+    await setEnforcement(false);
+    expect((await errorOf(await call("joinMatch", {matchId: "partida-inexistente"}))).status).toBe("NOT_FOUND");
+
+    await setEnforcement(null);
+    expect((await errorOf(await call("joinMatch", {matchId: "partida-inexistente"}))).status).toBe("NOT_FOUND");
+  });
+
+  it("isentas continuam funcionando para conta sem verificação", async () => {
+    await setEnforcement(true);
+
+    const exported = await call("exportUserData", {});
+    expect(exported.ok).toBe(true);
+
+    const left = await errorOf(await call("leaveMatch", {matchId: "partida-inexistente"}));
+    expect(left.status).toBe("NOT_FOUND");
+    expect(left.message ?? "").not.toContain("Verification required");
+  });
+
+  it("sincronizar copia o telefone assinado para os dados privados", async () => {
+    const token = await verifyAccount({emailVerified: true, phoneNumber: verifiedPhone});
+
+    const response = await call("syncVerificationStatus", {}, token);
+    expect(response.ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const privateData = await getDoc(doc(database, "profiles", uid, "private", "data"));
+      const profile = await getDoc(doc(database, "profiles", uid));
+
+      expect(privateData.data()?.phone).toBe(verifiedPhone);
+      expect(profile.data()).toMatchObject({emailVerified: true, phoneVerified: true});
+    });
+  });
+
+  it("sem telefone na conta, sincronizar não grava telefone", async () => {
+    const token = await verifyAccount({emailVerified: true});
+
+    expect((await call("syncVerificationStatus", {}, token)).ok).toBe(true);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const privateData = await getDoc(doc(context.firestore(), "profiles", uid, "private", "data"));
+      expect(privateData.data()?.phone ?? null).toBeNull();
+    });
   });
 });

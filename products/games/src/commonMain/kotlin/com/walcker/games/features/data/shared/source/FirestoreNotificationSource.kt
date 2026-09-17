@@ -20,8 +20,8 @@ internal class FirestoreNotificationSource(
     override suspend fun getNotificationHistory(
         userId: String,
         limit: Int,
-    ): List<NotificationHistoryItem> {
-        return firestore
+    ): List<NotificationHistoryItem> =
+        firestore
             .collection("users/$userId/notificationHistory")
             .query()
             .orderBy("receivedAt", direction = "desc")
@@ -43,7 +43,6 @@ internal class FirestoreNotificationSource(
                 }
             }
             ?: emptyList()
-    }
 
     override suspend fun markNotificationAsRead(
         userId: String,

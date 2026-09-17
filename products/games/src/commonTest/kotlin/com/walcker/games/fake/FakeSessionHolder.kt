@@ -23,9 +23,11 @@ internal fun testUserSession(
     uid: String = "user-1",
     email: String? = "ana@example.com",
     displayName: String? = "Ana Souza",
+    phoneNumber: String? = null,
 ): UserSession =
     UserSession(
         uid = uid,
         email = email,
         displayName = displayName,
+        phoneNumber = phoneNumber,
     )

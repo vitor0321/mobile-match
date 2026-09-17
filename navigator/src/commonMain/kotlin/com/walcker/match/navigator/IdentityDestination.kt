@@ -6,4 +6,8 @@ public interface IdentityDestination {
     fun login(): Screen
 
     fun signUp(): Screen
+
+    fun verification(): Screen
+
+    fun changePhone(): Screen
 }

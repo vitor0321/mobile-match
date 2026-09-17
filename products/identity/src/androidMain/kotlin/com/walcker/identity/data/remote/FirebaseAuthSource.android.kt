@@ -3,9 +3,9 @@ package com.walcker.identity.features.data.remote
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.walcker.identity.api.UserSession
+import com.walcker.identity.features.domain.error.VerificationError
 import com.walcker.identity.features.domain.usecase.RequiresRecentLoginException
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.identity.strings.resolveStringsOrDefault
@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import com.walcker.identity.features.data.remote.FirebaseAuthSource as FeatureFirebaseAuthSource
 
@@ -33,12 +34,12 @@ internal class AndroidFirebaseAuthSource(
     override val currentUser: Flow<UserSession?> =
         callbackFlow {
             val listener =
-                FirebaseAuth.AuthStateListener { auth ->
+                FirebaseAuth.IdTokenListener { auth: FirebaseAuth ->
                     trySend(auth.currentUser?.toUserSession())
                 }
-            firebaseAuth.addAuthStateListener(listener)
+            firebaseAuth.addIdTokenListener(listener)
             trySend(firebaseAuth.currentUser?.toUserSession())
-            awaitClose { firebaseAuth.removeAuthStateListener(listener) }
+            awaitClose { firebaseAuth.removeIdTokenListener(listener) }
         }.distinctUntilChanged()
 
     override suspend fun signIn(
@@ -119,12 +120,23 @@ internal class AndroidFirebaseAuthSource(
                     continuation.cancel()
                 }
         }
-}
 
-private fun FirebaseUser.toUserSession(): UserSession =
-    UserSession(
-        uid = uid,
-        email = email,
-        displayName = displayName,
-        creationTimestamp = metadata?.creationTimestamp,
-    )
+    override suspend fun refreshSession(): Result<UserSession> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw VerificationError.Unknown
+            user.reload().await()
+            val refreshed = firebaseAuth.currentUser ?: throw VerificationError.Unknown
+            refreshed.getIdToken(true).await()
+            refreshed.toUserSession()
+        }.onFailure { error -> if (error is CancellationException) throw error }
+            .recoverCatching { error -> throw error.toVerificationError() }
+
+    override suspend fun sendEmailVerification(): Result<Unit> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw VerificationError.Unknown
+            firebaseAuth.useAppLanguage()
+            user.sendEmailVerification().await()
+            Unit
+        }.onFailure { error -> if (error is CancellationException) throw error }
+            .recoverCatching { error -> throw error.toVerificationError() }
+}

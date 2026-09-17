@@ -10,4 +10,5 @@ internal val EnIdentityStrings =
         nativeAuth = nativeAuthStringsEn,
         signUp = signUpStringsEn,
         forgotPassword = forgotPasswordStringsEn,
+        verification = verificationStringsEn,
     )

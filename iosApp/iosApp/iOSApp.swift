@@ -34,14 +34,31 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         // Set UNUserNotificationCenter delegate for handling notifications
         UNUserNotificationCenter.current().delegate = self
 
-        // Request notification permissions
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            DispatchQueue.main.async {
-                if granted {
-                    application.registerForRemoteNotifications()
-                }
-            }
-        }
+        // Register for APNs regardless of the notification permission: the silent
+        // push Firebase Phone Auth uses to prove the device does not need one.
+        // Gating this on `granted` sent everyone who declined notifications to the
+        // reCAPTCHA web fallback.
+        application.registerForRemoteNotifications()
+
+        // Request notification permissions (user-visible notifications only)
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        Auth.auth().setAPNSToken(deviceToken, type: .unknown)
+        Messaging.messaging().apnsToken = deviceToken
+    }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        _ = Auth.auth().canHandleNotification(userInfo)
+        completionHandler(.noData)
     }
 
     func application(
@@ -49,7 +66,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey : Any] = [:],
     ) -> Bool {
-        GIDSignIn.sharedInstance.handle(url)
+        if Auth.auth().canHandle(url) {
+            return true
+        }
+        return GIDSignIn.sharedInstance.handle(url)
     }
 
     // MARK: - MessagingDelegate
@@ -125,6 +145,9 @@ struct iOSApp: App {
         WindowGroup {
             ContentView()
                 .onOpenURL { url in
+                    if Auth.auth().canHandle(url) {
+                        return
+                    }
                     print("DEEPLINK_DEBUG onOpenURL received url=\(url.absoluteString)")
                     guard let matchId = matchIdFromMatchLink(url) else {
                         print("DEEPLINK_DEBUG onOpenURL could not extract matchId")

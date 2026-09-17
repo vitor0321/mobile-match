@@ -1,46 +1,73 @@
 "use strict";
-// Verificação de e-mail e telefone (Phase 6).
+// Verificação de e-mail e telefone.
 //
 // Quem verifica é o Firebase Auth, não este código: o app dispara
-// `sendEmailVerification()` ou o fluxo de SMS, e o resultado vira claim no ID
-// token, assinado. O papel do servidor é só espelhar essa claim no perfil, para
-// que outras pessoas vejam o selo — e, se um dia for ligado, exigir.
+// `sendEmailVerification()` ou o fluxo de SMS, e o resultado vira claim
+// assinada no ID token. O servidor espelha essa claim no perfil e, quando
+// `config/verification.enforced` está ligado, exige as duas nas callables
+// que agem sobre outras pessoas.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VERIFICATION_POLICY = void 0;
+exports.ADMIN_CALLABLES = exports.VERIFICATION_EXEMPT_CALLABLES = exports.VERIFIED_CALLABLES = exports.FULL_VERIFICATION = void 0;
 exports.verificationFromClaims = verificationFromClaims;
+exports.phoneNumberFromClaims = phoneNumberFromClaims;
+exports.parseEnforcementFlag = parseEnforcementFlag;
 exports.meetsRequirement = meetsRequirement;
-exports.isEnforcementEnabled = isEnforcementEnabled;
 exports.missingVerification = missingVerification;
+/** Com a exigência ligada, toda ação protegida pede as duas verificações. */
+exports.FULL_VERIFICATION = { email: true, phone: true };
+/** Callables que agem sobre outras pessoas e por isso exigem conta verificada. */
+exports.VERIFIED_CALLABLES = [
+    "joinMatch",
+    "cancelMatch",
+    "cancelMatchSeries",
+    "submitPlayerRating",
+    "submitOrganizerRating",
+    "submitSkillRating",
+    "submitMatchRating",
+    "submitReport",
+    "setVipStatus",
+    "confirmWaitlistedPlayer",
+    "banPlayerFromMatch",
+];
+/**
+ * Isentas de propósito. Excluir e exportar são garantias da LGPD; travar a
+ * saída prende uma vaga que outra pessoa usaria; e sincronizar é o próprio
+ * caminho para ficar verificado.
+ */
+exports.VERIFICATION_EXEMPT_CALLABLES = [
+    "deleteAccount",
+    "exportUserData",
+    "leaveMatch",
+    "syncVerificationStatus",
+];
+/**
+ * Ferramenta da equipe, não ação entre usuários: quem barra é a custom claim
+ * de admin, e exigir verificação aqui não protegeria ninguém.
+ */
+exports.ADMIN_CALLABLES = ["adminSetModeration"];
 /**
  * Lê o estado de verificação das claims do ID token.
  *
  * O token é a única fonte que vale: o cliente pode mandar qualquer coisa no
- * payload, mas não forja uma claim assinada pelo Firebase.
- *
- * `phone_number` só aparece quando existe credencial de telefone na conta, e é
- * por isso que a presença dele basta como prova — não há telefone não
- * verificado no Firebase Auth.
+ * payload, mas não forja uma claim assinada. `phone_number` só existe depois
+ * do SMS, por isso a presença dele basta como prova.
  */
 function verificationFromClaims(claims) {
     return {
         emailVerified: claims?.email_verified === true,
-        phoneVerified: typeof claims?.phone_number === "string" && claims.phone_number.length > 0,
+        phoneVerified: phoneNumberFromClaims(claims) !== null,
     };
 }
-/**
- * O que cada ação exige.
- *
- * Tudo desligado de propósito. Ligar qualquer um destes tranca, de uma hora
- * para outra, todo mundo que já usa o app e nunca verificou nada — a capacidade
- * existe, a decisão de exigir é de produto e precisa de aviso antes.
- *
- * Ligar é trocar `false` por `true` e reimplantar.
- */
-exports.VERIFICATION_POLICY = {
-    createMatch: { email: false, phone: false },
-    joinMatch: { email: false, phone: false },
-};
-/** A conta atende ao exigido para a ação? */
+/** O telefone assinado, ou null. É o único valor confiável para gravar. */
+function phoneNumberFromClaims(claims) {
+    const phone = claims?.phone_number;
+    return typeof phone === "string" && phone.length > 0 ? phone : null;
+}
+/** `config/verification`: só o booleano `true` liga. Documento ausente é desligado. */
+function parseEnforcementFlag(data) {
+    return data?.enforced === true;
+}
+/** A conta atende ao exigido? */
 function meetsRequirement(status, requirement) {
     if (requirement.email && !status.emailVerified)
         return false;
@@ -48,11 +75,7 @@ function meetsRequirement(status, requirement) {
         return false;
     return true;
 }
-/** Alguma ação exige alguma coisa? Serve para pular leitura desnecessária. */
-function isEnforcementEnabled(requirement) {
-    return requirement.email || requirement.phone;
-}
-/** Mensagem única, para o app poder mapear sem depender de texto. */
+/** O que falta, e-mail primeiro, para o app poder mapear sem depender de texto. */
 function missingVerification(status, requirement) {
     if (requirement.email && !status.emailVerified)
         return "email";

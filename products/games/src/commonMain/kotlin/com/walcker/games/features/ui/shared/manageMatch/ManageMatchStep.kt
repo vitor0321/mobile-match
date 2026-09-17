@@ -107,7 +107,12 @@ internal fun ManageMatchContent(
 ) {
     val manage = strings.manageMatch
     val match = state.match
-    val nowSeconds = remember { kotlin.time.Clock.System.now().epochSeconds }
+    val nowSeconds =
+        remember {
+            kotlin.time.Clock.System
+                .now()
+                .epochSeconds
+        }
 
     Column(
         modifier =

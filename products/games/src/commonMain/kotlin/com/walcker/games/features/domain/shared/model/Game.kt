@@ -45,8 +45,7 @@ internal data class Game(
 
 internal fun Game.isDiscoverable(nowSeconds: Long): Boolean = status != MatchStatus.CANCELLED && !isOver(nowSeconds)
 
-internal fun Game.isInProgress(nowSeconds: Long): Boolean =
-    status != MatchStatus.CANCELLED && nowSeconds in startsAtSeconds until endsAtSeconds
+internal fun Game.isInProgress(nowSeconds: Long): Boolean = status != MatchStatus.CANCELLED && nowSeconds in startsAtSeconds until endsAtSeconds
 
 internal fun Game.canBeRatedByParticipant(
     userId: String?,

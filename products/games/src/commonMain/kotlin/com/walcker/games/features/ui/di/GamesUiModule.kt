@@ -93,6 +93,7 @@ internal val gamesUiModule =
                 playerRepository = get(),
                 stringsHolder = get(),
                 logoutService = get(),
+                accountDeletionService = get(),
                 observeAvailability = get(),
                 setAvailability = get(),
                 setAvailableSports = get(),

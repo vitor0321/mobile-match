@@ -162,7 +162,12 @@ internal fun MyMatchesContent(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                val nowSeconds = remember { kotlin.time.Clock.System.now().epochSeconds }
+                val nowSeconds =
+                    remember {
+                        kotlin.time.Clock.System
+                            .now()
+                            .epochSeconds
+                    }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding =

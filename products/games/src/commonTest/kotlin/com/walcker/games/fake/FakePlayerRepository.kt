@@ -48,8 +48,7 @@ internal class FakePlayerRepository(
         userIds: List<String>,
     ): Result<Map<String, PlayerRatingSummary>> = skillRatingSummaryResult
 
-    override suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?> =
-        organizerRatingSummaryResult
+    override suspend fun getOrganizerRatingSummary(organizerId: String): Result<PlayerRatingSummary?> = organizerRatingSummaryResult
 
     override suspend fun getPlayerRatings(
         userId: String,

@@ -4,6 +4,7 @@ import cocoapods.FirebaseAuth.FIRAuth
 import cocoapods.FirebaseAuth.FIRAuthDataResult
 import cocoapods.FirebaseAuth.FIRUser
 import com.walcker.identity.api.UserSession
+import com.walcker.identity.features.domain.error.VerificationError
 import com.walcker.identity.features.domain.usecase.RequiresRecentLoginException
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.identity.strings.resolveStringsOrDefault
@@ -37,11 +38,11 @@ internal class IosFirebaseAuthSource(
     override val currentUser: Flow<UserSession?> =
         callbackFlow {
             val handle =
-                auth.addAuthStateDidChangeListener { _, user ->
+                auth.addIDTokenDidChangeListener { _, user ->
                     trySend(user?.toUserSession())
                 }
             trySend(auth.currentUser()?.toUserSession())
-            awaitClose { auth.removeAuthStateDidChangeListener(handle) }
+            awaitClose { auth.removeIDTokenDidChangeListener(handle) }
         }.distinctUntilChanged()
 
     override suspend fun signIn(
@@ -122,6 +123,34 @@ internal class IosFirebaseAuthSource(
             }
         }
     }
+
+    override suspend fun refreshSession(): Result<UserSession> {
+        val user = auth.currentUser() ?: return Result.failure(VerificationError.Unknown)
+        val reloadError =
+            suspendCancellableCoroutine<NSError?> { continuation ->
+                user.reloadWithCompletion { error -> continuation.resume(error) }
+            }
+        if (reloadError != null) return Result.failure(reloadError.toVerificationError())
+        val refreshed = auth.currentUser() ?: return Result.failure(VerificationError.Unknown)
+        val tokenError =
+            suspendCancellableCoroutine<NSError?> { continuation ->
+                refreshed.getIDTokenForcingRefresh(true) { _, error -> continuation.resume(error) }
+            }
+        if (tokenError != null) return Result.failure(tokenError.toVerificationError())
+        return Result.success(refreshed.toUserSession())
+    }
+
+    override suspend fun sendEmailVerification(): Result<Unit> {
+        val user = auth.currentUser() ?: return Result.failure(VerificationError.Unknown)
+        auth.useAppLanguage()
+        return suspendCancellableCoroutine { continuation ->
+            user.sendEmailVerificationWithCompletion { error ->
+                continuation.resume(
+                    if (error == null) Result.success(Unit) else Result.failure(error.toVerificationError()),
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -155,4 +184,6 @@ internal fun FIRUser.toUserSession(): UserSession =
         email = email(),
         displayName = displayName(),
         creationTimestamp = metadata()?.creationDate()?.timeIntervalSince1970()?.let { (it * 1000).toLong() },
+        isEmailVerified = emailVerified(),
+        phoneNumber = phoneNumber()?.takeIf { it.isNotBlank() },
     )

@@ -93,7 +93,7 @@ public enum class CedarButtonTone {
     Danger,
 }
 
-private const val DisabledBorderAlpha = 0.38f
+private const val DISABLED_BORDER_ALPHA = 0.38f
 
 @Composable
 public fun CedarSecondaryButton(
@@ -120,7 +120,7 @@ public fun CedarSecondaryButton(
             CedarButtonTone.Danger ->
                 BorderStroke(
                     width = defaultBorder.width,
-                    color = toneColor.copy(alpha = if (isActive) 1f else DisabledBorderAlpha),
+                    color = toneColor.copy(alpha = if (isActive) 1f else DISABLED_BORDER_ALPHA),
                 )
         }
     OutlinedButton(

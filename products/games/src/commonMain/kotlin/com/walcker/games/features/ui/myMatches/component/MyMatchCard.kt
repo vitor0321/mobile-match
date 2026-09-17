@@ -30,7 +30,7 @@ import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.datetime.formatWhen
 
 private val ActionLoadingSize = 28.dp
-private const val StartsSoonThresholdSeconds = 3 * 60 * 60
+private const val STARTS_SOON_THRESHOLD_SECONDS = 3 * 60 * 60
 
 @Composable
 internal fun MyMatchCard(
@@ -61,7 +61,7 @@ internal fun MyMatchCard(
     val startsSoon =
         statusLabel == null &&
             game.startsAtSeconds > nowSeconds &&
-            game.startsAtSeconds - nowSeconds <= StartsSoonThresholdSeconds
+            game.startsAtSeconds - nowSeconds <= STARTS_SOON_THRESHOLD_SECONDS
 
     Card(
         onClick = onClick,

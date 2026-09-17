@@ -56,7 +56,7 @@ internal class GameListStepModel(
     private val _effects = Channel<GameListEffect>(Channel.BUFFERED)
     val effects: Flow<GameListEffect> = _effects.receiveAsFlow()
 
-    private val _isNearestFallback = MutableStateFlow(false)
+    private val isNearestFallback = MutableStateFlow(false)
 
     init {
         observePreferencesAndMatches()
@@ -94,7 +94,7 @@ internal class GameListStepModel(
             }
             is GameListEvents.SetRadius -> {
                 screenModelScope.launch {
-                    _isNearestFallback.value = false
+                    isNearestFallback.value = false
                     preferences.setRadiusKm(event.radiusKm)
                     refresh()
                 }
@@ -114,7 +114,7 @@ internal class GameListStepModel(
             preferences.radiusKm,
             repository.observeMatches(),
             repository.observeHasMoreMatches(),
-            _isNearestFallback,
+            isNearestFallback,
         ) { sport, radius, games, hasMore, isFallback ->
             GamesUpdate(sport, radius, games, hasMore, isFallback)
         }.onEach { update ->
@@ -155,7 +155,11 @@ internal class GameListStepModel(
             repository
                 .refresh(radiusKm)
                 .onSuccess {
-                    preferences.setLastSyncAt(kotlin.time.Clock.System.now().toEpochMilliseconds())
+                    preferences.setLastSyncAt(
+                        kotlin.time.Clock.System
+                            .now()
+                            .toEpochMilliseconds(),
+                    )
                     val hasNearbyMatches = repository.observeMatches().first().isNotEmpty()
                     if (isFirstLaunch && !hasNearbyMatches) {
                         showNearestFallback()
@@ -179,7 +183,7 @@ internal class GameListStepModel(
         repository
             .refresh(NEAREST_FALLBACK_RADIUS_KM)
             .onSuccess {
-                _isNearestFallback.value = true
+                isNearestFallback.value = true
                 _state.update { it.copy(isLoading = false) }
             }.onFailure { error ->
                 crashReporter.recordException(error)

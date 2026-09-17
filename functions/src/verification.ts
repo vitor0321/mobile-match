@@ -1,9 +1,10 @@
-// Verificação de e-mail e telefone (Phase 6).
+// Verificação de e-mail e telefone.
 //
 // Quem verifica é o Firebase Auth, não este código: o app dispara
-// `sendEmailVerification()` ou o fluxo de SMS, e o resultado vira claim no ID
-// token, assinado. O papel do servidor é só espelhar essa claim no perfil, para
-// que outras pessoas vejam o selo — e, se um dia for ligado, exigir.
+// `sendEmailVerification()` ou o fluxo de SMS, e o resultado vira claim
+// assinada no ID token. O servidor espelha essa claim no perfil e, quando
+// `config/verification.enforced` está ligado, exige as duas nas callables
+// que agem sobre outras pessoas.
 
 /** O que o perfil publica como sinal de confiança. */
 export type VerificationStatus = {
@@ -11,40 +12,70 @@ export type VerificationStatus = {
   phoneVerified: boolean;
 };
 
+export type VerificationRequirement = {email: boolean; phone: boolean};
+
+/** Com a exigência ligada, toda ação protegida pede as duas verificações. */
+export const FULL_VERIFICATION: VerificationRequirement = {email: true, phone: true};
+
+/** Callables que agem sobre outras pessoas e por isso exigem conta verificada. */
+export const VERIFIED_CALLABLES = [
+  "joinMatch",
+  "cancelMatch",
+  "cancelMatchSeries",
+  "submitPlayerRating",
+  "submitOrganizerRating",
+  "submitSkillRating",
+  "submitMatchRating",
+  "submitReport",
+  "setVipStatus",
+  "confirmWaitlistedPlayer",
+  "banPlayerFromMatch",
+] as const;
+
+/**
+ * Isentas de propósito. Excluir e exportar são garantias da LGPD; travar a
+ * saída prende uma vaga que outra pessoa usaria; e sincronizar é o próprio
+ * caminho para ficar verificado.
+ */
+export const VERIFICATION_EXEMPT_CALLABLES = [
+  "deleteAccount",
+  "exportUserData",
+  "leaveMatch",
+  "syncVerificationStatus",
+] as const;
+
+/**
+ * Ferramenta da equipe, não ação entre usuários: quem barra é a custom claim
+ * de admin, e exigir verificação aqui não protegeria ninguém.
+ */
+export const ADMIN_CALLABLES = ["adminSetModeration"] as const;
+
 /**
  * Lê o estado de verificação das claims do ID token.
  *
  * O token é a única fonte que vale: o cliente pode mandar qualquer coisa no
- * payload, mas não forja uma claim assinada pelo Firebase.
- *
- * `phone_number` só aparece quando existe credencial de telefone na conta, e é
- * por isso que a presença dele basta como prova — não há telefone não
- * verificado no Firebase Auth.
+ * payload, mas não forja uma claim assinada. `phone_number` só existe depois
+ * do SMS, por isso a presença dele basta como prova.
  */
 export function verificationFromClaims(claims: Record<string, unknown> | undefined): VerificationStatus {
   return {
     emailVerified: claims?.email_verified === true,
-    phoneVerified: typeof claims?.phone_number === "string" && claims.phone_number.length > 0,
+    phoneVerified: phoneNumberFromClaims(claims) !== null,
   };
 }
 
-/**
- * O que cada ação exige.
- *
- * Tudo desligado de propósito. Ligar qualquer um destes tranca, de uma hora
- * para outra, todo mundo que já usa o app e nunca verificou nada — a capacidade
- * existe, a decisão de exigir é de produto e precisa de aviso antes.
- *
- * Ligar é trocar `false` por `true` e reimplantar.
- */
-export const VERIFICATION_POLICY = {
-  createMatch: {email: false, phone: false},
-  joinMatch: {email: false, phone: false},
-} as const;
+/** O telefone assinado, ou null. É o único valor confiável para gravar. */
+export function phoneNumberFromClaims(claims: Record<string, unknown> | undefined): string | null {
+  const phone = claims?.phone_number;
+  return typeof phone === "string" && phone.length > 0 ? phone : null;
+}
 
-export type VerificationRequirement = {email: boolean; phone: boolean};
+/** `config/verification`: só o booleano `true` liga. Documento ausente é desligado. */
+export function parseEnforcementFlag(data: Record<string, unknown> | undefined): boolean {
+  return data?.enforced === true;
+}
 
-/** A conta atende ao exigido para a ação? */
+/** A conta atende ao exigido? */
 export function meetsRequirement(
   status: VerificationStatus,
   requirement: VerificationRequirement,
@@ -54,12 +85,7 @@ export function meetsRequirement(
   return true;
 }
 
-/** Alguma ação exige alguma coisa? Serve para pular leitura desnecessária. */
-export function isEnforcementEnabled(requirement: VerificationRequirement): boolean {
-  return requirement.email || requirement.phone;
-}
-
-/** Mensagem única, para o app poder mapear sem depender de texto. */
+/** O que falta, e-mail primeiro, para o app poder mapear sem depender de texto. */
 export function missingVerification(
   status: VerificationStatus,
   requirement: VerificationRequirement,
