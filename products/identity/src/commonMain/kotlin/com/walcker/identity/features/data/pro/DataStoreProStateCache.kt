@@ -10,19 +10,23 @@ import kotlinx.coroutines.flow.first
 internal class DataStoreProStateCache(
     private val dataStore: DataStore<Preferences>,
 ) : ProStateCache {
-    override suspend fun read(uid: String): Boolean =
-        dataStore.data.first()[isProKey(uid)] ?: false
+    override suspend fun read(uid: String): Boolean = dataStore.data.first()[isProKey(uid)] ?: false
 
-    override suspend fun save(uid: String, isPro: Boolean) {
+    override suspend fun save(
+        uid: String,
+        isPro: Boolean,
+    ) {
         dataStore.edit { preferences ->
             preferences[isProKey(uid)] = isPro
         }
     }
 
-    override suspend fun readRegistrationDate(uid: String): String? =
-        dataStore.data.first()[registrationDateKey(uid)]
+    override suspend fun readRegistrationDate(uid: String): String? = dataStore.data.first()[registrationDateKey(uid)]
 
-    override suspend fun saveRegistrationDate(uid: String, dateStr: String) {
+    override suspend fun saveRegistrationDate(
+        uid: String,
+        dateStr: String,
+    ) {
         dataStore.edit { preferences ->
             preferences[registrationDateKey(uid)] = dateStr
         }

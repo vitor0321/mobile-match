@@ -1,0 +1,53 @@
+build:
+  maxIssues: 2147483647 # esta task roda com ignoreFailures = true de qualquer forma (ver build.gradle.kts) — nunca deve travar o build
+
+config:
+  validation: true
+
+complexity:
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 12
+  NestedBlockDepth:
+    active: true
+    threshold: 4
+  LongParameterList:
+    active: true
+    functionThreshold: 4
+    constructorThreshold: 5
+    ignoreDefaultParameters: true
+  LongMethod:
+    active: true
+    threshold: 150
+  TooManyFunctions:
+    active: true
+  LargeClass:
+    active: true
+
+style:
+  ReturnCount:
+    active: true
+
+performance:
+  SpreadOperator:
+    active: true
+
+coroutines:
+  InjectDispatcher:
+    active: true # pressão arquitetural real; o projeto não tem convenção de
+                 # injeção de dispatcher hoje, então isso é débito visível, não bloqueio
+
+Compose:
+  CompositionLocalAllowlist:
+    active: true # allowlist-based, falso positivo esperado em CompositionLocal
+                 # intencional (ex: provedor de strings) — ver detekt.yml
+  ParameterNaming:
+    active: true
+  ComposableParamOrder:
+    active: true
+  ModifierWithoutDefault:
+    active: true
+  ModifierMissing:
+    active: true
+  MutableStateAutoboxing:
+    active: true

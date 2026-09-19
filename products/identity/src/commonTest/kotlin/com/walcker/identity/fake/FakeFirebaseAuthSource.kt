@@ -19,16 +19,25 @@ internal class FakeFirebaseAuthSource(
 
     var lastSignInInput: Pair<String, String>? = null
     var lastSignUpInput: Pair<String, String>? = null
+    var lastSignUpDisplayName: String? = null
     var deleteCurrentUserCallCount: Int = 0
     var signOutCallCount: Int = 0
 
-    override suspend fun signIn(email: String, password: String): Result<UserSession> {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession> {
         lastSignInInput = email to password
         return signInResult
     }
 
-    override suspend fun signUp(email: String, password: String): Result<UserSession> {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserSession> {
         lastSignUpInput = email to password
+        lastSignUpDisplayName = displayName
         return signUpResult
     }
 
@@ -42,12 +51,43 @@ internal class FakeFirebaseAuthSource(
         return deleteCurrentUserResult
     }
 
+    var lastReauthenticationPassword: String? = null
+    var reauthenticateWithPasswordResult: Result<Unit> = Result.success(Unit)
+    var signInProviderResult: Result<String?> = Result.success("password")
+
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> {
+        lastReauthenticationPassword = password
+        return reauthenticateWithPasswordResult
+    }
+
+    override suspend fun signInProvider(): Result<String?> = signInProviderResult
+
     var lastSendPasswordResetEmailInput: String? = null
     private var sendPasswordResetEmailResult: Result<Unit> = Result.success(Unit)
 
     override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         lastSendPasswordResetEmailInput = email
         return sendPasswordResetEmailResult
+    }
+
+    var refreshSessionResult: Result<UserSession>? = null
+    var refreshSessionCallCount: Int = 0
+    var sendEmailVerificationResult: Result<Unit> = Result.success(Unit)
+    var sendEmailVerificationCallCount: Int = 0
+
+    override suspend fun refreshSession(): Result<UserSession> {
+        refreshSessionCallCount++
+        val result =
+            refreshSessionResult
+                ?: currentUserState.value?.let { Result.success(it) }
+                ?: Result.failure(IllegalStateException("refreshSession without a user"))
+        result.onSuccess { currentUserState.value = it }
+        return result
+    }
+
+    override suspend fun sendEmailVerification(): Result<Unit> {
+        sendEmailVerificationCallCount++
+        return sendEmailVerificationResult
     }
 
     fun emitCurrentUser(userSession: UserSession?) {
@@ -74,4 +114,3 @@ internal class FakeFirebaseAuthSource(
         sendPasswordResetEmailResult = result
     }
 }
-

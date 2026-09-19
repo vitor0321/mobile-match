@@ -4,4 +4,6 @@ import com.walcker.identity.api.UserSession
 
 internal interface GoogleAuthSource {
     suspend fun signIn(): Result<UserSession>
+
+    suspend fun reauthenticate(): Result<Unit>
 }

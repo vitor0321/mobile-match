@@ -24,11 +24,15 @@ internal class FakeAuthRepository(
     var signInWithGoogleCallCount: Int = 0
     var signInWithAppleCallCount: Int = 0
     var lastSignUpInput: Pair<String, String>? = null
+    var lastSignUpDisplayName: String? = null
     var deleteAccountCallCount: Int = 0
     var signOutCallCount: Int = 0
     var lastSendPasswordResetEmailInput: String? = null
 
-    override suspend fun signIn(email: String, password: String): Result<UserSession> {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession> {
         lastSignInInput = email to password
         return signInResult
     }
@@ -43,14 +47,44 @@ internal class FakeAuthRepository(
         return signInWithAppleResult
     }
 
-    override suspend fun signUp(email: String, password: String): Result<UserSession> {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserSession> {
         lastSignUpInput = email to password
+        lastSignUpDisplayName = displayName
         return signUpResult
     }
 
     override suspend fun deleteAccount(): Result<Unit> {
         deleteAccountCallCount++
         return deleteAccountResult
+    }
+
+    var signInProviderResult: Result<String?> = Result.success("password")
+    var reauthenticateWithPasswordResult: Result<Unit> = Result.success(Unit)
+    var reauthenticateWithGoogleResult: Result<Unit> = Result.success(Unit)
+    var reauthenticateWithAppleResult: Result<Unit> = Result.success(Unit)
+    var lastReauthenticationPassword: String? = null
+    var reauthenticateWithGoogleCallCount: Int = 0
+    var reauthenticateWithAppleCallCount: Int = 0
+
+    override suspend fun signInProvider(): Result<String?> = signInProviderResult
+
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> {
+        lastReauthenticationPassword = password
+        return reauthenticateWithPasswordResult
+    }
+
+    override suspend fun reauthenticateWithGoogle(): Result<Unit> {
+        reauthenticateWithGoogleCallCount++
+        return reauthenticateWithGoogleResult
+    }
+
+    override suspend fun reauthenticateWithApple(): Result<Unit> {
+        reauthenticateWithAppleCallCount++
+        return reauthenticateWithAppleResult
     }
 
     override suspend fun signOut(): Result<Unit> {

@@ -1,7 +1,11 @@
 package com.walcker.match.core.analytics
 
+import cocoapods.FirebaseAnalytics.FIRAnalytics
+import kotlinx.cinterop.ExperimentalForeignApi
+
+@OptIn(ExperimentalForeignApi::class)
 internal class IosAnalyticsTracker : AnalyticsTracker {
-    override fun trackVerseRead(bookId: Int, chapter: Int) {}
-    override fun trackStrongViewed(strongNumber: String, language: String) {}
-    override fun trackChapterNavigated(direction: String) {}
+    override fun track(event: AnalyticsEvent) {
+        FIRAnalytics.logEventWithName(event.name, event.params as Map<Any?, *>)
+    }
 }

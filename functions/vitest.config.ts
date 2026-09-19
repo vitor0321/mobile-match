@@ -2,6 +2,7 @@ import {defineConfig} from "vitest/config";
 
 export default defineConfig({
   test: {
+    fileParallelism: false,
     projects: [
       {
         test: {
@@ -15,7 +16,6 @@ export default defineConfig({
           name: "rules",
           include: ["test/rules/**/*.test.ts"],
           environment: "node",
-          fileParallelism: false,
         },
       },
     ],

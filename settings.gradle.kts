@@ -1,4 +1,4 @@
-rootProject.name = "Match"
+rootProject.name = "JoinPlay"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
@@ -34,9 +34,10 @@ plugins {
 
 include(":app")
 include(":core")
+include(":firestore")
 include(":navigator")
 include(":cedarDS")
 include(":products:identity")
 include(":products:identity:screenshotTests")
 include(":products:games")
-include(":products:bible:screenshotTests")
+include(":products:games:screenshotTests")

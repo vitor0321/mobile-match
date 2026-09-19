@@ -1,9 +1,9 @@
 package com.walcker.identity
 
 import com.walcker.identity.features.ui.login.LoginStep
-import com.walcker.identity.features.ui.paywall.PaywallStep
-import com.walcker.identity.features.ui.profile.ProfileStep
 import com.walcker.identity.features.ui.signup.SignUpStep
+import com.walcker.identity.features.ui.verification.VerificationStep
+import com.walcker.identity.features.ui.verification.phone.ChangePhoneStep
 import com.walcker.match.navigator.IdentityDestination
 
 internal class IdentityDestinationImpl : IdentityDestination {
@@ -11,7 +11,7 @@ internal class IdentityDestinationImpl : IdentityDestination {
 
     override fun signUp() = SignUpStep()
 
-    override fun paywall() = PaywallStep()
+    override fun verification() = VerificationStep()
 
-    override fun profile() = ProfileStep()
+    override fun changePhone() = ChangePhoneStep()
 }

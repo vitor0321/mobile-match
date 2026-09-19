@@ -1,0 +1,92 @@
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+
+package com.walcker.games.screenshot
+
+import app.cash.paparazzi.DeviceConfig
+import app.cash.paparazzi.Paparazzi
+import com.walcker.games.features.ui.playerProfile.PlayerProfileContent
+import com.walcker.games.features.ui.playerProfile.PlayerProfileState
+import com.walcker.games.strings.PtBrGamesStrings
+import org.junit.Rule
+import org.junit.Test
+
+class PlayerProfileStepTest {
+    @get:Rule
+    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
+
+    private val loadedState =
+        PlayerProfileState(
+            userId = "user-1",
+            userName = "Ana Souza",
+            userEmail = "ana@example.com",
+            userPhone = "+55 (11) 98765-4321",
+            matchesOrganized = 5,
+            matchesParticipated = 12,
+            ratings = listOf(fakeRating(id = "1"), fakeRating(id = "2")),
+            averageRating = 4.6f,
+            totalRatings = 2,
+            isAvailable = true,
+        )
+
+    private fun snapshot(
+        state: PlayerProfileState,
+        darkTheme: Boolean,
+    ) {
+        paparazzi.snapshot {
+            GamesSnapshotTheme(darkTheme = darkTheme) {
+                PlayerProfileContent(state = state, onEvent = {}, strings = PtBrGamesStrings.playerProfile)
+            }
+        }
+    }
+
+    @Test
+    fun content_lightMode() = snapshot(loadedState, darkTheme = false)
+
+    @Test
+    fun content_darkMode() = snapshot(loadedState, darkTheme = true)
+
+    @Test
+    fun deleteAccountPassword_lightMode() =
+        snapshot(
+            loadedState.copy(showDeleteAccountDialog = true, isDeleteAccountPasswordRequired = true, deleteAccountPassword = "s3cret"),
+            darkTheme = false,
+        )
+
+    @Test
+    fun deleteAccountWrongPassword_darkMode() =
+        snapshot(
+            loadedState.copy(
+                showDeleteAccountDialog = true,
+                isDeleteAccountPasswordRequired = true,
+                deleteAccountPassword = "nope",
+                deleteAccountPasswordError = PtBrGamesStrings.playerProfile.deleteAccountWrongPassword,
+            ),
+            darkTheme = true,
+        )
+
+    @Test
+    fun visitor_lightMode() = snapshot(PlayerProfileState(), darkTheme = false)
+
+    @Test
+    fun loading_lightMode() = snapshot(PlayerProfileState(isLoading = true), darkTheme = false)
+
+    @Test
+    fun organizerAndPlayerRatings_lightMode() =
+        snapshot(
+            loadedState.copy(organizerAverageRating = 3.8f, organizerTotalRatings = 4),
+            darkTheme = false,
+        )
+
+    @Test
+    fun unreadNotifications_lightMode() =
+        paparazzi.snapshot {
+            GamesSnapshotTheme(darkTheme = false) {
+                PlayerProfileContent(
+                    state = loadedState,
+                    onEvent = {},
+                    strings = PtBrGamesStrings.playerProfile,
+                    hasUnreadNotifications = true,
+                )
+            }
+        }
+}

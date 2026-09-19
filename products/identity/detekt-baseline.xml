@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LambdaParameterInRestartableEffect:PaywallEvents.kt$onDismiss</ID>
+    <ID>LambdaParameterInRestartableEffect:PaywallEvents.kt$onRequireLogin</ID>
+    <ID>LambdaParameterInRestartableEffect:PaywallEvents.kt$onShowSnackbar</ID>
+  </CurrentIssues>
+</SmellBaseline>

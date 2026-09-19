@@ -1,12 +1,29 @@
 package com.walcker.games.di
 
 import com.walcker.games.GamesDestinationImpl
-import com.walcker.games.features.data.di.gamesDataModule
+import com.walcker.games.features.data.shared.di.gamesDataModule
+import com.walcker.games.features.data.shared.platform.gamesPlatformModule
 import com.walcker.games.features.ui.di.gamesUiModule
+import com.walcker.games.strings.di.gamesStringsModule
+import com.walcker.match.navigator.BottomBarVisibilityCoordinator
+import com.walcker.match.navigator.DeepLinkCoordinator
 import com.walcker.match.navigator.GamesDestination
+import com.walcker.match.navigator.HomeViewCoordinator
+import com.walcker.match.navigator.LoginCoordinator
+import com.walcker.match.navigator.MatchDetailCoordinator
+import com.walcker.match.navigator.PromotionCoordinator
+import com.walcker.match.navigator.TabCoordinator
 import org.koin.dsl.module
 
-val gamesModule = module {
-    includes(gamesDataModule, gamesUiModule)
-    single<GamesDestination> { GamesDestinationImpl() }
-}
+val gamesModule =
+    module {
+        includes(gamesDataModule, gamesUiModule, gamesPlatformModule, gamesStringsModule)
+        single<GamesDestination> { GamesDestinationImpl() }
+        single { TabCoordinator() }
+        single { DeepLinkCoordinator() }
+        single { PromotionCoordinator() }
+        single { LoginCoordinator() }
+        single { HomeViewCoordinator() }
+        single { MatchDetailCoordinator() }
+        single { BottomBarVisibilityCoordinator() }
+    }

@@ -8,10 +8,14 @@ internal interface BillingClient {
     fun customerInfoUpdates(): Flow<BillingCustomerInfoUpdate>
 
     suspend fun logIn(userId: String): Result<Boolean>
+
     suspend fun logOut(): Result<Unit>
+
     suspend fun listOfferings(): Result<ImmutableList<ProductOffering>>
+
     suspend fun purchase(packageId: String): Result<Boolean>
+
     suspend fun restore(): Result<Boolean>
+
     suspend fun managementUrl(): Result<String?>
 }
-

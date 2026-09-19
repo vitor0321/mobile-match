@@ -1,0 +1,556 @@
+package com.walcker.games.features.ui.playerProfile
+
+import app.cash.turbine.test
+import com.walcker.games.fake.FakeAccountDeletionService
+import com.walcker.games.fake.FakeAnalyticsTracker
+import com.walcker.games.fake.FakeAvailabilityRepository
+import com.walcker.games.fake.FakeCrashReporter
+import com.walcker.games.fake.FakeGameRepository
+import com.walcker.games.fake.FakeLogoutService
+import com.walcker.games.fake.FakePlayerRepository
+import com.walcker.games.fake.FakeRatingRepository
+import com.walcker.games.fake.FakeSessionHolder
+import com.walcker.games.fake.game
+import com.walcker.games.fake.rating
+import com.walcker.games.fake.testUserSession
+import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
+import com.walcker.games.features.domain.playerProfile.usecase.SetAvailabilityUseCaseImpl
+import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSportsUseCaseImpl
+import com.walcker.games.features.domain.shared.model.Availability
+import com.walcker.games.features.domain.shared.model.MatchRole
+import com.walcker.games.features.domain.shared.model.Sport
+import com.walcker.games.features.domain.shared.repository.MyMatch
+import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCaseImpl
+import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
+import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.games.strings.PtBrGamesStrings
+import com.walcker.identity.api.AccountDeletionOutcome
+import com.walcker.identity.api.ReauthenticationMethod
+import com.walcker.identity.api.ReauthenticationOutcome
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class PlayerProfileStepModelTest {
+    private val testDispatcher = StandardTestDispatcher()
+    private val stringsHolder = GamesStringsHolder().apply { setStrings(PtBrGamesStrings) }
+
+    @BeforeTest
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @AfterTest
+    fun teardown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun buildModel(
+        gameRepository: FakeGameRepository = FakeGameRepository(),
+        ratingRepository: FakeRatingRepository = FakeRatingRepository(),
+        playerRepository: FakePlayerRepository = FakePlayerRepository(),
+        availabilityRepository: FakeAvailabilityRepository = FakeAvailabilityRepository(),
+        sessionHolder: FakeSessionHolder = FakeSessionHolder(),
+        logoutService: FakeLogoutService = FakeLogoutService(),
+        accountDeletionService: FakeAccountDeletionService = FakeAccountDeletionService(),
+    ) = PlayerProfileStepModel(
+        sessionHolder = sessionHolder,
+        getMyMatches = GetMyMatchesUseCaseImpl(gameRepository),
+        getUserRatings = GetUserRatingsUseCase(ratingRepository),
+        playerRepository = playerRepository,
+        stringsHolder = stringsHolder,
+        logoutService = logoutService,
+        accountDeletionService = accountDeletionService,
+        observeAvailability = ObserveAvailabilityUseCaseImpl(availabilityRepository),
+        setAvailability = SetAvailabilityUseCaseImpl(availabilityRepository),
+        setAvailableSports = SetAvailableSportsUseCaseImpl(availabilityRepository),
+        analytics = FakeAnalyticsTracker(),
+        crashReporter = FakeCrashReporter(),
+    )
+
+    @Test
+    fun `an anonymous session clears the profile`() =
+        runTest(testDispatcher) {
+            val model = buildModel(sessionHolder = FakeSessionHolder(session = null))
+
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertNull(state.userName)
+            assertFalse(state.isLoading)
+        }
+
+    @Test
+    fun `loads name, email and computes organizer versus participant counts`() =
+        runTest(testDispatcher) {
+            val organized = game(id = "match-1").let { it.copy(organizerId = "user-1") }
+            val participated = game(id = "match-2").let { it.copy(organizerId = "someone-else") }
+            val gameRepository =
+                FakeGameRepository(
+                    myMatches =
+                        Result.success(
+                            listOf(
+                                MyMatch(game = organized, role = MatchRole.ORGANIZER),
+                                MyMatch(game = participated, role = MatchRole.PARTICIPANT),
+                            ),
+                        ),
+                )
+            val model = buildModel(gameRepository = gameRepository)
+
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals("Ana Souza", state.userName)
+            assertEquals("ana@example.com", state.userEmail)
+            assertEquals(1, state.matchesOrganized)
+            assertEquals(1, state.matchesParticipated)
+        }
+
+    @Test
+    fun `shows the formatted phone number from the session`() =
+        runTest(testDispatcher) {
+            val sessionHolder = FakeSessionHolder(session = testUserSession(phoneNumber = "+5511987654321"))
+            val model = buildModel(sessionHolder = sessionHolder)
+
+            advanceUntilIdle()
+            assertEquals("+55 (11) 98765-4321", model.state.value.userPhone)
+
+            sessionHolder.setSession(null)
+            advanceUntilIdle()
+            assertNull(model.state.value.userPhone)
+        }
+
+    @Test
+    fun `computes the average from the loaded ratings`() =
+        runTest(testDispatcher) {
+            val ratingRepository =
+                FakeRatingRepository(
+                    userRatingsResult = Result.success(listOf(rating(id = "1", stars = 5), rating(id = "2", stars = 3))),
+                )
+            val model = buildModel(ratingRepository = ratingRepository)
+
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(4f, state.averageRating)
+            assertEquals(2, state.totalRatings)
+        }
+
+    @Test
+    fun `observes availability and reflects it in state`() =
+        runTest(testDispatcher) {
+            val availabilityRepository = FakeAvailabilityRepository()
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+
+            availabilityRepository.emit(Result.success(Availability(isAvailable = true)))
+            advanceUntilIdle()
+
+            assertTrue(model.state.value.isAvailable)
+        }
+
+    @Test
+    fun `changing availability while logged out requires login`() =
+        runTest(testDispatcher) {
+            val model = buildModel(sessionHolder = FakeSessionHolder(session = null))
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.AvailabilityChanged(true))
+                advanceUntilIdle()
+
+                assertIs<PlayerProfileEffect.RequireLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `a failed availability change reverts the optimistic update`() =
+        runTest(testDispatcher) {
+            val availabilityRepository = FakeAvailabilityRepository(setAvailableResult = Result.failure(IllegalStateException("boom")))
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.AvailabilityChanged(true))
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertFalse(state.isAvailable)
+            assertFalse(state.isUpdatingAvailability)
+            assertEquals(stringsHolder.strings.playerProfile.availabilityError, state.availabilityErrorMessage)
+        }
+
+    @Test
+    fun `logging out calls the logout service`() =
+        runTest(testDispatcher) {
+            val logoutService = FakeLogoutService()
+            val model = buildModel(logoutService = logoutService)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.LogoutRequested)
+            advanceUntilIdle()
+
+            assertEquals(1, logoutService.logoutCallCount)
+        }
+
+    @Test
+    fun `a failed logout surfaces an error`() =
+        runTest(testDispatcher) {
+            val logoutService = FakeLogoutService(result = Result.failure(IllegalStateException("offline")))
+            val model = buildModel(logoutService = logoutService)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.LogoutRequested)
+            advanceUntilIdle()
+
+            assertEquals(stringsHolder.strings.playerProfile.logoutError, model.state.value.errorMessage)
+        }
+
+    @Test
+    fun `dismissing the availability error only clears that message`() =
+        runTest(testDispatcher) {
+            val availabilityRepository = FakeAvailabilityRepository(setAvailableResult = Result.failure(IllegalStateException("boom")))
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+            model.onEvent(PlayerProfileEvent.AvailabilityChanged(true))
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.DismissAvailabilityError)
+
+            assertNull(model.state.value.availabilityErrorMessage)
+        }
+
+    @Test
+    fun `toggling a sport adds it to the preferred set and persists it`() =
+        runTest(testDispatcher) {
+            val availabilityRepository = FakeAvailabilityRepository()
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            assertEquals(setOf(Sport.FUTEBOL), model.state.value.availableSports)
+            assertEquals("user-1" to setOf(Sport.FUTEBOL), availabilityRepository.setAvailableSportsCalls.last())
+        }
+
+    @Test
+    fun `toggling an already selected sport removes it`() =
+        runTest(testDispatcher) {
+            val availabilityRepository = FakeAvailabilityRepository()
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            assertEquals(emptySet(), model.state.value.availableSports)
+        }
+
+    @Test
+    fun `a failed sport toggle reverts the optimistic update`() =
+        runTest(testDispatcher) {
+            val availabilityRepository =
+                FakeAvailabilityRepository(setAvailableSportsResult = Result.failure(IllegalStateException("boom")))
+            val model = buildModel(availabilityRepository = availabilityRepository)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.SportToggled(Sport.FUTEBOL))
+            advanceUntilIdle()
+
+            assertEquals(emptySet(), model.state.value.availableSports)
+            assertEquals(stringsHolder.strings.playerProfile.sportsPreferenceError, model.state.value.sportsErrorMessage)
+        }
+
+    @Test
+    fun `the next match is the soonest active one, ignoring past matches`() =
+        runTest(testDispatcher) {
+            val soonest = game(id = "match-1").let { it.copy(organizerId = "user-1", startsAtSeconds = 9_999_998_000) }
+            val later = game(id = "match-2").let { it.copy(organizerId = "user-1", startsAtSeconds = 9_999_999_000) }
+            val gameRepository =
+                FakeGameRepository(
+                    myMatches =
+                        Result.success(
+                            listOf(
+                                MyMatch(game = later, role = MatchRole.ORGANIZER),
+                                MyMatch(game = soonest, role = MatchRole.ORGANIZER),
+                            ),
+                        ),
+                )
+            val model = buildModel(gameRepository = gameRepository)
+
+            advanceUntilIdle()
+
+            assertEquals(
+                "match-1",
+                model.state.value.nextMatch
+                    ?.game
+                    ?.id,
+            )
+        }
+
+    @Test
+    fun `clicking the next match navigates to its detail`() =
+        runTest(testDispatcher) {
+            val model = buildModel()
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.NextMatchClicked("match-1"))
+                advanceUntilIdle()
+
+                assertEquals(PlayerProfileEffect.NavigateToMatchDetail("match-1"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `requesting account deletion opens the confirmation dialog`() =
+        runTest(testDispatcher) {
+            val model = buildModel()
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
+
+            assertTrue(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `cancelling account deletion closes the dialog without deleting`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = FakeAccountDeletionService()
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+            model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
+
+            model.onEvent(PlayerProfileEvent.CancelDeleteAccount)
+            advanceUntilIdle()
+
+            assertFalse(model.state.value.showDeleteAccountDialog)
+            assertEquals(0, accountDeletionService.deleteCallCount)
+        }
+
+    @Test
+    fun `a successful deletion sends the user back to login`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = FakeAccountDeletionService()
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+                advanceUntilIdle()
+
+                assertIs<PlayerProfileEffect.RequireLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, accountDeletionService.deleteCallCount)
+            assertFalse(model.state.value.isDeletingAccount)
+            assertFalse(model.state.value.showDeleteAccountDialog)
+        }
+
+    private fun passwordAccount() =
+        FakeAccountDeletionService(
+            outcome = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Password),
+        )
+
+    private fun TestScope.modelWaitingForPassword(accountDeletionService: FakeAccountDeletionService): PlayerProfileStepModel {
+        val model = buildModel(accountDeletionService = accountDeletionService)
+        advanceUntilIdle()
+        model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
+        model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+        advanceUntilIdle()
+        return model
+    }
+
+    @Test
+    fun `an old password login asks for the password inside the dialog`() =
+        runTest(testDispatcher) {
+            val model = modelWaitingForPassword(passwordAccount())
+
+            val state = model.state.value
+            assertTrue(state.showDeleteAccountDialog)
+            assertTrue(state.isDeleteAccountPasswordRequired)
+            assertFalse(state.isDeletingAccount)
+            assertNull(state.errorMessage)
+        }
+
+    @Test
+    fun `the right password deletes the account and sends the user back to login`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount()
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("s3cret"))
+                model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+                advanceUntilIdle()
+
+                assertIs<PlayerProfileEffect.RequireLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals("s3cret", accountDeletionService.lastPassword)
+            assertEquals(2, accountDeletionService.deleteCallCount)
+            assertFalse(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `a wrong password keeps the dialog open with an inline error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount().apply { passwordOutcome = ReauthenticationOutcome.WrongPassword }
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("nope"))
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertTrue(state.showDeleteAccountDialog)
+            assertTrue(state.isDeleteAccountPasswordRequired)
+            assertFalse(state.isDeletingAccount)
+            assertEquals(stringsHolder.strings.playerProfile.deleteAccountWrongPassword, state.deleteAccountPasswordError)
+            assertEquals(1, accountDeletionService.deleteCallCount)
+        }
+
+    @Test
+    fun `typing again clears the wrong password error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount().apply { passwordOutcome = ReauthenticationOutcome.WrongPassword }
+            val model = modelWaitingForPassword(accountDeletionService)
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("nope"))
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("nope2"))
+
+            assertNull(model.state.value.deleteAccountPasswordError)
+        }
+
+    @Test
+    fun `an empty password is not sent`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount()
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            assertNull(accountDeletionService.lastPassword)
+            assertTrue(model.state.value.isDeleteAccountPasswordRequired)
+        }
+
+    @Test
+    fun `an old google login confirms with google and then deletes`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                FakeAccountDeletionService(
+                    outcome = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Google),
+                )
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+                advanceUntilIdle()
+
+                assertIs<PlayerProfileEffect.RequireLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, accountDeletionService.providerCallCount)
+            assertEquals(2, accountDeletionService.deleteCallCount)
+            assertFalse(model.state.value.isDeleteAccountPasswordRequired)
+        }
+
+    @Test
+    fun `closing the google sheet keeps the account and shows no error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                FakeAccountDeletionService(
+                    outcome = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Apple),
+                    providerOutcome = ReauthenticationOutcome.Cancelled,
+                )
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+            model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
+
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(1, accountDeletionService.deleteCallCount)
+            assertFalse(state.showDeleteAccountDialog)
+            assertFalse(state.isDeletingAccount)
+            assertNull(state.errorMessage)
+        }
+
+    @Test
+    fun `a server that still refuses after confirming does not loop`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                passwordAccount().apply {
+                    outcomeAfterReauthentication = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Password)
+                }
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("s3cret"))
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            assertEquals(2, accountDeletionService.deleteCallCount)
+            assertEquals(stringsHolder.strings.playerProfile.deleteAccountError, model.state.value.errorMessage)
+            assertFalse(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `cancelling the password step forgets what was typed`() =
+        runTest(testDispatcher) {
+            val model = modelWaitingForPassword(passwordAccount())
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("s3cret"))
+
+            model.onEvent(PlayerProfileEvent.CancelDeleteAccount)
+
+            val state = model.state.value
+            assertFalse(state.showDeleteAccountDialog)
+            assertFalse(state.isDeleteAccountPasswordRequired)
+            assertEquals("", state.deleteAccountPassword)
+        }
+
+    @Test
+    fun `a failed deletion surfaces the generic error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                FakeAccountDeletionService(
+                    outcome = AccountDeletionOutcome.Failure(IllegalStateException("boom")),
+                )
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+            advanceUntilIdle()
+
+            assertEquals(
+                stringsHolder.strings.playerProfile.deleteAccountError,
+                model.state.value.errorMessage,
+            )
+            assertFalse(model.state.value.isDeletingAccount)
+        }
+}

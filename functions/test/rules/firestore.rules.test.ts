@@ -1,9 +1,18 @@
 import {readFile} from "node:fs/promises";
-import {initializeTestEnvironment, type RulesTestEnvironment} from "@firebase/rules-unit-testing";
-import {doc, getDoc, setDoc} from "firebase/firestore";
+import {
+  assertFails,
+  assertSucceeds,
+  initializeTestEnvironment,
+  type RulesTestEnvironment,
+} from "@firebase/rules-unit-testing";
+import {Timestamp, deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc} from "firebase/firestore";
 import {afterAll, afterEach, beforeAll, describe, expect, it} from "vitest";
 
 const projectId = "match-ci";
+const ORGANIZER = "organizer-uid";
+const PLAYER = "player-uid";
+const MATCH_ID = "match-1";
+
 let testEnvironment: RulesTestEnvironment;
 
 beforeAll(async () => {
@@ -25,40 +34,762 @@ afterAll(async () => {
   await testEnvironment.cleanup();
 });
 
-describe("Firestore rules", () => {
-  it("allows an owner to read and write their own favorites", async () => {
-    const database = testEnvironment.authenticatedContext("owner").firestore();
-    const favorite = doc(database, "users/owner/favorites/john-3-16");
+function asUser(uid: string) {
+  return testEnvironment.authenticatedContext(uid).firestore();
+}
 
-    await expect(setDoc(favorite, {verseRef: "João 3:16"})).resolves.toBeUndefined();
-    await expect(getDoc(favorite)).resolves.toMatchObject({exists: expect.any(Function)});
+function asAnonymous() {
+  return testEnvironment.unauthenticatedContext().firestore();
+}
+
+function seed(work: (firestore: ReturnType<typeof asAnonymous>) => Promise<void>) {
+  return testEnvironment.withSecurityRulesDisabled((context) =>
+    work(context.firestore() as ReturnType<typeof asAnonymous>),
+  );
+}
+
+function publicProfile(overrides: Record<string, unknown> = {}) {
+  return {
+    fullName: "Jogador Teste",
+    nickname: null,
+    avatarUrl: null,
+    position: "Meia",
+    level: "Livre",
+    sports: ["futsal"],
+    city: "São Paulo",
+    neighborhood: "União dos Cegos",
+    rating: 0,
+    ratingCount: 0,
+    matchesPlayed: 0,
+    isBanned: false,
+    // As regras exigem createdAt == request.time; o sentinel do servidor é o
+    // único valor que satisfaz isso vindo do cliente.
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+describe("profiles — parte pública", () => {
+  it("qualquer autenticado lê o perfil público; anônimo não", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", ORGANIZER), publicProfile());
+    });
+
+    await assertSucceeds(getDoc(doc(asUser(PLAYER), "profiles", ORGANIZER)));
+    await assertFails(getDoc(doc(asAnonymous(), "profiles", ORGANIZER)));
   });
 
-  it("denies a different user and anonymous users from private data", async () => {
-    const otherUserFavorite = doc(
-      testEnvironment.authenticatedContext("other").firestore(),
-      "users/owner/favorites/john-3-16",
-    );
-    const anonymousComment = doc(
-      testEnvironment.unauthenticatedContext().firestore(),
-      "users/owner/verse_comments/john-3-16",
-    );
-
-    await expect(getDoc(otherUserFavorite)).rejects.toThrow();
-    await expect(setDoc(anonymousComment, {content: "No access"})).rejects.toThrow();
+  it("o dono cria o próprio perfil com os valores iniciais do servidor", async () => {
+    await assertSucceeds(setDoc(doc(asUser(PLAYER), "profiles", PLAYER), publicProfile()));
   });
 
-  it("allows authenticated cache reads but denies every client cache write", async () => {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "verse_explanations/john-3-16-NVI"), {
-        explanation: "Cached explanation",
+  it("nega criar perfil de outro usuário", async () => {
+    await assertFails(setDoc(doc(asUser(PLAYER), "profiles", ORGANIZER), publicProfile()));
+  });
+
+  it("nega nascer com reputação inflada", async () => {
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "profiles", PLAYER), publicProfile({rating: 5, matchesPlayed: 120})),
+    );
+  });
+
+  it("o dono edita nome e posição", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+
+    await assertSucceeds(
+      updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {
+        fullName: "Novo Nome",
+        position: "Fixo",
+        updatedAt: Timestamp.now(),
+      }),
+    );
+  });
+
+  it("nega o usuário mexer em reputação ou tirar o próprio banimento", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile({isBanned: true}));
+    });
+
+    const profile = doc(asUser(PLAYER), "profiles", PLAYER);
+    await assertFails(updateDoc(profile, {rating: 5}));
+    await assertFails(updateDoc(profile, {matchesPlayed: 999}));
+    await assertFails(updateDoc(profile, {isBanned: false}));
+  });
+});
+
+describe("profiles/private — telefone, Pix, geo e disponibilidade", () => {
+  it("só o dono lê e escreve os dados privados", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "private", "data"), {
+        phone: "+5511999999999",
+        pixKey: "player@email.com",
+        lat: -23.55,
+        lng: -46.63,
+        geohash: "6gyf4bf8m",
+        radiusKm: 15,
+        isAvailable: true,
       });
     });
 
-    const authenticatedDatabase = testEnvironment.authenticatedContext("reader").firestore();
-    const cachedExplanation = doc(authenticatedDatabase, "verse_explanations/john-3-16-NVI");
+    const ownPrivate = doc(asUser(PLAYER), "profiles", PLAYER, "private", "data");
+    const otherPrivate = doc(asUser(ORGANIZER), "profiles", PLAYER, "private", "data");
 
-    await expect(getDoc(cachedExplanation)).resolves.toMatchObject({exists: expect.any(Function)});
-    await expect(setDoc(cachedExplanation, {explanation: "Tampered"})).rejects.toThrow();
+    await assertSucceeds(getDoc(ownPrivate));
+    await assertSucceeds(updateDoc(ownPrivate, {isAvailable: false}));
+
+    // É este teste que garante que telefone e chave Pix não vazam com o
+    // perfil público — no Postgres os dois campos ficavam na mesma linha.
+    await assertFails(getDoc(otherPrivate));
+    await assertFails(updateDoc(otherPrivate, {phone: "+5511000000000"}));
+    await assertFails(getDoc(doc(asAnonymous(), "profiles", PLAYER, "private", "data")));
+  });
+});
+
+function validMatchPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    organizerId: ORGANIZER,
+    organizerName: "Organizador",
+    sport: "futsal",
+    venueName: "Green Ball",
+    address: "Rua das Quadras, 100",
+    neighborhood: "União dos Cegos",
+    city: "São Paulo",
+    lat: -23.5505,
+    lng: -46.6333,
+    geohash: "6gyf4bf8m",
+    startsAtSeconds: Math.floor(Date.now() / 1_000) + 6 * 3_600,
+    durationMin: 60,
+    totalSlots: 14,
+    confirmedCount: 0,
+    priceCents: 2000,
+    currencyCode: "BRL",
+    status: "OPEN",
+    organizerRating: 5,
+    organizerRatingCount: 0,
+    matchRating: 0,
+    matchRatingCount: 0,
+    participants: [],
+    ...overrides,
+  };
+}
+
+describe("matches", () => {
+  it("o organizador cria a própria partida", async () => {
+    await assertSucceeds(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
+  });
+
+  it("nega criar partida em nome de outro organizador", async () => {
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "matches", MATCH_ID), validMatchPayload()),
+    );
+  });
+
+  it("nega partida no passado, lotação fora da faixa e contadores adiantados", async () => {
+    const matchRef = doc(asUser(ORGANIZER), "matches", MATCH_ID);
+
+    await assertFails(setDoc(matchRef, validMatchPayload({startsAtSeconds: Math.floor(Date.now() / 1_000) - 2 * 3_600})));
+    await assertFails(setDoc(matchRef, validMatchPayload({totalSlots: 0})));
+    await assertFails(setDoc(matchRef, validMatchPayload({totalSlots: 500})));
+    await assertFails(setDoc(matchRef, validMatchPayload({confirmedCount: 12})));
+    await assertFails(setDoc(matchRef, validMatchPayload({status: "FULL"})));
+  });
+
+  it("nega usuário banido criar partida", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", ORGANIZER), publicProfile({isBanned: true}));
+    });
+
+    await assertFails(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
+  });
+
+  it("o organizador edita os dados da partida, mas não os contadores", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 10}));
+    });
+
+    const matchRef = doc(asUser(ORGANIZER), "matches", MATCH_ID);
+
+    await assertSucceeds(updateDoc(matchRef, {venueName: "Arena Central"}));
+    await assertSucceeds(updateDoc(matchRef, {status: "CANCELLED"}));
+
+    // Contadores são a fonte da verdade da lotação: só as callables escrevem.
+    await assertFails(updateDoc(matchRef, {confirmedCount: 0}));
+    await assertFails(updateDoc(matchRef, {waitlistCount: 0}));
+    await assertFails(updateDoc(matchRef, {status: "FINISHED"}));
+    // Encolher a partida abaixo de quem já está confirmado deixaria gente fora.
+    await assertFails(updateDoc(matchRef, {totalSlots: 6}));
+  });
+
+  it("nega um terceiro editar a partida", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload());
+    });
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "matches", MATCH_ID), {venueName: "Sequestrada"}));
+  });
+
+  it("o organizador grava teamCount e teamAssignments na própria partida", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 4}));
+    });
+
+    await assertSucceeds(
+      updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+  });
+
+  it("nega um terceiro gravar teamCount e teamAssignments na partida de outro organizador", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 4}));
+    });
+
+    await assertFails(
+      updateDoc(doc(asUser(PLAYER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+  });
+
+  it("o organizador ainda edita a partida cheia (regressão do bloqueio em FULL)", async () => {
+    await seed(async (database) => {
+      await setDoc(
+        doc(database, "matches", MATCH_ID),
+        validMatchPayload({totalSlots: 4, confirmedCount: 4, status: "FULL"}),
+      );
+    });
+
+    await assertSucceeds(
+      updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+    await assertSucceeds(updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {priceCents: 2500}));
+  });
+
+  it("o organizador ainda edita uma partida antiga sem currencyCode/matchRating (regressão de schema legado)", async () => {
+    await seed(async (database) => {
+      // Documento propositalmente sem currencyCode/matchRating/matchRatingCount/
+      // organizerRatingCount — reproduz partidas reais anteriores a esses campos
+      // existirem no schema. Nenhum deles está em matchEditableFields(), então
+      // uma edição nunca consegue adicioná-los.
+      await setDoc(doc(database, "matches", MATCH_ID), {
+        organizerId: ORGANIZER,
+        organizerName: "Organizador",
+        organizerRating: 5,
+        sport: "futsal",
+        venueName: "Green Ball",
+        address: "Rua das Quadras, 100",
+        neighborhood: "União dos Cegos",
+        city: "São Paulo",
+        lat: -23.5505,
+        lng: -46.6333,
+        geohash: "6gyf4bf8m",
+        startsAtSeconds: Math.floor(Date.now() / 1_000) + 6 * 3_600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 4,
+        priceCents: 2000,
+        status: "OPEN",
+        participants: [],
+      });
+    });
+
+    await assertSucceeds(
+      updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        teamCount: 2,
+        teamAssignments: {[PLAYER]: 0, "player-2": 1},
+      }),
+    );
+    await assertSucceeds(updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {priceCents: 2500}));
+  });
+
+  it("nega criar uma partida sem currencyCode/matchRating (a criação continua exigindo o schema completo)", async () => {
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), {
+        organizerId: ORGANIZER,
+        organizerName: "Organizador",
+        organizerRating: 5,
+        sport: "futsal",
+        venueName: "Green Ball",
+        address: "Rua das Quadras, 100",
+        neighborhood: "União dos Cegos",
+        city: "São Paulo",
+        lat: -23.5505,
+        lng: -46.6333,
+        geohash: "6gyf4bf8m",
+        startsAtSeconds: Math.floor(Date.now() / 1_000) + 6 * 3_600,
+        durationMin: 60,
+        totalSlots: 10,
+        confirmedCount: 0,
+        priceCents: 2000,
+        status: "OPEN",
+        participants: [],
+        // sem currencyCode/matchRating/matchRatingCount/organizerRatingCount
+      }),
+    );
+  });
+
+  it("apaga partida vazia, mas exige cancelamento quando já tem gente", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", "vazia"), validMatchPayload());
+      await setDoc(doc(database, "matches", "cheia"), validMatchPayload({confirmedCount: 4}));
+    });
+
+    await assertSucceeds(deleteDoc(doc(asUser(ORGANIZER), "matches", "vazia")));
+    await assertFails(deleteDoc(doc(asUser(ORGANIZER), "matches", "cheia")));
+  });
+});
+
+describe("matches/{matchId}/bannedUsers/{userId}", () => {
+  const BANNED = "banned-uid";
+
+  async function seedMatchAndBan() {
+    await seed(async (firestore) => {
+      await setDoc(doc(firestore, "matches", MATCH_ID), validMatchPayload());
+      await setDoc(doc(firestore, "matches", MATCH_ID, "bannedUsers", BANNED), {
+        bannedAt: serverTimestamp(),
+        bannedBy: ORGANIZER,
+      });
+    });
+  }
+
+  it("lets the organizer read the banned list", async () => {
+    await seedMatchAndBan();
+    await assertSucceeds(getDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID, "bannedUsers", BANNED)));
+  });
+
+  it("blocks a non-organizer from reading the banned list", async () => {
+    await seedMatchAndBan();
+    await assertFails(getDoc(doc(asUser(PLAYER), "matches", MATCH_ID, "bannedUsers", BANNED)));
+    await assertFails(getDoc(doc(asAnonymous(), "matches", MATCH_ID, "bannedUsers", BANNED)));
+  });
+
+  it("blocks every client write, organizer included", async () => {
+    await seed(async (firestore) => {
+      await setDoc(doc(firestore, "matches", MATCH_ID), validMatchPayload());
+    });
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID, "bannedUsers", BANNED), {
+        bannedAt: serverTimestamp(),
+        bannedBy: ORGANIZER,
+      }),
+    );
+  });
+});
+
+describe("matchSeries/{seriesId}/vipPlayers/{userId}", () => {
+  const SERIES_ID = "series-1";
+  const VIP = "vip-uid";
+
+  it("blocks every client read and write, organizer included", async () => {
+    await seed(async (firestore) => {
+      await setDoc(doc(firestore, "matchSeries", SERIES_ID), {organizerId: ORGANIZER, active: true});
+    });
+    await assertFails(getDoc(doc(asUser(ORGANIZER), "matchSeries", SERIES_ID, "vipPlayers", VIP)));
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "matchSeries", SERIES_ID, "vipPlayers", VIP), {
+        addedAt: serverTimestamp(),
+        addedBy: ORGANIZER,
+      }),
+    );
+  });
+});
+
+describe("matches/participants — a trava contra overbooking", () => {
+  it("qualquer autenticado lê a lista, ninguém escreve pelo cliente", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload());
+      await setDoc(doc(database, "matches", MATCH_ID, "participants", PLAYER), {
+        userId: PLAYER,
+        status: "confirmed",
+        paymentStatus: "pending",
+        order: 1,
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID, "participants", PLAYER)));
+
+    // Entrar, sair e pagar passam por joinMatch/leaveMatch/confirmPixPayment.
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "matches", MATCH_ID, "participants", PLAYER), {
+        userId: PLAYER,
+        status: "confirmed",
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(asUser(PLAYER), "matches", MATCH_ID, "participants", PLAYER), {
+        paymentStatus: "paid",
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID, "participants", PLAYER), {
+        status: "confirmed",
+      }),
+    );
+  });
+
+  it("avaliação da partida não é gravada direto pelo cliente", async () => {
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "matches", MATCH_ID, "ratings", PLAYER), {
+        ratedId: ORGANIZER,
+        stars: 5,
+      }),
+    );
+  });
+});
+
+describe("users — notificações, pagamentos, assinatura e dispositivos", () => {
+  it("o dono só marca a notificação como lida ou apaga", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "users", PLAYER, "notifications", "n1"), {
+        type: "new_match",
+        title: "Faltam 2 vagas: Green Ball",
+        readAt: null,
+      });
+    });
+
+    const own = doc(asUser(PLAYER), "users", PLAYER, "notifications", "n1");
+
+    await assertSucceeds(getDoc(own));
+    await assertSucceeds(updateDoc(own, {readAt: Timestamp.now()}));
+    await assertFails(updateDoc(own, {title: "Título forjado"}));
+    await assertFails(setDoc(doc(asUser(PLAYER), "users", PLAYER, "notifications", "n2"), {title: "Fake"}));
+    await assertSucceeds(deleteDoc(own));
+
+    await assertFails(getDoc(doc(asUser(ORGANIZER), "users", PLAYER, "notifications", "n1")));
+  });
+
+  it("o dono marca a notificação do histórico como lida (isRead) ou apaga", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "users", PLAYER, "notificationHistory", "h1"), {
+        id: "h1",
+        title: "Você foi promovido!",
+        body: "Uma vaga abriu no Green Ball",
+        receivedAt: Date.now(),
+        isRead: false,
+        data: {matchId: MATCH_ID},
+      });
+    });
+
+    const own = doc(asUser(PLAYER), "users", PLAYER, "notificationHistory", "h1");
+
+    await assertSucceeds(getDoc(own));
+    await assertSucceeds(updateDoc(own, {isRead: true}));
+    // Só o campo isRead pode mudar — forjar o título é negado.
+    await assertFails(updateDoc(own, {title: "Título forjado"}));
+    // Criar histórico direto é negado (vem das Functions ao receber o push).
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "users", PLAYER, "notificationHistory", "h2"), {title: "Fake"}),
+    );
+    await assertSucceeds(deleteDoc(own));
+
+    // Ninguém lê o histórico de outro usuário.
+    await assertFails(getDoc(doc(asUser(ORGANIZER), "users", PLAYER, "notificationHistory", "h1")));
+  });
+
+  it("pagamento e assinatura são só de leitura para o dono", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "users", PLAYER, "payments", "p1"), {
+        matchId: MATCH_ID,
+        amountCents: 2000,
+        status: "pending",
+      });
+      await setDoc(doc(database, "users", PLAYER, "subscription", "current"), {
+        plan: "free",
+        status: "paid",
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(asUser(PLAYER), "users", PLAYER, "payments", "p1")));
+    await assertFails(updateDoc(doc(asUser(PLAYER), "users", PLAYER, "payments", "p1"), {status: "paid"}));
+
+    await assertSucceeds(getDoc(doc(asUser(PLAYER), "users", PLAYER, "subscription", "current")));
+    await assertFails(
+      updateDoc(doc(asUser(PLAYER), "users", PLAYER, "subscription", "current"), {plan: "business"}),
+    );
+  });
+
+  it("o dono registra e remove o próprio dispositivo de push", async () => {
+    const token = doc(asUser(PLAYER), "users", PLAYER, "devices", "fcm-token-1");
+
+    await assertSucceeds(setDoc(token, {userId: PLAYER, platform: "android"}));
+    await assertSucceeds(deleteDoc(token));
+
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "users", PLAYER, "devices", "fcm-token-2"), {
+        userId: PLAYER,
+        platform: "ios",
+      }),
+    );
+  });
+});
+
+describe("moderação e denúncias", () => {
+  it("denúncia não é criada direto e só o autor e o admin leem", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "reports", "r1"), {
+        reporterId: PLAYER,
+        reportedUserId: ORGANIZER,
+        reason: "nao_comparecimento",
+        status: "open",
+      });
+    });
+
+    await assertFails(setDoc(doc(asUser(PLAYER), "reports", "r2"), {reporterId: PLAYER, reason: "fraude"}));
+    await assertSucceeds(getDoc(doc(asUser(PLAYER), "reports", "r1")));
+    await assertFails(getDoc(doc(asUser(ORGANIZER), "reports", "r1")));
+  });
+
+  it("suspensão ativa impede criar partida; expirada não", async () => {
+    const inADay = Date.now() + 24 * 60 * 60 * 1_000;
+    const yesterday = Date.now() - 24 * 60 * 60 * 1_000;
+    const asPlayer = validMatchPayload({organizerId: PLAYER});
+
+    await seed(async (database) => {
+      await setDoc(doc(database, "moderation", PLAYER), {level: "suspended", untilMs: inADay});
+    });
+    await assertFails(setDoc(doc(asUser(PLAYER), "matches", "m-suspenso"), asPlayer));
+
+    await seed(async (database) => {
+      await setDoc(doc(database, "moderation", PLAYER), {level: "suspended", untilMs: yesterday});
+    });
+    // Suspensão vencida não bloqueia mais. Nada roda para limpar o documento,
+    // então a regra precisa comparar a data, não só o nível.
+    await assertSucceeds(setDoc(doc(asUser(PLAYER), "matches", "m-liberado"), asPlayer));
+  });
+
+  it("banimento impede criar partida mesmo sem prazo", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "moderation", PLAYER), {level: "banned"});
+    });
+
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "matches", "m-banido"), validMatchPayload({organizerId: PLAYER})),
+    );
+  });
+
+  it("o usuário lê o próprio status de moderação, mas não o altera", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "moderation", PLAYER), {level: "suspended", reason: "denúncias"});
+    });
+
+    await assertSucceeds(getDoc(doc(asUser(PLAYER), "moderation", PLAYER)));
+    await assertFails(updateDoc(doc(asUser(PLAYER), "moderation", PLAYER), {level: "warning"}));
+    await assertFails(getDoc(doc(asUser(ORGANIZER), "moderation", PLAYER)));
+  });
+});
+
+describe("avaliações recebidas — profiles/{uid}/ratings", () => {
+  it("qualquer usuário logado lê as avaliações de um jogador, mas ninguém escreve", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "ratings", `${ORGANIZER}_${PLAYER}`), {
+        matchId: MATCH_ID,
+        ratedUserId: PLAYER,
+        raterUserId: ORGANIZER,
+        rating: 5,
+        comment: "Pontual",
+        createdAtMs: Date.now(),
+      });
+    });
+
+    // A tela de perfil mostra as avaliações de outra pessoa: leitura é pública
+    // para quem está logado.
+    await assertSucceeds(getDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "ratings", `${ORGANIZER}_${PLAYER}`)));
+    await assertFails(getDoc(doc(asAnonymous(), "profiles", PLAYER, "ratings", `${ORGANIZER}_${PLAYER}`)));
+
+    // Reputação nunca vem do cliente — nem do próprio dono do perfil.
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "ratings", "forjada"), {
+        ratedUserId: PLAYER,
+        raterUserId: ORGANIZER,
+        rating: 5,
+      }),
+    );
+    await assertFails(
+      setDoc(doc(asUser(PLAYER), "profiles", PLAYER, "ratings", "autoelogio"), {
+        ratedUserId: PLAYER,
+        raterUserId: PLAYER,
+        rating: 5,
+      }),
+    );
+  });
+
+  it("o dono não consegue mexer na própria média nem na contagem", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), {
+        fullName: "Jogador",
+        rating: 3,
+        ratingCount: 10,
+        matchesPlayed: 4,
+        isBanned: false,
+      });
+    });
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {rating: 5}));
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {ratingCount: 999}));
+  });
+});
+
+describe("nota de habilidade — profiles/{uid}/skillRatings", () => {
+  it("qualquer usuário logado lê, mas ninguém escreve — só a callable submitSkillRating", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "skillRatings", ORGANIZER), {
+        matchId: MATCH_ID,
+        ratedUserId: PLAYER,
+        organizerId: ORGANIZER,
+        rating: 8,
+        createdAtMs: Date.now(),
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "skillRatings", ORGANIZER)));
+    await assertFails(getDoc(doc(asAnonymous(), "profiles", PLAYER, "skillRatings", ORGANIZER)));
+
+    await assertFails(
+      setDoc(doc(asUser(ORGANIZER), "profiles", PLAYER, "skillRatings", ORGANIZER), {
+        ratedUserId: PLAYER,
+        organizerId: ORGANIZER,
+        rating: 10,
+      }),
+    );
+  });
+
+  it("o dono não consegue mexer na própria média nem na contagem", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), {
+        fullName: "Jogador",
+        rating: 3,
+        ratingCount: 10,
+        matchesPlayed: 4,
+        isBanned: false,
+      });
+    });
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {skillRating: 9}));
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), {skillRatingCount: 999}));
+  });
+});
+
+describe("fechamento padrão", () => {
+  it("nega qualquer caminho não previsto nas regras", async () => {
+    const stray = doc(asUser(PLAYER), "colecao_desconhecida", "x");
+
+    await assertFails(getDoc(stray));
+    await assertFails(setDoc(stray, {qualquer: "coisa"}));
+  });
+
+  it("não sobrou nenhuma coleção do Lexis nas regras", async () => {
+    const rules = await readFile("../firestore.rules", "utf8");
+
+    expect(rules).not.toMatch(/verse|book_explanations|favorites/i);
+  });
+});
+
+describe("verificação de conta", () => {
+  const VERIFIED_CLAIMS = {email_verified: true, phone_number: "+5511912345678"};
+
+  function asVerifiedUser(userId: string) {
+    return testEnvironment.authenticatedContext(userId, VERIFIED_CLAIMS).firestore();
+  }
+
+  function asEmailOnlyUser(userId: string) {
+    return testEnvironment.authenticatedContext(userId, {email_verified: true}).firestore();
+  }
+
+  async function setEnforcement(enforced: boolean) {
+    await seed(async (database) => {
+      await setDoc(doc(database, "config", "verification"), {enforced});
+    });
+  }
+
+  const profileEdit = () => ({fullName: "Novo Nome", updatedAt: Timestamp.now()});
+  const teamsEdit = () => ({teamCount: 2, teamAssignments: {[PLAYER]: 0, "player-2": 1}});
+
+  it("exigência ligada: conta sem verificação não edita o perfil público", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(true);
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência ligada: só o e-mail verificado não basta", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(true);
+
+    await assertFails(updateDoc(doc(asEmailOnlyUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência ligada: conta verificada edita o perfil público", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(true);
+
+    await assertSucceeds(updateDoc(doc(asVerifiedUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência desligada: conta sem verificação edita como antes", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER), publicProfile());
+    });
+    await setEnforcement(false);
+
+    await assertSucceeds(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER), profileEdit()));
+  });
+
+  it("exigência ligada: organizador sem verificação não edita a partida; verificado edita", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 4}));
+    });
+    await setEnforcement(true);
+
+    await assertFails(updateDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), teamsEdit()));
+    await assertSucceeds(updateDoc(doc(asVerifiedUser(ORGANIZER), "matches", MATCH_ID), teamsEdit()));
+  });
+
+  it("exigência ligada: criar partida sem verificação é negado; verificado cria", async () => {
+    await setEnforcement(true);
+
+    await assertFails(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
+    await assertSucceeds(setDoc(doc(asVerifiedUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
+  });
+
+  it("o dono não grava o telefone nos próprios dados privados, nem criando nem alterando", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "private", "data"), {phone: "+5511999999999", isAvailable: true});
+    });
+
+    await assertFails(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER, "private", "data"), {phone: "+5511000000000"}));
+    await assertFails(setDoc(doc(asUser(ORGANIZER), "profiles", ORGANIZER, "private", "data"), {phone: "+5511000000000"}));
+    await assertSucceeds(setDoc(doc(asUser(ORGANIZER), "profiles", ORGANIZER, "private", "data"), {isAvailable: true}));
+  });
+
+  it("exigência ligada: dados privados continuam livres para o dono", async () => {
+    await seed(async (database) => {
+      await setDoc(doc(database, "profiles", PLAYER, "private", "data"), {
+        phone: "+5511999999999",
+        pixKey: "player@email.com",
+        lat: -23.55,
+        lng: -46.63,
+        geohash: "6gyf4bf8m",
+        radiusKm: 15,
+        isAvailable: true,
+      });
+    });
+    await setEnforcement(true);
+
+    await assertSucceeds(updateDoc(doc(asUser(PLAYER), "profiles", PLAYER, "private", "data"), {isAvailable: false}));
   });
 });

@@ -1,12 +1,16 @@
 package com.walcker.identity.features.data.remote
 
 import android.util.Log
+import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
-import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.walcker.identity.api.UserSession
+import com.walcker.identity.features.domain.error.IdentityError
+import com.walcker.identity.features.domain.error.VerificationError
 import com.walcker.identity.features.domain.usecase.RequiresRecentLoginException
-import com.walcker.identity.features.data.remote.FirebaseAuthSource as FeatureFirebaseAuthSource
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.identity.strings.resolveStringsOrDefault
 import kotlinx.coroutines.channels.awaitClose
@@ -15,34 +19,41 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
+import com.walcker.identity.features.data.remote.FirebaseAuthSource as FeatureFirebaseAuthSource
 
 private const val TAG = "FirebaseAuthSource"
 
-internal actual fun createFirebaseAuthSource(stringsHolder: IdentityStringsHolder): FeatureFirebaseAuthSource {
-    return AndroidFirebaseAuthSource(
+internal actual fun createFirebaseAuthSource(stringsHolder: IdentityStringsHolder): FeatureFirebaseAuthSource =
+    AndroidFirebaseAuthSource(
         firebaseAuth = FirebaseAuth.getInstance(),
         stringsHolder = stringsHolder,
     )
-}
 
 internal class AndroidFirebaseAuthSource(
     private val firebaseAuth: FirebaseAuth,
     private val stringsHolder: IdentityStringsHolder,
 ) : FeatureFirebaseAuthSource {
-    override val currentUser: Flow<UserSession?> = callbackFlow {
-        val listener = FirebaseAuth.AuthStateListener { auth ->
-            trySend(auth.currentUser?.toUserSession())
-        }
-        firebaseAuth.addAuthStateListener(listener)
-        trySend(firebaseAuth.currentUser?.toUserSession())
-        awaitClose { firebaseAuth.removeAuthStateListener(listener) }
-    }.distinctUntilChanged()
+    override val currentUser: Flow<UserSession?> =
+        callbackFlow {
+            val listener =
+                FirebaseAuth.IdTokenListener { auth: FirebaseAuth ->
+                    trySend(auth.currentUser?.toUserSession())
+                }
+            firebaseAuth.addIdTokenListener(listener)
+            trySend(firebaseAuth.currentUser?.toUserSession())
+            awaitClose { firebaseAuth.removeIdTokenListener(listener) }
+        }.distinctUntilChanged()
 
-    override suspend fun signIn(email: String, password: String): Result<UserSession> {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
         return suspendCancellableCoroutine { continuation ->
-            firebaseAuth.signInWithEmailAndPassword(email, password)
+            firebaseAuth
+                .signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener { result ->
                     val user = result.user?.toUserSession()
                     if (user != null) {
@@ -51,45 +62,37 @@ internal class AndroidFirebaseAuthSource(
                         val errorMsg = strings.missingAuthenticatedUser
                         continuation.resume(Result.failure(IllegalStateException(errorMsg)))
                     }
-                }
-                .addOnFailureListener { error ->
+                }.addOnFailureListener { error ->
                     continuation.resume(Result.failure(error))
-                }
-                .addOnCanceledListener {
+                }.addOnCanceledListener {
                     continuation.cancel()
                 }
         }
     }
 
-    override suspend fun signUp(email: String, password: String): Result<UserSession> {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserSession> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
-        return suspendCancellableCoroutine { continuation ->
-            firebaseAuth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener { result ->
-                    val user = result.user?.toUserSession()
-                    if (user != null) {
-                        continuation.resume(Result.success(user))
-                    } else {
-                        val errorMsg = strings.missingAuthenticatedUser
-                        continuation.resume(Result.failure(IllegalStateException(errorMsg)))
-                    }
-                }
-                .addOnFailureListener { error ->
-                    continuation.resume(Result.failure(error))
-                }
-                .addOnCanceledListener {
-                    continuation.cancel()
-                }
-        }
-    }
-
-    override suspend fun signOut(): Result<Unit> {
         return runCatching {
+            val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+            val user = requireNotNull(result.user) { strings.missingAuthenticatedUser }
+            if (displayName.isNotBlank()) {
+                val profileUpdate = UserProfileChangeRequest.Builder().setDisplayName(displayName).build()
+                user.updateProfile(profileUpdate).await()
+            }
+            user.toUserSession()
+        }
+    }
+
+    override suspend fun signOut(): Result<Unit> =
+        runCatching {
             firebaseAuth.signOut()
         }.onFailure { error ->
             Log.e(TAG, "Erro no signOut: ${error.message}", error)
         }
-    }
 
     override suspend fun deleteCurrentUser(): Result<Unit> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
@@ -107,30 +110,61 @@ internal class AndroidFirebaseAuthSource(
         }
     }
 
-    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
-        return suspendCancellableCoroutine { continuation ->
-            firebaseAuth.sendPasswordResetEmail(email)
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw IdentityError.Unknown
+            val email = user.email ?: throw IdentityError.Unknown
+            user.reauthenticate(EmailAuthProvider.getCredential(email, password)).await()
+            user.getIdToken(true).await()
+            Unit
+        }.onFailure { error -> if (error is CancellationException) throw error }
+            .recoverCatching { error -> throw error.toReauthenticationError() }
+
+    override suspend fun signInProvider(): Result<String?> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw IdentityError.Unknown
+            user.getIdToken(false).await().signInProvider
+        }.onFailure { error -> if (error is CancellationException) throw error }
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            firebaseAuth
+                .sendPasswordResetEmail(email)
                 .addOnSuccessListener {
                     continuation.resume(Result.success(Unit))
-                }
-                .addOnFailureListener { error ->
+                }.addOnFailureListener { error ->
                     Log.e(TAG, "Erro ao enviar email de redefinição: ${error.message}", error)
                     continuation.resume(Result.failure(error))
-                }
-                .addOnCanceledListener {
+                }.addOnCanceledListener {
                     Log.w(TAG, "Envio de email de redefinição cancelado")
                     continuation.cancel()
                 }
         }
+
+    override suspend fun refreshSession(): Result<UserSession> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw VerificationError.Unknown
+            user.reload().await()
+            val refreshed = firebaseAuth.currentUser ?: throw VerificationError.Unknown
+            refreshed.getIdToken(true).await()
+            refreshed.toUserSession()
+        }.onFailure { error -> if (error is CancellationException) throw error }
+            .recoverCatching { error -> throw error.toVerificationError() }
+
+    override suspend fun sendEmailVerification(): Result<Unit> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw VerificationError.Unknown
+            firebaseAuth.useAppLanguage()
+            user.sendEmailVerification().await()
+            Unit
+        }.onFailure { error -> if (error is CancellationException) throw error }
+            .recoverCatching { error -> throw error.toVerificationError() }
+}
+
+private fun Throwable.toReauthenticationError(): Throwable =
+    when (this) {
+        is IdentityError -> this
+        is FirebaseAuthInvalidCredentialsException -> IdentityError.InvalidCredentials
+        is FirebaseNetworkException -> IdentityError.Network
+        else -> this
     }
-}
-
-private fun FirebaseUser.toUserSession(): UserSession {
-    return UserSession(
-        uid = uid,
-        email = email,
-        displayName = displayName,
-        creationTimestamp = metadata?.creationTimestamp,
-    )
-}
-

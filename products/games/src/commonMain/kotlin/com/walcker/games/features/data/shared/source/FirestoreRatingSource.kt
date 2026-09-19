@@ -1,0 +1,217 @@
+package com.walcker.games.features.data.shared.source
+
+import com.walcker.games.features.domain.shared.model.RATING_FIELD_CREATED_AT_MS
+import com.walcker.games.features.domain.shared.model.Rating
+import com.walcker.games.features.domain.shared.model.RatingSort
+import com.walcker.games.features.domain.shared.model.RatingsPage
+import com.walcker.games.features.domain.shared.model.SubmitRatingOutcome
+import com.walcker.match.firestore.DocumentSnapshot
+import com.walcker.match.firestore.FirestoreClient
+import com.walcker.match.firestore.FirestoreQueryBuilder
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+
+internal class FirestoreRatingSource(
+    private val firestore: FirestoreClient,
+) : RatingSource {
+    override suspend fun submitPlayerRating(
+        matchId: String,
+        ratedUserId: String,
+        rating: Int,
+        comment: String,
+    ): Result<SubmitRatingOutcome> =
+        firestore
+            .callFunction(
+                SUBMIT_RATING_FUNCTION,
+                mapOf(
+                    "matchId" to matchId,
+                    "ratedUserId" to ratedUserId,
+                    "rating" to rating,
+                    "comment" to comment,
+                ),
+            ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
+    override suspend fun submitMatchRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> =
+        firestore
+            .callFunction(
+                SUBMIT_MATCH_RATING_FUNCTION,
+                mapOf("matchId" to matchId, "rating" to rating),
+            ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
+    override suspend fun submitOrganizerRating(
+        matchId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> =
+        firestore
+            .callFunction(
+                SUBMIT_ORGANIZER_RATING_FUNCTION,
+                mapOf("matchId" to matchId, "rating" to rating),
+            ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
+    override suspend fun submitSkillRating(
+        matchId: String,
+        ratedUserId: String,
+        rating: Int,
+    ): Result<SubmitRatingOutcome> =
+        firestore
+            .callFunction(
+                SUBMIT_SKILL_RATING_FUNCTION,
+                mapOf("matchId" to matchId, "ratedUserId" to ratedUserId, "rating" to rating),
+            ).mapCatching { payload -> payload.toSubmitRatingOutcome() }
+
+    override suspend fun getMySkillRatings(
+        organizerId: String,
+        userIds: List<String>,
+    ): Result<Map<String, Int>> =
+        runCatching {
+            coroutineScope {
+                userIds
+                    .distinct()
+                    .map { userId ->
+                        async {
+                            val snapshot =
+                                firestore
+                                    .document("profiles/$userId/skillRatings/$organizerId")
+                                    .get()
+                                    .getOrNull()
+                            userId to snapshot?.getLong("rating")?.toInt()
+                        }
+                    }.awaitAll()
+                    .mapNotNull { (userId, rating) -> rating?.let { userId to it } }
+                    .toMap()
+            }
+        }
+
+    private fun Map<String, Any?>.toSubmitRatingOutcome(): SubmitRatingOutcome {
+        val averageRating = (this["averageRating"] as? Number)?.toFloat() ?: 0f
+        val ratingCount = (this["ratingCount"] as? Number)?.toInt() ?: 0
+
+        return when (val status = this["status"]) {
+            "recorded" -> SubmitRatingOutcome.Recorded(averageRating, ratingCount)
+            "updated" -> SubmitRatingOutcome.Updated(averageRating, ratingCount)
+            "already_rated" -> SubmitRatingOutcome.AlreadyRated(averageRating, ratingCount)
+            else -> throw IllegalStateException(
+                "Unexpected submitPlayerRating response status: $status",
+            )
+        }
+    }
+
+    override suspend fun getUserRatings(
+        userId: String,
+        limit: Int,
+    ): Result<List<Rating>> = getUserRatingsPage(userId = userId, limit = limit).map { it.ratings }
+
+    override suspend fun getUserRatingsPage(
+        userId: String,
+        limit: Int,
+        sort: RatingSort,
+        cursor: String?,
+    ): Result<RatingsPage> =
+        runCatching {
+            val snapshots =
+                firestore
+                    .collection("profiles/$userId/ratings")
+                    .query()
+                    .applySort(sort)
+                    .applyCursor(cursor, sort)
+                    .limit(limit)
+                    .get()
+                    .getOrThrow()
+            val last = snapshots.lastOrNull()
+
+            RatingsPage(
+                ratings = snapshots.mapNotNull { snapshot -> snapshot.toRating() },
+                nextCursor =
+                    if (snapshots.size < limit || last == null) {
+                        null
+                    } else {
+                        RatingCursor.encode(
+                            stars = last.getLong("rating")?.toInt() ?: 0,
+                            createdAtMs = last.createdAtMs(),
+                            sort = sort,
+                        )
+                    },
+            )
+        }
+
+    override suspend fun getMatchLocationRatings(
+        matchId: String,
+        limit: Int,
+    ): Result<List<Rating>> =
+        runCatching {
+            firestore
+                .collection("matches/$matchId/locationRatings")
+                .query()
+                .orderBy(RATING_FIELD_CREATED_AT_MS, DESCENDING)
+                .limit(limit)
+                .get()
+                .getOrThrow()
+                .mapNotNull { snapshot -> snapshot.toRating() }
+        }
+
+    override suspend fun getRatingsGivenForMatch(
+        matchId: String,
+        raterUserId: String,
+    ): Result<List<Rating>> =
+        runCatching {
+            firestore
+                .collection("matches/$matchId/ratings")
+                .query()
+                .where("raterUserId", "==", raterUserId)
+                .get()
+                .getOrThrow()
+                .mapNotNull { snapshot -> snapshot.toRating() }
+        }
+
+    private fun FirestoreQueryBuilder.applySort(sort: RatingSort): FirestoreQueryBuilder {
+        val primary = orderBy(sort.primaryField, if (sort.descending) DESCENDING else ASCENDING)
+        return if (sort.primaryField == RATING_FIELD_CREATED_AT_MS) {
+            primary
+        } else {
+            primary.orderBy(RATING_FIELD_CREATED_AT_MS, DESCENDING)
+        }
+    }
+
+    private fun FirestoreQueryBuilder.applyCursor(
+        cursor: String?,
+        sort: RatingSort,
+    ): FirestoreQueryBuilder {
+        val values = RatingCursor.decode(cursor, sort)
+        return if (values.isEmpty()) this else startAfter(*values.toTypedArray())
+    }
+
+    private fun DocumentSnapshot.toRating(): Rating? =
+        try {
+            Rating(
+                id = id,
+                matchId = getString("matchId") ?: return null,
+                ratedUserId = getString("ratedUserId") ?: return null,
+                raterUserId = getString("raterUserId") ?: return null,
+                rating = getLong("rating")?.toInt() ?: return null,
+                comment = getString("comment") ?: "",
+                createdAtMs = createdAtMs(),
+            )
+        } catch (e: Exception) {
+            null
+        }
+
+    private fun DocumentSnapshot.createdAtMs(): Long =
+        getLong(RATING_FIELD_CREATED_AT_MS)
+            ?: getTimestamp(LEGACY_CREATED_AT_FIELD)
+            ?: 0L
+
+    private companion object {
+        const val SUBMIT_RATING_FUNCTION = "submitPlayerRating"
+        const val SUBMIT_MATCH_RATING_FUNCTION = "submitMatchRating"
+        const val SUBMIT_ORGANIZER_RATING_FUNCTION = "submitOrganizerRating"
+        const val SUBMIT_SKILL_RATING_FUNCTION = "submitSkillRating"
+        const val ASCENDING = "asc"
+        const val DESCENDING = "desc"
+
+        const val LEGACY_CREATED_AT_FIELD = "createdAt"
+    }
+}

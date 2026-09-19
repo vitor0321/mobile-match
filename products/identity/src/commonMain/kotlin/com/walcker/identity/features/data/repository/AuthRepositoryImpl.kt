@@ -14,31 +14,32 @@ internal class AuthRepositoryImpl(
 ) : AuthRepository {
     override val currentUser: Flow<UserSession?> = firebaseAuthSource.currentUser
 
-    override suspend fun signIn(email: String, password: String): Result<UserSession> {
-        return firebaseAuthSource.signIn(email = email, password = password)
-    }
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession> = firebaseAuthSource.signIn(email = email, password = password)
 
-    override suspend fun signInWithGoogle(): Result<UserSession> {
-        return googleAuthSource.signIn()
-    }
+    override suspend fun signInWithGoogle(): Result<UserSession> = googleAuthSource.signIn()
 
-    override suspend fun signInWithApple(): Result<UserSession> {
-        return appleAuthSource.signIn()
-    }
+    override suspend fun signInWithApple(): Result<UserSession> = appleAuthSource.signIn()
 
-    override suspend fun signUp(email: String, password: String): Result<UserSession> {
-        return firebaseAuthSource.signUp(email = email, password = password)
-    }
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserSession> = firebaseAuthSource.signUp(email = email, password = password, displayName = displayName)
 
-    override suspend fun deleteAccount(): Result<Unit> {
-        return firebaseAuthSource.deleteCurrentUser()
-    }
+    override suspend fun deleteAccount(): Result<Unit> = firebaseAuthSource.deleteCurrentUser()
 
-    override suspend fun signOut(): Result<Unit> {
-        return firebaseAuthSource.signOut()
-    }
+    override suspend fun signInProvider(): Result<String?> = firebaseAuthSource.signInProvider()
 
-    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
-        return firebaseAuthSource.sendPasswordResetEmail(email)
-    }
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> = firebaseAuthSource.reauthenticateWithPassword(password)
+
+    override suspend fun reauthenticateWithGoogle(): Result<Unit> = googleAuthSource.reauthenticate()
+
+    override suspend fun reauthenticateWithApple(): Result<Unit> = appleAuthSource.reauthenticate()
+
+    override suspend fun signOut(): Result<Unit> = firebaseAuthSource.signOut()
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = firebaseAuthSource.sendPasswordResetEmail(email)
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ForbiddenComment:CurrencyFormat.kt$// (com.walcker.match.core.strings.Locales). É isso que fica gravado na partida e</ID>
+    <ID>ForbiddenComment:CurrencyFormat.kt$// Código de moeda (ISO 4217, ex. "BRL", "USD") do dispositivo de quem está criando a</ID>
+    <ID>ForbiddenComment:CurrencyFormat.kt$// Formata centavos usando a moeda informada (não a do dispositivo de quem está</ID>
+    <ID>ForbiddenComment:CurrencyFormat.kt$// decide o símbolo mostrado pra todo mundo depois, inclusive em outro país.</ID>
+    <ID>ForbiddenComment:CurrencyFormat.kt$// nativa da plataforma, não de um mapa manual código→símbolo.</ID>
+    <ID>ForbiddenComment:CurrencyFormat.kt$// partida — a localização real do aparelho, não o idioma escolhido no app</ID>
+    <ID>ForbiddenComment:CurrencyFormat.kt$// vendo) — a convenção de casas decimais e símbolo vem da própria moeda via API</ID>
+    <ID>UnusedPrivateProperty:GeoHash.kt$val queryBits = precision * BITS_PER_CHAR</ID>
+  </CurrentIssues>
+</SmellBaseline>

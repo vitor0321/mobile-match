@@ -11,8 +11,8 @@ internal class SessionHolderImpl(
     authRepository: AuthRepository,
 ) : SessionHolder {
     override val currentUser: Flow<UserSession?> = authRepository.currentUser
-    override val isAuthenticated: Flow<Boolean> = authRepository.currentUser
-        .map { it != null }
-        .distinctUntilChanged()
+    override val isAuthenticated: Flow<Boolean> =
+        authRepository.currentUser
+            .map { it != null }
+            .distinctUntilChanged()
 }
-

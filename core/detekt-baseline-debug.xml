@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>UnusedImports:AddressGeocoder.android.kt$import kotlin.coroutines.resume</ID>
+    <ID>UnusedImports:ReverseGeocoder.android.kt$import kotlin.coroutines.resume</ID>
+    <ID>UseOrEmpty:AddressGeocoder.android.kt$AndroidAddressGeocoder$address.getAddressLine(0) ?: ""</ID>
+    <ID>UseOrEmpty:AddressGeocoder.android.kt$AndroidAddressGeocoder$address.locality ?: address.subAdminArea ?: ""</ID>
+    <ID>UseOrEmpty:AddressGeocoder.android.kt$AndroidAddressGeocoder$address.subLocality ?: ""</ID>
+    <ID>UseOrEmpty:ReverseGeocoder.android.kt$AndroidReverseGeocoder$address.getAddressLine(0) ?: ""</ID>
+    <ID>UseOrEmpty:ReverseGeocoder.android.kt$AndroidReverseGeocoder$address.locality ?: address.subAdminArea ?: ""</ID>
+    <ID>UseOrEmpty:ReverseGeocoder.android.kt$AndroidReverseGeocoder$address.subLocality ?: ""</ID>
+  </CurrentIssues>
+</SmellBaseline>

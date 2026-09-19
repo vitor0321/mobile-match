@@ -12,20 +12,21 @@ import com.revenuecat.purchases.kmp.models.StoreTransaction
 import com.walcker.identity.features.domain.billing.ProductOffering
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 private const val PRO_ENTITLEMENT_ID = "Match Pro"
 private const val BILLING_NOT_CONFIGURED_MESSAGE = "RevenueCat has not been configured."
 
 internal class RevenueCatBillingClient : BillingClient {
-    private val customerInfoUpdatesState = MutableSharedFlow<BillingCustomerInfoUpdate>(
-        replay = 1,
-        extraBufferCapacity = 1,
-    )
+    private val customerInfoUpdatesState =
+        MutableSharedFlow<BillingCustomerInfoUpdate>(
+            replay = 1,
+            extraBufferCapacity = 1,
+        )
     private var delegateAttached = false
     private var activeUserId: String? = null
 
@@ -34,15 +35,14 @@ internal class RevenueCatBillingClient : BillingClient {
         return customerInfoUpdatesState.distinctUntilChanged()
     }
 
-    override suspend fun logIn(userId: String): Result<Boolean> {
-        return runBillingCall {
+    override suspend fun logIn(userId: String): Result<Boolean> =
+        runBillingCall {
             ensureConfigured()
             attachDelegateIfNeeded()
             val customerInfo = Purchases.sharedInstance.awaitLogIn(userId).first
             activeUserId = userId
             customerInfo.hasProAccess()
         }
-    }
 
     override suspend fun logOut(): Result<Unit> {
         if (!Purchases.isConfigured) return Result.success(Unit)
@@ -55,11 +55,12 @@ internal class RevenueCatBillingClient : BillingClient {
         }
     }
 
-    override suspend fun listOfferings(): Result<ImmutableList<ProductOffering>> {
-        return runBillingCall {
+    override suspend fun listOfferings(): Result<ImmutableList<ProductOffering>> =
+        runBillingCall {
             ensureConfigured()
             attachDelegateIfNeeded()
-            Purchases.sharedInstance.awaitOfferings()
+            Purchases.sharedInstance
+                .awaitOfferings()
                 .current
                 ?.availablePackages
                 .orEmpty()
@@ -67,61 +68,62 @@ internal class RevenueCatBillingClient : BillingClient {
                 .map { it.toProductOffering() }
                 .toImmutableList()
         }
-    }
 
-    override suspend fun purchase(packageId: String): Result<Boolean> {
-        return runBillingCall {
+    override suspend fun purchase(packageId: String): Result<Boolean> =
+        runBillingCall {
             ensureConfigured()
             attachDelegateIfNeeded()
             val packageToPurchase = resolvePackage(packageId)
-            Purchases.sharedInstance.awaitPurchase(packageToPurchase).second.hasProAccess()
+            Purchases.sharedInstance
+                .awaitPurchase(packageToPurchase)
+                .second
+                .hasProAccess()
         }
-    }
 
-    override suspend fun restore(): Result<Boolean> {
-        return runBillingCall {
+    override suspend fun restore(): Result<Boolean> =
+        runBillingCall {
             ensureConfigured()
             attachDelegateIfNeeded()
             Purchases.sharedInstance.awaitRestore().hasProAccess()
         }
-    }
 
-    override suspend fun managementUrl(): Result<String?> {
-        return runBillingCall {
+    override suspend fun managementUrl(): Result<String?> =
+        runBillingCall {
             ensureConfigured()
             attachDelegateIfNeeded()
             Purchases.sharedInstance.awaitCustomerInfo().managementUrlString
         }
-    }
 
     private fun attachDelegateIfNeeded() {
         if (delegateAttached) return
-        Purchases.sharedInstance.delegate = object : PurchasesDelegate {
-            override fun onPurchasePromoProduct(
-                product: StoreProduct,
-                startPurchase: (
-                    onError: (error: PurchasesError, userCancelled: Boolean) -> Unit,
-                    onSuccess: (storeTransaction: StoreTransaction, customerInfo: CustomerInfo) -> Unit,
-                ) -> Unit,
-            ) = Unit
+        Purchases.sharedInstance.delegate =
+            object : PurchasesDelegate {
+                override fun onPurchasePromoProduct(
+                    product: StoreProduct,
+                    startPurchase: (
+                        onError: (error: PurchasesError, userCancelled: Boolean) -> Unit,
+                        onSuccess: (storeTransaction: StoreTransaction, customerInfo: CustomerInfo) -> Unit,
+                    ) -> Unit,
+                ) = Unit
 
-            override fun onCustomerInfoUpdated(customerInfo: CustomerInfo) {
-                activeUserId?.let { uid ->
-                    customerInfoUpdatesState.tryEmit(BillingCustomerInfoUpdate(uid, customerInfo.hasProAccess()))
+                override fun onCustomerInfoUpdated(customerInfo: CustomerInfo) {
+                    activeUserId?.let { uid ->
+                        customerInfoUpdatesState.tryEmit(BillingCustomerInfoUpdate(uid, customerInfo.hasProAccess()))
+                    }
                 }
             }
-        }
         delegateAttached = true
     }
 
     private suspend fun resolvePackage(packageId: String): Package {
         val offerings = Purchases.sharedInstance.awaitOfferings()
-        val packages = buildList<Package> {
-            offerings.current?.availablePackages?.let { addAll(it) }
-            offerings.all.forEach { (_, availableOffering) ->
-                addAll(availableOffering.availablePackages)
+        val packages =
+            buildList<Package> {
+                offerings.current?.availablePackages?.let { addAll(it) }
+                offerings.all.forEach { (_, availableOffering) ->
+                    addAll(availableOffering.availablePackages)
+                }
             }
-        }
         return packages.firstOrNull { availablePackage ->
             availablePackage.identifier == packageId
         } ?: error("Requested offering is no longer available.")
@@ -132,32 +134,29 @@ internal class RevenueCatBillingClient : BillingClient {
     }
 }
 
-private fun CustomerInfo.hasProAccess(): Boolean {
-    return entitlements.active[PRO_ENTITLEMENT_ID]?.isActive == true
-}
+private fun CustomerInfo.hasProAccess(): Boolean = entitlements.active[PRO_ENTITLEMENT_ID]?.isActive == true
 
-private suspend inline fun <T> runBillingCall(crossinline block: suspend () -> T): Result<T> {
-    return try {
+private suspend inline fun <T> runBillingCall(crossinline block: suspend () -> T): Result<T> =
+    try {
         Result.success(block())
     } catch (error: Throwable) {
         Result.failure(error)
     }
-}
 
-private fun Package.toProductOffering(): ProductOffering {
-    return ProductOffering(
+private fun Package.toProductOffering(): ProductOffering =
+    ProductOffering(
         id = "${presentedOfferingContext.offeringIdentifier}:$identifier",
         offeringId = presentedOfferingContext.offeringIdentifier,
         packageId = identifier,
         title = storeProduct.title.trim(),
-        description = storeProduct.localizedDescription?.takeIf { it.isNotBlank() }
-            ?: defaultDescription(),
+        description =
+            storeProduct.localizedDescription?.takeIf { it.isNotBlank() }
+                ?: defaultDescription(),
         priceLabel = storeProduct.price.formatted,
     )
-}
 
-private fun Package.defaultDescription(): String {
-    return when (packageType) {
+private fun Package.defaultDescription(): String =
+    when (packageType) {
         PackageType.LIFETIME -> "Lifetime access"
         PackageType.ANNUAL -> "Annual plan"
         PackageType.SIX_MONTH -> "6-month plan"
@@ -167,10 +166,9 @@ private fun Package.defaultDescription(): String {
         PackageType.WEEKLY -> "Weekly plan"
         else -> identifier
     }
-}
 
-private fun PackageType.rank(): Int {
-    return when (this) {
+private fun PackageType.rank(): Int =
+    when (this) {
         PackageType.LIFETIME -> 0
         PackageType.ANNUAL -> 1
         PackageType.SIX_MONTH -> 2
@@ -180,39 +178,34 @@ private fun PackageType.rank(): Int {
         PackageType.WEEKLY -> 6
         else -> 7
     }
-}
 
-
-private suspend fun Purchases.awaitOfferings(): Offerings {
-    return suspendCancellableCoroutine { continuation ->
+private suspend fun Purchases.awaitOfferings(): Offerings =
+    suspendCancellableCoroutine { continuation ->
         getOfferings(
             onError = { error -> continuation.resumeWith(Result.failure(error.asException())) },
             onSuccess = { offerings -> continuation.resume(offerings) },
         )
     }
-}
 
-private suspend fun Purchases.awaitLogIn(userId: String): Pair<CustomerInfo, Boolean> {
-    return suspendCancellableCoroutine { continuation ->
+private suspend fun Purchases.awaitLogIn(userId: String): Pair<CustomerInfo, Boolean> =
+    suspendCancellableCoroutine { continuation ->
         logIn(
             newAppUserID = userId,
             onError = { error -> continuation.resumeWith(Result.failure(error.asException())) },
             onSuccess = { customerInfo, created -> continuation.resume(customerInfo to created) },
         )
     }
-}
 
-private suspend fun Purchases.awaitLogOut(): CustomerInfo {
-    return suspendCancellableCoroutine { continuation ->
+private suspend fun Purchases.awaitLogOut(): CustomerInfo =
+    suspendCancellableCoroutine { continuation ->
         logOut(
             onError = { error -> continuation.resumeWith(Result.failure(error.asException())) },
             onSuccess = { customerInfo -> continuation.resume(customerInfo) },
         )
     }
-}
 
-private suspend fun Purchases.awaitPurchase(packageToPurchase: Package): Pair<StoreTransaction, CustomerInfo> {
-    return suspendCancellableCoroutine { continuation ->
+private suspend fun Purchases.awaitPurchase(packageToPurchase: Package): Pair<StoreTransaction, CustomerInfo> =
+    suspendCancellableCoroutine { continuation ->
         purchase(
             packageToPurchase = packageToPurchase,
             onError = { error, userCancelled ->
@@ -221,31 +214,27 @@ private suspend fun Purchases.awaitPurchase(packageToPurchase: Package): Pair<St
             onSuccess = { transaction, customerInfo -> continuation.resume(transaction to customerInfo) },
         )
     }
-}
 
-private suspend fun Purchases.awaitRestore(): CustomerInfo {
-    return suspendCancellableCoroutine { continuation ->
+private suspend fun Purchases.awaitRestore(): CustomerInfo =
+    suspendCancellableCoroutine { continuation ->
         restorePurchases(
             onError = { error -> continuation.resumeWith(Result.failure(error.asException())) },
             onSuccess = { customerInfo -> continuation.resume(customerInfo) },
         )
     }
-}
 
-private suspend fun Purchases.awaitCustomerInfo(): CustomerInfo {
-    return suspendCancellableCoroutine { continuation ->
+private suspend fun Purchases.awaitCustomerInfo(): CustomerInfo =
+    suspendCancellableCoroutine { continuation ->
         getCustomerInfo(
             onError = { error -> continuation.resumeWith(Result.failure(error.asException())) },
             onSuccess = { customerInfo -> continuation.resume(customerInfo) },
         )
     }
-}
 
-private fun PurchasesError.asException(): Throwable {
-    return com.revenuecat.purchases.kmp.models.PurchasesException(this)
-}
+private fun PurchasesError.asException(): Throwable =
+    com.revenuecat.purchases.kmp.models
+        .PurchasesException(this)
 
-private fun PurchasesError.asTransactionException(userCancelled: Boolean): Throwable {
-    return com.revenuecat.purchases.kmp.models.PurchasesTransactionException(this, userCancelled)
-}
-
+private fun PurchasesError.asTransactionException(userCancelled: Boolean): Throwable =
+    com.revenuecat.purchases.kmp.models
+        .PurchasesTransactionException(this, userCancelled)

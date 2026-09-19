@@ -5,12 +5,33 @@ import kotlinx.coroutines.flow.Flow
 
 internal interface AuthRepository {
     val currentUser: Flow<UserSession?>
-    suspend fun signIn(email: String, password: String): Result<UserSession>
+
+    suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<UserSession>
+
     suspend fun signInWithGoogle(): Result<UserSession>
+
     suspend fun signInWithApple(): Result<UserSession>
-    suspend fun signUp(email: String, password: String): Result<UserSession>
+
+    suspend fun signUp(
+        email: String,
+        password: String,
+        displayName: String,
+    ): Result<UserSession>
+
     suspend fun deleteAccount(): Result<Unit>
+
+    suspend fun signInProvider(): Result<String?>
+
+    suspend fun reauthenticateWithPassword(password: String): Result<Unit>
+
+    suspend fun reauthenticateWithGoogle(): Result<Unit>
+
+    suspend fun reauthenticateWithApple(): Result<Unit>
+
     suspend fun signOut(): Result<Unit>
+
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>
 }
-

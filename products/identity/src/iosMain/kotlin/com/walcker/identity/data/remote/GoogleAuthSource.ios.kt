@@ -1,10 +1,10 @@
 package com.walcker.identity.features.data.remote
 
 import cocoapods.FirebaseAuth.FIRAuth
+import cocoapods.FirebaseAuth.FIRAuthCredential
 import cocoapods.FirebaseAuth.FIRGoogleAuthProvider
 import cocoapods.GoogleSignIn.GIDSignIn
 import com.walcker.identity.api.UserSession
-import com.walcker.identity.features.data.remote.GoogleAuthSource as FeatureGoogleAuthSource
 import com.walcker.identity.features.domain.error.IdentityError
 import com.walcker.identity.strings.IdentityStringsHolder
 import com.walcker.identity.strings.resolveStringsOrDefault
@@ -16,6 +16,7 @@ import platform.UIKit.UINavigationController
 import platform.UIKit.UITabBarController
 import platform.UIKit.UIViewController
 import kotlin.coroutines.resume
+import com.walcker.identity.features.data.remote.GoogleAuthSource as FeatureGoogleAuthSource
 
 @OptIn(ExperimentalForeignApi::class)
 internal class IosGoogleAuthSource(
@@ -25,8 +26,40 @@ internal class IosGoogleAuthSource(
 ) : FeatureGoogleAuthSource {
     override suspend fun signIn(): Result<UserSession> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
-        val presentingViewController = topViewController()
-            ?: return Result.failure(IllegalStateException(strings.missingActiveViewController))
+        val credential = googleCredential().getOrElse { return Result.failure(it) }
+        return suspendCancellableCoroutine { continuation ->
+            auth.signInWithCredential(credential) { authResult, authError ->
+                if (authError != null) {
+                    continuation.resume(Result.failure(authError.toThrowable(strings.firebaseGoogleAuthFailed)))
+                    return@signInWithCredential
+                }
+
+                val session = authResult?.user()?.toUserSession()
+                continuation.resume(
+                    if (session != null) {
+                        Result.success(session)
+                    } else {
+                        Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterGoogleSignIn))
+                    },
+                )
+            }
+        }
+    }
+
+    override suspend fun reauthenticate(): Result<Unit> {
+        val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+        val user =
+            auth.currentUser()
+                ?: return Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterGoogleSignIn))
+        val credential = googleCredential().getOrElse { return Result.failure(it) }
+        return user.reauthenticate(credential, strings.firebaseGoogleAuthFailed)
+    }
+
+    private suspend fun googleCredential(): Result<FIRAuthCredential> {
+        val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+        val presentingViewController =
+            topViewController()
+                ?: return Result.failure(IllegalStateException(strings.missingActiveViewController))
 
         return suspendCancellableCoroutine { continuation ->
             signIn.signInWithPresentingViewController(presentingViewController) { result, signInError ->
@@ -44,33 +77,18 @@ internal class IosGoogleAuthSource(
                     return@signInWithPresentingViewController
                 }
 
-                val credential = FIRGoogleAuthProvider.credentialWithIDToken(
-                    idToken = idToken,
-                    accessToken = accessToken,
+                continuation.resume(
+                    Result.success(FIRGoogleAuthProvider.credentialWithIDToken(idToken = idToken, accessToken = accessToken)),
                 )
-                auth.signInWithCredential(credential) { authResult, authError ->
-                    if (authError != null) {
-                        continuation.resume(Result.failure(authError.toThrowable(strings.firebaseGoogleAuthFailed)))
-                        return@signInWithCredential
-                    }
-
-                    val session = authResult?.user()?.toUserSession()
-                    continuation.resume(
-                        if (session != null) {
-                            Result.success(session)
-                        } else {
-                            Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterGoogleSignIn))
-                        }
-                    )
-                }
             }
         }
     }
 }
 
 private fun topViewController(): UIViewController? {
-    val root = UIApplication.sharedApplication.keyWindow?.rootViewController
-        ?: return null
+    val root =
+        UIApplication.sharedApplication.keyWindow?.rootViewController
+            ?: return null
     return root.topMostViewController()
 }
 
@@ -89,5 +107,4 @@ private fun UIViewController.topMostViewController(): UIViewController {
     return this
 }
 
-private fun NSError.toGoogleSignInError(): Throwable =
-    if (code == -5L) IdentityError.Cancelled else IdentityError.ProviderUnavailable
+private fun NSError.toGoogleSignInError(): Throwable = if (code == -5L) IdentityError.Cancelled else IdentityError.ProviderUnavailable
