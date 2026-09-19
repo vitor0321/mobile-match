@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.MatchStatus
 import com.walcker.games.features.domain.shared.repository.MyMatch
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarTag
 import com.walcker.match.cedar.components.CedarTagTone
@@ -108,7 +109,7 @@ internal fun MyMatchCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "${game.sport.label} · ${game.neighborhood}",
+                        text = "${sportName(game.sport)} · ${game.neighborhood}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

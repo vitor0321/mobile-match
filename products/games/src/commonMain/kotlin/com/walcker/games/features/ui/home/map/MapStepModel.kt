@@ -10,6 +10,8 @@ import com.walcker.games.features.ui.home.map.mapper.toMapPin
 import com.walcker.games.features.ui.home.map.model.MapPin
 import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.home.map.model.NearbyMatch
+import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.match.core.analytics.AnalyticsEvent
 import com.walcker.match.core.analytics.AnalyticsTracker
 import com.walcker.match.core.analytics.CrashReporter
@@ -62,6 +64,7 @@ internal class MapStepModel(
     private val locationProvider: LocationProvider,
     private val analytics: AnalyticsTracker,
     private val crashReporter: CrashReporter,
+    private val stringsHolder: GamesStringsHolder,
 ) : ScreenModel {
     private val _state = MutableStateFlow(MapState())
     val state: StateFlow<MapState> = _state.asStateFlow()
@@ -110,7 +113,7 @@ internal class MapStepModel(
         }.onEach { (games, nearby) ->
             _state.update {
                 it.copy(
-                    pins = games.map { game -> game.toMapPin() },
+                    pins = stringsHolder.resolveStringsOrDefault().let { strings -> games.map { game -> game.toMapPin(strings.sports, strings.map.freePrice) } },
                     matches = games,
                     nearbyMatches = nearby,
                     isLoading = false,

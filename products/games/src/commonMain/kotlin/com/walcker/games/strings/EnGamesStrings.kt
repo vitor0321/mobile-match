@@ -23,4 +23,6 @@ internal val EnGamesStrings =
         map = mapStringsEn,
         loginRequired = loginRequiredStringsEn,
         about = aboutStringsEn,
+        sports = sportStringsEn,
+        errors = errorStringsEn,
     )

@@ -13,6 +13,7 @@ import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.NearbyMatchesPage
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.ui.home.map.MapCamera
+import com.walcker.games.strings.EnGamesStrings
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
 import com.walcker.match.core.geo.Coordinates
@@ -126,6 +127,32 @@ class SearchStepModelTest {
             advanceUntilIdle()
 
             assertEquals(1, model.state.value.results.size)
+        }
+
+    @Test
+    fun `the sport is searched by its name in the app language`() =
+        runTest(testDispatcher) {
+            val volleyball = futureGame("volei").copy(sport = Sport.VOLEI)
+            val repository = FakeGameRepository(searchMatchesResult = pageOf(listOf(volleyball, futureGame("futsal"))))
+            val model = buildModel(repository)
+            advanceUntilIdle()
+
+            model.onEvent(SearchEvents.QueryChanged("vôlei"))
+            advanceUntilIdle()
+            assertEquals(
+                listOf("volei"),
+                model.state.value.results
+                    .map { it.id },
+            )
+
+            stringsHolder.setStrings(EnGamesStrings)
+            model.onEvent(SearchEvents.QueryChanged("volleyball"))
+            advanceUntilIdle()
+            assertEquals(
+                listOf("volei"),
+                model.state.value.results
+                    .map { it.id },
+            )
         }
 
     @Test

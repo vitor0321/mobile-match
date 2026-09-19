@@ -49,6 +49,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.walcker.games.features.ui.about.AboutStep
 import com.walcker.games.features.ui.playerProfile.component.AvailabilityCard
+import com.walcker.games.features.ui.playerProfile.component.DeleteAccountPasswordDialog
 import com.walcker.games.features.ui.playerProfile.component.MySportsSection
 import com.walcker.games.features.ui.playerProfile.component.ProfileHeader
 import com.walcker.games.features.ui.playerProfile.component.RatingItemCard
@@ -58,6 +59,7 @@ import com.walcker.games.features.ui.shared.notifications.NotificationHistorySte
 import com.walcker.games.features.ui.shared.notifications.rememberHasUnreadNotifications
 import com.walcker.games.strings.PlayerProfileStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarMenuRow
 import com.walcker.match.cedar.components.CedarProfilePreLoginAnimation
@@ -354,7 +356,7 @@ internal fun PlayerProfileContent(
                             venueName = nextMatch.game.venueName,
                             startsAtSeconds = nextMatch.game.startsAtSeconds,
                             onClick = { onEvent(PlayerProfileEvent.NextMatchClicked(nextMatch.game.id)) },
-                            metaLabel = "${nextMatch.game.sport.label} · ${nextMatch.game.neighborhood}",
+                            metaLabel = "${sportName(nextMatch.game.sport)} · ${nextMatch.game.neighborhood}",
                         )
                     }
                 }
@@ -428,7 +430,17 @@ internal fun PlayerProfileContent(
         }
     }
 
-    if (state.showDeleteAccountDialog) {
+    if (state.showDeleteAccountDialog && state.isDeleteAccountPasswordRequired) {
+        DeleteAccountPasswordDialog(
+            password = state.deleteAccountPassword,
+            error = state.deleteAccountPasswordError,
+            isWorking = state.isDeletingAccount,
+            strings = strings,
+            onPasswordChange = { onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged(it)) },
+            onConfirm = { onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword) },
+            onDismiss = { onEvent(PlayerProfileEvent.CancelDeleteAccount) },
+        )
+    } else if (state.showDeleteAccountDialog) {
         ConfirmDialog(
             title = strings.deleteAccountDialogTitle,
             body = strings.deleteAccountDialogBody,

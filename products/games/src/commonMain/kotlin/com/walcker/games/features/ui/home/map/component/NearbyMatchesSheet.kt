@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.walcker.games.features.ui.home.map.model.NearbyMatch
 import com.walcker.games.strings.MapStrings
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.CedarSectionHeader
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -49,7 +50,7 @@ internal fun NearbyMatchesSheet(
                 MatchCard(
                     venueName = nearby.game.venueName,
                     startsAtSeconds = nearby.game.startsAtSeconds,
-                    metaLabel = "${nearby.game.sport.label} · ${formatDistance(nearby.distanceKm)}",
+                    metaLabel = "${sportName(nearby.game.sport)} · ${formatDistance(nearby.distanceKm)}",
                     onClick = { onMatchTap(nearby.game.id) },
                 )
             }

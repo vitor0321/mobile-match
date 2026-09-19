@@ -1,10 +1,10 @@
 package com.walcker.match.firestore
 
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Transaction
 import com.google.firebase.functions.FirebaseFunctions
-import com.google.firebase.functions.dagger.internal.DoubleCheck.lazy
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -223,6 +223,17 @@ private class AndroidQueryBuilder(
                 currentQuery.orderBy(field, Query.Direction.DESCENDING)
             } else {
                 currentQuery.orderBy(field, Query.Direction.ASCENDING)
+            }
+        return newBuilder
+    }
+
+    override fun orderByDocumentId(direction: String): FirestoreQueryBuilder {
+        val newBuilder = AndroidQueryBuilder(baseQuery)
+        newBuilder.currentQuery =
+            if (direction.lowercase() == "desc") {
+                currentQuery.orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
+            } else {
+                currentQuery.orderBy(FieldPath.documentId(), Query.Direction.ASCENDING)
             }
         return newBuilder
     }

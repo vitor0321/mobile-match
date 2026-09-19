@@ -6,6 +6,8 @@ import com.walcker.games.fake.FakeGameRepository
 import com.walcker.games.fake.FakeLocationProvider
 import com.walcker.games.fake.game
 import com.walcker.games.fake.testGamesPreferences
+import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.games.strings.PtBrGamesStrings
 import com.walcker.match.core.geo.Coordinates
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +45,7 @@ class MapStepModelTest {
         locationProvider = locationProvider,
         analytics = FakeAnalyticsTracker(),
         crashReporter = FakeCrashReporter(),
+        stringsHolder = GamesStringsHolder().apply { setStrings(PtBrGamesStrings) },
     )
 
     private fun futureGame(id: String) = game(id = id, startsAtSeconds = Long.MAX_VALUE / 1000)

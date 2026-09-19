@@ -128,15 +128,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
     }
 }
 
-private func matchIdFromMatchLink(_ url: URL) -> String? {
-    let components = URLComponents(url: url, resolvingAgainstBaseURL: true)
-    if let id = components?.queryItems?.first(where: { $0.name == "id" })?.value, !id.isEmpty {
-        return id
-    }
-    let lastComponent = url.lastPathComponent
-    return lastComponent.isEmpty ? nil : lastComponent
-}
-
 @main
 struct iOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
@@ -148,13 +139,7 @@ struct iOSApp: App {
                     if Auth.auth().canHandle(url) {
                         return
                     }
-                    print("DEEPLINK_DEBUG onOpenURL received url=\(url.absoluteString)")
-                    guard let matchId = matchIdFromMatchLink(url) else {
-                        print("DEEPLINK_DEBUG onOpenURL could not extract matchId")
-                        return
-                    }
-                    print("DEEPLINK_DEBUG onOpenURL matchId=\(matchId), calling openMatch")
-                    IosDeepLinkBridge.companion.getInstance().openMatch(matchId: matchId)
+                    IosDeepLinkBridge.companion.getInstance().openMatchFromUrl(url: url.absoluteString)
                 }
         }
     }

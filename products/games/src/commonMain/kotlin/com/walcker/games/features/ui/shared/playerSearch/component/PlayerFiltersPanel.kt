@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.strings.PlayerSearchStrings
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.CedarFilterSection
 import com.walcker.match.cedar.components.CedarPrimaryButton
 import com.walcker.match.cedar.components.CedarScreenTitle
@@ -85,7 +86,7 @@ internal fun PlayerFiltersPanel(
                 Sport.entries.forEach { sport ->
                     val selected = sport in filters.favoriteSports
                     SportChip(
-                        label = sport.label,
+                        label = sportName(sport),
                         selected = selected,
                         onClick = {
                             val updated =

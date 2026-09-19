@@ -106,13 +106,11 @@ internal fun fakeParticipantsSummary(
     confirmed: List<Participant> = listOf(fakeParticipant()),
     waitlist: List<Participant> = emptyList(),
     confirmedCount: Int = confirmed.size,
-    totalSlots: Int = 10,
 ): ParticipantsSummary =
     ParticipantsSummary(
         confirmed = confirmed,
         waitlist = waitlist,
         confirmedCount = confirmedCount,
-        totalSlots = totalSlots,
     )
 
 internal fun fakePlayerSearchResult(

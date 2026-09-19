@@ -198,7 +198,7 @@ class PlayerSearchStepModelTest {
             advanceUntilIdle()
 
             val state = model.state.value
-            assertEquals("sem rede", state.errorMessage)
+            assertEquals(PtBrGamesStrings.playerSearch.errorLoading, state.errorMessage)
             assertFalse(state.isLoading)
         }
 

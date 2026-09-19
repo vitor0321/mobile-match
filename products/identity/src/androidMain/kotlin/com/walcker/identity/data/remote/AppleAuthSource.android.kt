@@ -11,8 +11,9 @@ internal actual val isAppleSignInAvailable: Boolean = false
 internal class AndroidAppleAuthSource(
     private val stringsHolder: IdentityStringsHolder,
 ) : AppleAuthSource {
-    override suspend fun signIn(): Result<UserSession> {
-        val message = stringsHolder.resolveStringsOrDefault().nativeAuth.appleUnavailableOrCancelled
-        return Result.failure(UnsupportedOperationException(message))
-    }
+    override suspend fun signIn(): Result<UserSession> = Result.failure(unavailable())
+
+    override suspend fun reauthenticate(): Result<Unit> = Result.failure(unavailable())
+
+    private fun unavailable(): Throwable = UnsupportedOperationException(stringsHolder.resolveStringsOrDefault().nativeAuth.appleUnavailableOrCancelled)
 }

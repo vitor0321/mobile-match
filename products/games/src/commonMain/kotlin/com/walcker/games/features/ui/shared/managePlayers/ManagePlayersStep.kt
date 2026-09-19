@@ -212,6 +212,7 @@ private fun ManagePlayersBody(
                     onToggleVip = { userId, displayName, currentlyVip ->
                         onEvent(ManagePlayersEvent.ToggleVip(userId, displayName, currentlyVip))
                     },
+                    vipEnabled = !state.isUpdatingVip,
                 )
             }
         }
@@ -247,6 +248,8 @@ private fun ManagePlayersBody(
                             onToggleVip = { userId, displayName, currentlyVip ->
                                 onEvent(ManagePlayersEvent.ToggleVip(userId, displayName, currentlyVip))
                             },
+                            vipEnabled = !state.isUpdatingVip,
+                            confirmEnabled = !state.isConfirmingWaitlisted,
                         )
                     }
                 }

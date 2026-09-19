@@ -9,11 +9,16 @@ internal object RatingCursor {
     fun encode(
         rating: Rating,
         sort: RatingSort,
+    ): String = encode(stars = rating.rating, createdAtMs = rating.createdAtMs, sort = sort)
+
+    fun encode(
+        stars: Int,
+        createdAtMs: Long,
+        sort: RatingSort,
     ): String =
         when (sort) {
-            RatingSort.RECENT -> rating.createdAtMs.toString()
-            RatingSort.HIGHEST, RatingSort.LOWEST ->
-                "${rating.rating}$SEPARATOR${rating.createdAtMs}"
+            RatingSort.RECENT -> createdAtMs.toString()
+            RatingSort.HIGHEST, RatingSort.LOWEST -> "$stars$SEPARATOR$createdAtMs"
         }
 
     fun decode(

@@ -160,13 +160,13 @@ class PlayerDetailsStepModelTest {
                 advanceUntilIdle()
 
                 val effect = assertIs<PlayerDetailsEffect.ShowMessage>(awaitItem())
-                assertEquals("Jogador não encontrado", effect.message)
+                assertEquals(PtBrGamesStrings.playerDetails.errorLoading, effect.message)
                 cancelAndIgnoreRemainingEvents()
             }
 
             val state = model.state.value
             assertNull(state.player)
-            assertEquals("Jogador não encontrado", state.errorMessage)
+            assertEquals(PtBrGamesStrings.playerDetails.errorLoading, state.errorMessage)
             assertFalse(state.isLoadingPlayer)
             assertTrue(repository.ratingCalls.isEmpty())
         }
@@ -198,7 +198,7 @@ class PlayerDetailsStepModelTest {
                 )
             val model = buildModel(repository)
             advanceUntilIdle()
-            assertEquals("offline", model.state.value.errorMessage)
+            assertEquals(PtBrGamesStrings.playerDetails.errorLoading, model.state.value.errorMessage)
 
             repository.detailsResult = Result.success(playerDetails(displayName = "Ana Souza"))
             model.onEvent(PlayerDetailsEvents.RetryLoading)

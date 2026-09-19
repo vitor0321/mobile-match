@@ -18,4 +18,6 @@ internal data class GamesStrings(
     val map: MapStrings,
     val loginRequired: LoginRequiredStrings,
     val about: AboutStrings,
+    val sports: SportStrings,
+    val errors: ErrorStrings,
 )

@@ -60,6 +60,8 @@ public interface FirestoreQueryBuilder {
         direction: String = "asc",
     ): FirestoreQueryBuilder
 
+    public fun orderByDocumentId(direction: String = "asc"): FirestoreQueryBuilder
+
     public fun limit(count: Int): FirestoreQueryBuilder
 
     public fun startAt(vararg values: Any?): FirestoreQueryBuilder

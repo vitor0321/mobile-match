@@ -68,6 +68,7 @@ import com.walcker.games.strings.GamesStrings
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.MatchDetailStrings
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.games.strings.sportName
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.cedar.CedarTopBar
 import com.walcker.match.cedar.components.CedarLoading
@@ -219,7 +220,7 @@ internal fun MatchDetailContent(
 
     val match = state.match
     val confirmed = state.participants?.confirmedCount ?: match?.confirmedPlayers ?: 0
-    val total = match?.totalPlayers ?: state.participants?.totalSlots ?: 0
+    val total = match?.totalPlayers ?: 0
     val openSlots = (total - confirmed).coerceAtLeast(0)
     val isFull = match != null && (confirmed >= total || match.status == MatchStatus.FULL)
     val isClosed =
@@ -255,12 +256,13 @@ internal fun MatchDetailContent(
             leadingIcon = Icons.Default.Close,
             actions = {
                 if (match != null) {
+                    val matchSportName = sportName(match.sport)
                     IconButton(
                         onClick = {
                             shareLauncher(
-                                detail.shareSubject(match.sport.label),
+                                detail.shareSubject(matchSportName),
                                 detail.shareMessage(
-                                    match.sport.label,
+                                    matchSportName,
                                     formatDayLabel(match.startsAtSeconds),
                                     formatTimeRange(match.startsAtSeconds, match.durationMin),
                                     match.venueName,
@@ -488,7 +490,7 @@ internal fun MatchDetailBody(
             )
             IconInfoRow(
                 icon = match.sport.icon(),
-                text = match.sport.label,
+                text = sportName(match.sport),
             )
             IconInfoRow(
                 icon = Icons.Filled.Payments,

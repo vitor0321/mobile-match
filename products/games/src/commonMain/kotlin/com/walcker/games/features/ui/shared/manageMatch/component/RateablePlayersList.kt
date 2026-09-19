@@ -23,6 +23,7 @@ internal fun RateablePlayersList(
     onBanPlayer: ((userId: String, displayName: String) -> Unit)? = null,
     showVip: Boolean = false,
     onToggleVip: ((userId: String, displayName: String, currentlyVip: Boolean) -> Unit)? = null,
+    vipEnabled: Boolean = true,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -45,6 +46,7 @@ internal fun RateablePlayersList(
                 isVip = participant.isVip,
                 vipLabel = if (showVip) (if (participant.isVip) strings.vipRemoveAction else strings.vipAction) else null,
                 onToggleVip = if (showVip) onToggleVip else null,
+                vipEnabled = vipEnabled,
             )
         }
     }

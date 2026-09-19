@@ -38,7 +38,6 @@ class MatchDetailStepTest {
                 fakeParticipantsSummary(
                     confirmed = listOf(fakeParticipant(userId = "player-2")),
                     confirmedCount = 10,
-                    totalSlots = 10,
                 ),
             currentUserId = "player-1",
         )

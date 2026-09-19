@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.PlayerDetails
+import com.walcker.games.strings.LocalGamesStrings
 import com.walcker.games.strings.PlayerDetailsStrings
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
@@ -55,9 +56,10 @@ internal fun PlayerHeader(
             color = MaterialTheme.colorScheme.onSurface,
         )
 
+        val sportNames = LocalGamesStrings.current.sports
         player.favoriteSports
             .takeIf { it.isNotEmpty() }
-            ?.joinToString(separator = " · ") { it.label }
+            ?.joinToString(separator = " · ") { sportNames.name(it) }
             ?.let { sports ->
                 Text(
                     text = sports,

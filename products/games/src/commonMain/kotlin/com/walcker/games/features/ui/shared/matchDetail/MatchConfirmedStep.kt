@@ -19,6 +19,7 @@ import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.ui.shared.common.icon
 import com.walcker.games.features.ui.shared.matchDetail.component.IconInfoRow
 import com.walcker.games.strings.rememberGamesStrings
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.CedarCodeBlock
 import com.walcker.match.cedar.components.CedarSuccessScreen
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -74,7 +75,7 @@ internal data class MatchConfirmedStep(
                         )
                         IconInfoRow(
                             icon = sport.icon(),
-                            text = sport.label,
+                            text = sportName(sport),
                         )
                     }
                     if (matchCode != null) {

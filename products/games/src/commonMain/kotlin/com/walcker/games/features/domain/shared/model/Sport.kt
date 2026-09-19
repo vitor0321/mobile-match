@@ -1,17 +1,15 @@
 package com.walcker.games.features.domain.shared.model
 
-internal enum class Sport(
-    val label: String,
-) {
-    FUTSAL("Futsal"),
-    FUTEBOL("Futebol"),
-    SOCIETY("Society"),
-    VOLEI("Vôlei"),
-    BASQUETE("Basquete"),
-    BEACH_TENNIS("Beach Tennis"),
-    TENIS("Tênis"),
-    PADEL("Padel"),
-    FUTEVOLEI("Futevôlei"),
-    PICKLEBALL("Pickleball"),
-    NATACAO("Natação"),
+internal enum class Sport {
+    FUTSAL,
+    FUTEBOL,
+    SOCIETY,
+    VOLEI,
+    BASQUETE,
+    BEACH_TENNIS,
+    TENIS,
+    PADEL,
+    FUTEVOLEI,
+    PICKLEBALL,
+    NATACAO,
 }

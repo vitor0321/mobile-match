@@ -183,12 +183,12 @@ class PlayerRatingsListStepModelTest {
                 advanceUntilIdle()
 
                 val effect = assertIs<PlayerRatingsEffect.ShowMessage>(awaitItem())
-                assertEquals("sem rede", effect.message)
+                assertEquals(PtBrGamesStrings.playerRatings.errorLoading, effect.message)
                 cancelAndIgnoreRemainingEvents()
             }
 
             val state = model.state.value
-            assertEquals("sem rede", state.errorMessage)
+            assertEquals(PtBrGamesStrings.playerRatings.errorLoading, state.errorMessage)
             assertTrue(state.ratings.isEmpty())
             assertFalse(state.isLoadingFirstPage)
         }
@@ -230,7 +230,7 @@ class PlayerRatingsListStepModelTest {
                 )
             val model = buildModel(repository)
             advanceUntilIdle()
-            assertEquals("sem rede", model.state.value.errorMessage)
+            assertEquals(PtBrGamesStrings.playerRatings.errorLoading, model.state.value.errorMessage)
 
             repository.ratingPages = mapOf(null to page(1..3, nextCursor = null))
             model.onEvent(PlayerRatingsEvents.Retry)

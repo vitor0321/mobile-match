@@ -85,3 +85,7 @@ dependencies {
     testImplementation(libs.kotlinx.collections.immutable)
     testImplementation(libs.lyricist.core)
 }
+
+tasks.withType<Test>().configureEach {
+    systemProperty("user.timezone", "America/Sao_Paulo")
+}

@@ -12,6 +12,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.walcker.identity.api.UserSession
@@ -36,23 +37,38 @@ internal class AndroidGoogleAuthSource(
 
     override suspend fun signIn(): Result<UserSession> =
         try {
-            val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
-            val activity =
-                activityHolder.currentActivity()
-                    ?: error(strings.noForegroundActivity)
-            val serverClientId =
-                resolveServerClientId()
-                    ?: error(strings.missingWebClientId)
-
-            val idToken = requestGoogleIdToken(activity, serverClientId)
-            val user = signInToFirebase(idToken)
-            Result.success(user)
+            Result.success(signInToFirebase(googleCredential()))
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (error: Throwable) {
             Log.w(TAG, "Google Sign-In failed: ${error.message}", error)
             Result.failure(mapError(error))
         }
+
+    override suspend fun reauthenticate(): Result<Unit> =
+        try {
+            val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+            val user = firebaseAuth.currentUser ?: error(strings.missingAuthenticatedUserAfterGoogleSignIn)
+            user.reauthenticate(googleCredential()).await()
+            user.getIdToken(true).await()
+            Result.success(Unit)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Throwable) {
+            Log.w(TAG, "Google reauthentication failed: ${error.message}", error)
+            Result.failure(mapError(error))
+        }
+
+    private suspend fun googleCredential(): AuthCredential {
+        val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+        val activity =
+            activityHolder.currentActivity()
+                ?: error(strings.noForegroundActivity)
+        val serverClientId =
+            resolveServerClientId()
+                ?: error(strings.missingWebClientId)
+        return GoogleAuthProvider.getCredential(requestGoogleIdToken(activity, serverClientId), null)
+    }
 
     private suspend fun requestGoogleIdToken(
         activity: Activity,
@@ -86,9 +102,8 @@ internal class AndroidGoogleAuthSource(
         }
     }
 
-    private suspend fun signInToFirebase(idToken: String): UserSession {
+    private suspend fun signInToFirebase(authCredential: AuthCredential): UserSession {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
-        val authCredential = GoogleAuthProvider.getCredential(idToken, null)
         val authResult = firebaseAuth.signInWithCredential(authCredential).await()
         val firebaseUser =
             authResult.user

@@ -104,15 +104,15 @@ internal fun ManageMatchContent(
     onManageTeams: () -> Unit = {},
     onManagePlayers: () -> Unit = {},
     onDismiss: () -> Unit = {},
-) {
-    val manage = strings.manageMatch
-    val match = state.match
-    val nowSeconds =
+    nowSeconds: Long =
         remember {
             kotlin.time.Clock.System
                 .now()
                 .epochSeconds
-        }
+        },
+) {
+    val manage = strings.manageMatch
+    val match = state.match
 
     Column(
         modifier =

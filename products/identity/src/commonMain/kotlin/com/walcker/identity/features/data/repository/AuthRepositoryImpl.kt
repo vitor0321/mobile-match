@@ -31,6 +31,14 @@ internal class AuthRepositoryImpl(
 
     override suspend fun deleteAccount(): Result<Unit> = firebaseAuthSource.deleteCurrentUser()
 
+    override suspend fun signInProvider(): Result<String?> = firebaseAuthSource.signInProvider()
+
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> = firebaseAuthSource.reauthenticateWithPassword(password)
+
+    override suspend fun reauthenticateWithGoogle(): Result<Unit> = googleAuthSource.reauthenticate()
+
+    override suspend fun reauthenticateWithApple(): Result<Unit> = appleAuthSource.reauthenticate()
+
     override suspend fun signOut(): Result<Unit> = firebaseAuthSource.signOut()
 
     override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = firebaseAuthSource.sendPasswordResetEmail(email)

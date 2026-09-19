@@ -64,6 +64,7 @@ kotlin {
         androidUnitTest.dependencies {
             implementation(libs.junit)
             implementation(libs.kotlin.testJunit)
+            implementation(libs.koin.test)
         }
     }
 }

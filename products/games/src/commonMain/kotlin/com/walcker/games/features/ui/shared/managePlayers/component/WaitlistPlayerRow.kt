@@ -27,6 +27,7 @@ import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.tokens.CedarTokens
 
 private val WaitlistActionSize = 48.dp
+private const val DISABLED_ICON_ALPHA = 0.38f
 
 @Composable
 internal fun WaitlistPlayerRow(
@@ -40,6 +41,8 @@ internal fun WaitlistPlayerRow(
     showVip: Boolean = false,
     vipLabel: String? = null,
     onToggleVip: ((userId: String, displayName: String, currentlyVip: Boolean) -> Unit)? = null,
+    vipEnabled: Boolean = true,
+    confirmEnabled: Boolean = true,
 ) {
     Row(
         modifier =
@@ -78,22 +81,30 @@ internal fun WaitlistPlayerRow(
 
         if (showVip && vipLabel != null && onToggleVip != null) {
             Box(modifier = Modifier.size(WaitlistActionSize), contentAlignment = Alignment.Center) {
-                IconButton(onClick = { onToggleVip(participant.userId, participant.displayName, participant.isVip) }) {
+                IconButton(
+                    onClick = { onToggleVip(participant.userId, participant.displayName, participant.isVip) },
+                    enabled = vipEnabled,
+                ) {
                     Icon(
                         imageVector = CedarIcons.Crown,
                         contentDescription = vipLabel,
-                        tint = if (participant.isVip) CedarTokens.colors.vip else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint =
+                            (if (participant.isVip) CedarTokens.colors.vip else MaterialTheme.colorScheme.onSurfaceVariant)
+                                .copy(alpha = if (vipEnabled) 1f else DISABLED_ICON_ALPHA),
                     )
                 }
             }
         }
 
         Box(modifier = Modifier.size(WaitlistActionSize), contentAlignment = Alignment.Center) {
-            IconButton(onClick = { onConfirmToGame(participant.userId, participant.displayName) }) {
+            IconButton(
+                onClick = { onConfirmToGame(participant.userId, participant.displayName) },
+                enabled = confirmEnabled,
+            ) {
                 Icon(
                     imageVector = Icons.Filled.PersonAdd,
                     contentDescription = confirmLabel,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = if (confirmEnabled) 1f else DISABLED_ICON_ALPHA),
                 )
             }
         }

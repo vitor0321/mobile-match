@@ -84,7 +84,7 @@ internal val identityDataModule =
         }
         factory<SignUseCase> { SignUseCaseImpl(authRepository = get()) }
         single<LogoutService> { LogoutServiceImpl(signUseCase = get()) }
-        single<AccountDeletionService> { AccountDeletionServiceImpl(deleteAccountUseCase = get()) }
+        single<AccountDeletionService> { AccountDeletionServiceImpl(deleteAccountUseCase = get(), authRepository = get()) }
         factory<ProfileAccountUseCase> {
             ProfileAccountUseCaseImpl(
                 proStateHolder = get(),

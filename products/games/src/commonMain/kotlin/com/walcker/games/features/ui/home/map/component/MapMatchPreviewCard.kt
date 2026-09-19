@@ -26,6 +26,7 @@ import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.shared.matchDetail.component.LocationAppDialog
 import com.walcker.games.strings.GameListStrings
 import com.walcker.games.strings.MapStrings
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.MatchCard
 import com.walcker.match.cedar.tokens.CedarTokens
 import com.walcker.match.core.geo.formatDistance
@@ -51,7 +52,7 @@ internal fun MapMatchPreviewCard(
             startsAtSeconds = game.startsAtSeconds,
             metaLabel =
                 buildString {
-                    append(game.sport.label)
+                    append(sportName(game.sport))
                     preview.distanceKm?.let {
                         append(" · ")
                         append(formatDistance(it))

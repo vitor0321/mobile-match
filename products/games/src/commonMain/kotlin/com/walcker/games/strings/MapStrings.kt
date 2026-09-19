@@ -16,6 +16,7 @@ internal data class MapStrings(
     val openInGoogleMaps: String,
     val openInWaze: String,
     val openLocationCancel: String,
+    val freePrice: String,
 )
 
 internal val mapStringsEn =
@@ -37,6 +38,7 @@ internal val mapStringsEn =
         openInGoogleMaps = "Google Maps",
         openInWaze = "Waze",
         openLocationCancel = "Cancel",
+        freePrice = "Free",
     )
 
 internal val mapStringsPt =
@@ -58,4 +60,5 @@ internal val mapStringsPt =
         openInGoogleMaps = "Google Maps",
         openInWaze = "Waze",
         openLocationCancel = "Cancelar",
+        freePrice = "Grátis",
     )

@@ -134,15 +134,11 @@ private fun AuthenticatedShell() {
         tabCoordinator.tabs.collect { tab -> setSelectedTab(tab) }
     }
 
-    LaunchedEffect(deepLinkCoordinator) {
-        println("DEEPLINK_DEBUG AuthenticatedShell started collecting deepLinkCoordinator=$deepLinkCoordinator")
+    LaunchedEffect(deepLinkCoordinator, needsVerification) {
+        if (needsVerification) return@LaunchedEffect
         deepLinkCoordinator.links.collect { link ->
-            println("DEEPLINK_DEBUG AuthenticatedShell received link=$link")
             when (link) {
-                is DeepLink.OpenMatch -> {
-                    matchDetailCoordinator.open(link.matchId)
-                    println("DEEPLINK_DEBUG matchDetailCoordinator.open(${link.matchId}) called, coordinator=$matchDetailCoordinator")
-                }
+                is DeepLink.OpenMatch -> matchDetailCoordinator.open(link.matchId)
             }
         }
     }

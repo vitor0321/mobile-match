@@ -230,7 +230,8 @@ internal class SearchStepModel(
                             game.venueName.lowercase().contains(trimmedQuery) ||
                                 game.neighborhood.lowercase().contains(trimmedQuery) ||
                                 game.city.lowercase().contains(trimmedQuery) ||
-                                game.sport.label
+                                gamesStrings.sports
+                                    .name(game.sport)
                                     .lowercase()
                                     .contains(trimmedQuery)
                         }

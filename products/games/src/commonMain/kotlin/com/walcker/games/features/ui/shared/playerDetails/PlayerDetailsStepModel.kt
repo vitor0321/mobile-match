@@ -6,6 +6,7 @@ import com.walcker.games.features.domain.shared.model.RatingSort
 import com.walcker.games.features.domain.shared.model.toDistribution
 import com.walcker.games.features.domain.shared.usecase.GetPlayerDetailsUseCase
 import com.walcker.games.features.domain.shared.usecase.GetPlayerRatingsUseCase
+import com.walcker.games.features.ui.shared.common.userMessage
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsState.Companion.PREVIEW_RATINGS_COUNT
 import com.walcker.games.features.ui.shared.playerDetails.PlayerDetailsState.Companion.RATINGS_SAMPLE_SIZE
 import com.walcker.games.strings.GamesStringsHolder
@@ -68,7 +69,7 @@ internal class PlayerDetailsStepModel(
                     loadRatingsSample()
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message = error.message ?: strings.errorLoading
+                    val message = error.userMessage(fallback = strings.errorLoading, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(isLoadingPlayer = false, errorMessage = message) }
                     _effects.send(PlayerDetailsEffect.ShowMessage(message))
                 }

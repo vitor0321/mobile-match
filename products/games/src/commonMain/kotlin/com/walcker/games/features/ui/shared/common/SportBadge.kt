@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.Sport
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.tokens.CedarTokens
 
 private val BadgeSize = 48.dp
@@ -62,7 +63,7 @@ internal fun SportBadge(
 ) {
     SportBadgeBase(
         icon = sport.icon(),
-        label = sport.label,
+        label = sportName(sport),
         selected = selected,
         onClick = onClick,
         modifier = modifier,

@@ -51,6 +51,17 @@ internal class FakeFirebaseAuthSource(
         return deleteCurrentUserResult
     }
 
+    var lastReauthenticationPassword: String? = null
+    var reauthenticateWithPasswordResult: Result<Unit> = Result.success(Unit)
+    var signInProviderResult: Result<String?> = Result.success("password")
+
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> {
+        lastReauthenticationPassword = password
+        return reauthenticateWithPasswordResult
+    }
+
+    override suspend fun signInProvider(): Result<String?> = signInProviderResult
+
     var lastSendPasswordResetEmailInput: String? = null
     private var sendPasswordResetEmailResult: Result<Unit> = Result.success(Unit)
 

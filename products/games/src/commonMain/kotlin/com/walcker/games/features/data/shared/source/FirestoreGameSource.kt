@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
 private const val NEARBY_PAGE_SIZE = 30
+private const val CURSOR_SEPARATOR = '|'
 
 internal class FirestoreGameSource(
     private val firestore: FirestoreClient,
@@ -190,8 +191,8 @@ internal class FirestoreGameSource(
         val organizerName = session.displayName ?: "Anonymous"
 
         val organizerProfile = firestore.document("profiles/$organizerId").get().getOrThrow()
-        val organizerRating = organizerProfile?.getDouble("rating") ?: 0.0
-        val organizerRatingCount = organizerProfile?.getLong("ratingCount")?.toInt() ?: 0
+        val organizerRating = organizerProfile?.getDouble("asOrganizerRating") ?: 0.0
+        val organizerRatingCount = organizerProfile?.getLong("asOrganizerRatingCount")?.toInt() ?: 0
 
         // "A mesma partida" ao longo do tempo = mesmo organizador + local + esporte.
         // Localizado por query de igualdade, não por id determinístico — ver
@@ -353,18 +354,26 @@ internal class FirestoreGameSource(
                 .where("geohash", ">=", startHash)
                 .where("geohash", "<=", endHash)
                 .orderBy("geohash")
-        val paged = if (cursor != null) query.startAfter(cursor) else query
+                .orderByDocumentId()
+        val paged = if (cursor != null) query.startAfter(*cursorValues(cursor)) else query
 
-        val games =
+        val snapshots =
             paged
                 .limit(NEARBY_PAGE_SIZE)
                 .get()
                 .getOrNull()
-                ?.mapNotNull { snapshot -> snapshot.toGame() }
-                ?: emptyList()
+                .orEmpty()
 
-        val nextCursor = if (games.size < NEARBY_PAGE_SIZE) null else games.last().geohash
-        return RangePage(games = games, nextCursor = nextCursor)
+        val last = snapshots.lastOrNull()
+        val nextCursor =
+            if (snapshots.size < NEARBY_PAGE_SIZE || last == null) null else "${last.getString("geohash")}$CURSOR_SEPARATOR${last.id}"
+        return RangePage(games = snapshots.mapNotNull { it.toGame() }, nextCursor = nextCursor)
+    }
+
+    private fun cursorValues(cursor: String): Array<Any?> {
+        val geohash = cursor.substringBefore(CURSOR_SEPARATOR)
+        val documentId = cursor.substringAfter(CURSOR_SEPARATOR, missingDelimiterValue = "")
+        return if (documentId.isEmpty()) arrayOf(geohash) else arrayOf(geohash, documentId)
     }
 
     override suspend fun getGameById(gameId: String): Game =
@@ -394,7 +403,6 @@ internal class FirestoreGameSource(
                         confirmed = confirmed,
                         waitlist = waitlist,
                         confirmedCount = confirmed.size,
-                        totalSlots = confirmed.size,
                     )
                 }
             }

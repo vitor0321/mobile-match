@@ -1,9 +1,12 @@
 package com.walcker.identity.features.data.remote
 
 import cocoapods.FirebaseAuth.FIRAuth
+import cocoapods.FirebaseAuth.FIRAuthCredential
 import cocoapods.FirebaseAuth.FIRAuthDataResult
+import cocoapods.FirebaseAuth.FIREmailAuthProvider
 import cocoapods.FirebaseAuth.FIRUser
 import com.walcker.identity.api.UserSession
+import com.walcker.identity.features.domain.error.IdentityError
 import com.walcker.identity.features.domain.error.VerificationError
 import com.walcker.identity.features.domain.usecase.RequiresRecentLoginException
 import com.walcker.identity.strings.IdentityStringsHolder
@@ -108,6 +111,26 @@ internal class IosFirebaseAuthSource(
         }
     }
 
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> {
+        val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+        val user = auth.currentUser() ?: return Result.failure(IdentityError.Unknown)
+        val email = user.email() ?: return Result.failure(IdentityError.Unknown)
+        val credential = FIREmailAuthProvider.credentialWithEmail(email = email, password = password)
+        return user.reauthenticate(credential, strings.authErrorFallback)
+    }
+
+    override suspend fun signInProvider(): Result<String?> {
+        val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+        val user = auth.currentUser() ?: return Result.failure(IdentityError.Unknown)
+        return suspendCancellableCoroutine { continuation ->
+            user.getIDTokenResultWithCompletion { result, error ->
+                continuation.resume(
+                    if (error != null) Result.failure(error.toThrowable(strings.authErrorFallback)) else Result.success(result?.signInProvider()),
+                )
+            }
+        }
+    }
+
     @OptIn(ExperimentalForeignApi::class)
     override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
@@ -169,6 +192,30 @@ private fun FIRAuthDataResult?.toResult(
 }
 
 internal fun NSError?.toThrowable(fallbackMessage: String): Throwable = IllegalStateException(this?.localizedDescription ?: fallbackMessage)
+
+@OptIn(ExperimentalForeignApi::class)
+internal suspend fun FIRUser.reauthenticate(
+    credential: FIRAuthCredential,
+    fallbackMessage: String,
+): Result<Unit> {
+    val reauthenticationError =
+        suspendCancellableCoroutine<NSError?> { continuation ->
+            reauthenticateWithCredential(credential) { _, error -> continuation.resume(error) }
+        }
+    if (reauthenticationError != null) return Result.failure(reauthenticationError.toReauthenticationError(fallbackMessage))
+    val tokenError =
+        suspendCancellableCoroutine<NSError?> { continuation ->
+            getIDTokenForcingRefresh(true) { _, error -> continuation.resume(error) }
+        }
+    return if (tokenError != null) Result.failure(tokenError.toThrowable(fallbackMessage)) else Result.success(Unit)
+}
+
+private fun NSError.toReauthenticationError(fallbackMessage: String): Throwable =
+    when (code) {
+        17004L, 17009L -> IdentityError.InvalidCredentials
+        17020L -> IdentityError.Network
+        else -> toThrowable(fallbackMessage)
+    }
 
 private fun NSError.toDeleteAccountThrowable(fallbackMessage: String): Throwable =
     if (code == 17014L) {

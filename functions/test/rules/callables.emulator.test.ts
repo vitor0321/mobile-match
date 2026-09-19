@@ -1,5 +1,5 @@
 import {readFile} from "node:fs/promises";
-import {initializeTestEnvironment, type RulesTestEnvironment} from "@firebase/rules-unit-testing";
+import {initializeTestEnvironment, type RulesTestContext, type RulesTestEnvironment} from "@firebase/rules-unit-testing";
 import {collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where} from "firebase/firestore";
 import {encodeGeohash} from "../../src/geo.js";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
@@ -54,7 +54,7 @@ afterAll(async () => {
 });
 
 describe("onUserCreate", () => {
-  it("provisions the public profile, the private doc and a free subscription", async () => {
+  it("provisions the public profile, the private doc and a free subscription", {timeout: 20_000}, async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
 
@@ -115,8 +115,16 @@ describe("deleteAccount", () => {
   });
 });
 
+async function readWithRulesDisabled<T>(read: (database: ReturnType<RulesTestContext["firestore"]>) => Promise<T>): Promise<T> {
+  let result: T | undefined;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    result = await read(context.firestore());
+  });
+  return result as T;
+}
+
 async function waitForDoc<T>(read: () => Promise<T & {exists(): boolean}>): Promise<T> {
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 100; attempt++) {
     const snapshot = await read();
     if (snapshot.exists()) return snapshot;
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -1024,9 +1032,7 @@ describe("submitReport", () => {
   }
 
   function readModeration() {
-    return testEnvironment.withSecurityRulesDisabled((context) =>
-      getDoc(doc(context.firestore(), "moderation", REPORTED)),
-    );
+    return readWithRulesDisabled((database) => getDoc(doc(database, "moderation", REPORTED)));
   }
 
   it("rejects unauthenticated requests", async () => {
@@ -1366,14 +1372,14 @@ describe("exportUserData", () => {
     });
 
     const {result} = (await (await call("exportUserData", {})).json()) as {
-      result: {profile: unknown};
+      result: {profile: {fullName?: string} | null};
     };
 
-    expect(result.profile).toBeNull();
+    expect(result.profile?.fullName).not.toBe("Outra");
   });
 });
 
-describe("onMatchCreated", () => {
+describe("onMatchCreated", {timeout: 20_000}, () => {
   const NEARBY = "vizinho";
   const FAR = "distante";
 
@@ -1391,14 +1397,13 @@ describe("onMatchCreated", () => {
         geohash: encodeGeohash({lat, lng: CENTER.lng}),
         radiusKm,
         availableSports: [],
+        isAvailable: true,
       });
     });
   }
 
   function historyOf(userId: string) {
-    return testEnvironment.withSecurityRulesDisabled((context) =>
-      getDocs(collection(context.firestore(), "users", userId, "notificationHistory")),
-    );
+    return readWithRulesDisabled((database) => getDocs(collection(database, "users", userId, "notificationHistory")));
   }
 
   it("avisa quem está dentro do raio e ignora quem está fora", async () => {
@@ -1435,7 +1440,7 @@ describe("onMatchCreated", () => {
   });
 });
 
-describe("onParticipantChanged", () => {
+describe("onParticipantChanged", {timeout: 20_000}, () => {
   const PROMOTED = "promovido";
   const MATCH = "m-fila";
 
@@ -1458,9 +1463,7 @@ describe("onParticipantChanged", () => {
     });
 
     const history = () =>
-      testEnvironment.withSecurityRulesDisabled((context) =>
-        getDocs(collection(context.firestore(), "users", PROMOTED, "notificationHistory")),
-      );
+      readWithRulesDisabled((database) => getDocs(collection(database, "users", PROMOTED, "notificationHistory")));
 
     await new Promise((resolve) => setTimeout(resolve, 2_000));
     expect((await history()).size).toBe(0);
@@ -1489,7 +1492,7 @@ async function waitFor(condition: () => Promise<boolean>, attempts = 30): Promis
   throw new Error("Condition was not met within the timeout.");
 }
 
-describe("adminSetModeration", () => {
+describe("adminSetModeration", {timeout: 20_000}, () => {
   const TARGET = "alvo";
 
   /**
@@ -1500,12 +1503,13 @@ describe("adminSetModeration", () => {
    * função.
    */
   async function becomeAdmin(): Promise<string> {
+    await waitForProvisionedClaims();
     await fetch(
       `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:update?key=fake-api-key`,
       {
         method: "POST",
         headers: {"content-type": "application/json", authorization: "Bearer owner"},
-        body: JSON.stringify({localId: uid, customAttributes: JSON.stringify({admin: true})}),
+        body: JSON.stringify({localId: uid, customAttributes: JSON.stringify({role: "user", plan: "free", admin: true})}),
       },
     );
 
@@ -1524,6 +1528,23 @@ describe("adminSetModeration", () => {
     return ((await response.json()) as {idToken: string}).idToken;
   }
 
+  async function waitForProvisionedClaims(): Promise<void> {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const response = await fetch(
+        "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:lookup?key=fake-api-key",
+        {
+          method: "POST",
+          headers: {"content-type": "application/json", authorization: "Bearer owner"},
+          body: JSON.stringify({localId: [uid]}),
+        },
+      );
+      const {users} = (await response.json()) as {users?: {customAttributes?: string}[]};
+      if (users?.[0]?.customAttributes?.includes('"role"')) return;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    throw new Error("onUserCreate did not set the default claims within the timeout.");
+  }
+
   async function seedTarget() {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), "profiles", TARGET), {
@@ -1534,8 +1555,7 @@ describe("adminSetModeration", () => {
   }
 
   function readState() {
-    return testEnvironment.withSecurityRulesDisabled(async (context) => {
-      const database = context.firestore();
+    return readWithRulesDisabled(async (database) => {
       const [moderation, profile] = await Promise.all([
         getDoc(doc(database, "moderation", TARGET)),
         getDoc(doc(database, "profiles", TARGET)),

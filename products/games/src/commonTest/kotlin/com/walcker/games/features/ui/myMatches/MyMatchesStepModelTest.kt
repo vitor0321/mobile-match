@@ -102,7 +102,7 @@ class MyMatchesStepModelTest {
 
             advanceUntilIdle()
 
-            assertEquals("offline", model.state.value.errorMessage)
+            assertEquals(PtBrGamesStrings.myMatches.loadError, model.state.value.errorMessage)
         }
 
     @Test

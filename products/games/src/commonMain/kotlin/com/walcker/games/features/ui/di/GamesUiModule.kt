@@ -37,6 +37,7 @@ internal val gamesUiModule =
                 locationProvider = get(),
                 analytics = get(),
                 crashReporter = get(),
+                stringsHolder = get(),
             )
         }
         factory {

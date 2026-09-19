@@ -20,6 +20,10 @@ internal interface FirebaseAuthSource {
 
     suspend fun deleteCurrentUser(): Result<Unit>
 
+    suspend fun reauthenticateWithPassword(password: String): Result<Unit>
+
+    suspend fun signInProvider(): Result<String?>
+
     suspend fun signOut(): Result<Unit>
 
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>

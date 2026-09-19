@@ -2,11 +2,12 @@ package com.walcker.games.features.ui.shared.notifications
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import com.walcker.games.features.domain.shared.error.GamesError
 import com.walcker.games.features.domain.shared.usecase.DeleteNotificationUseCase
 import com.walcker.games.features.domain.shared.usecase.GetNotificationHistoryUseCase
 import com.walcker.games.features.domain.shared.usecase.MarkNotificationAsReadUseCase
+import com.walcker.games.features.ui.shared.common.userMessage
 import com.walcker.games.strings.GamesStringsHolder
+import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
 import com.walcker.match.core.analytics.CrashReporter
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +58,7 @@ internal class NotificationHistoryStepModel(
                     }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().notificationHistory.actionError, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(errorMessage = message) }
                 }
         }
@@ -75,7 +76,7 @@ internal class NotificationHistoryStepModel(
                     }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().notificationHistory.actionError, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(errorMessage = message) }
                 }
         }
@@ -96,7 +97,7 @@ internal class NotificationHistoryStepModel(
                     _state.update { it.copy(isLoading = false, notifications = notifications) }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().notificationHistory.error, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(isLoading = false, errorMessage = message) }
                 }
         }

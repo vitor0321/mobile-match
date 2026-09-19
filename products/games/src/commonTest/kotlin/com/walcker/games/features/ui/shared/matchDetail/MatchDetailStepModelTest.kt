@@ -180,7 +180,7 @@ class MatchDetailStepModelTest {
             val waitlisted =
                 Participant(userId = "user-1", displayName = "Ana", photoUrl = null, joinedAt = 0, isConfirmed = false, positionInWaitlist = 1)
             gameRepository.emitParticipants(
-                Result.success(ParticipantsSummary(confirmed = emptyList(), waitlist = listOf(waitlisted), confirmedCount = 0, totalSlots = 10)),
+                Result.success(ParticipantsSummary(confirmed = emptyList(), waitlist = listOf(waitlisted), confirmedCount = 0)),
             )
             advanceUntilIdle()
             assertFalse(model.state.value.justPromoted)
@@ -189,7 +189,7 @@ class MatchDetailStepModelTest {
 
             promotionCoordinator.promotions.test {
                 gameRepository.emitParticipants(
-                    Result.success(ParticipantsSummary(confirmed = listOf(promoted), waitlist = emptyList(), confirmedCount = 1, totalSlots = 10)),
+                    Result.success(ParticipantsSummary(confirmed = listOf(promoted), waitlist = emptyList(), confirmedCount = 1)),
                 )
                 advanceUntilIdle()
 

@@ -5,6 +5,7 @@ package com.walcker.match.firestore
 import cocoapods.FirebaseFirestoreInternal.FIRCollectionReference
 import cocoapods.FirebaseFirestoreInternal.FIRDocumentReference
 import cocoapods.FirebaseFirestoreInternal.FIRDocumentSnapshot
+import cocoapods.FirebaseFirestoreInternal.FIRFieldPath
 import cocoapods.FirebaseFirestoreInternal.FIRFirestore
 import cocoapods.FirebaseFirestoreInternal.FIRQuery
 import cocoapods.FirebaseFunctions.FIRFunctions
@@ -187,6 +188,8 @@ private class IosQueryBuilder(
         field: String,
         direction: String,
     ): FirestoreQueryBuilder = IosQueryBuilder(currentQuery.queryOrderedByField(field, descending = direction.lowercase() == "desc"))
+
+    override fun orderByDocumentId(direction: String): FirestoreQueryBuilder = IosQueryBuilder(currentQuery.queryOrderedByFieldPath(FIRFieldPath.documentID(), descending = direction.lowercase() == "desc"))
 
     override fun limit(count: Int): FirestoreQueryBuilder = IosQueryBuilder(currentQuery.queryLimitedTo(count.toLong()))
 

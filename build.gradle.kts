@@ -5,13 +5,51 @@ plugins {
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.kover)
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.kotlinSerialization) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.room.plugin) apply false
 }
 
+val coveredModules = listOf(":core", ":firestore", ":navigator", ":products:identity", ":products:games", ":app")
+
+val coverageExcludedAnnotations =
+    arrayOf(
+        "androidx.compose.runtime.Composable",
+        "androidx.compose.ui.tooling.preview.Preview",
+        "org.jetbrains.compose.ui.tooling.preview.Preview",
+    )
+
+dependencies {
+    coveredModules.forEach { kover(project(it)) }
+}
+
+kover {
+    reports {
+        filters {
+            excludes { annotatedBy(*coverageExcludedAnnotations) }
+        }
+        verify {
+            rule {
+                minBound(70)
+            }
+        }
+    }
+}
+
 subprojects {
+    if (path in coveredModules) {
+        apply(plugin = "org.jetbrains.kotlinx.kover")
+        extensions.configure<kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension> {
+            reports {
+                filters {
+                    excludes { annotatedBy(*coverageExcludedAnnotations) }
+                }
+            }
+        }
+    }
+
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "io.gitlab.arturbosch.detekt")
 

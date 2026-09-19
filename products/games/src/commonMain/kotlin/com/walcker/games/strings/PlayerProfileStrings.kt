@@ -38,7 +38,14 @@ internal data class PlayerProfileStrings(
     val deleteAccountDialogConfirm: String,
     val deleteAccountDialogDismiss: String,
     val deleteAccountError: String,
-    val deleteAccountRequiresRecentLogin: String,
+    val logoutError: String,
+    val deleteAccountPasswordTitle: String,
+    val deleteAccountPasswordBody: String,
+    val deleteAccountPasswordLabel: String,
+    val deleteAccountPasswordConfirm: String,
+    val deleteAccountWrongPassword: String,
+    val showPassword: String,
+    val hidePassword: String,
 )
 
 internal val playerProfileStringsPt =
@@ -82,8 +89,14 @@ internal val playerProfileStringsPt =
         deleteAccountDialogConfirm = "Excluir para sempre",
         deleteAccountDialogDismiss = "Manter minha conta",
         deleteAccountError = "Não foi possível excluir sua conta. Tente de novo.",
-        deleteAccountRequiresRecentLogin =
-            "Por segurança, saia da conta e entre de novo antes de excluir.",
+        logoutError = "Não foi possível sair da conta. Tente de novo.",
+        deleteAccountPasswordTitle = "Confirme sua senha",
+        deleteAccountPasswordBody = "Por segurança, digite a senha da sua conta para excluí-la.",
+        deleteAccountPasswordLabel = "Senha",
+        deleteAccountPasswordConfirm = "Confirmar e excluir",
+        deleteAccountWrongPassword = "Senha incorreta. Confira e tente de novo.",
+        showPassword = "Mostrar senha",
+        hidePassword = "Ocultar senha",
     )
 
 internal val playerProfileStringsEn =
@@ -127,6 +140,12 @@ internal val playerProfileStringsEn =
         deleteAccountDialogConfirm = "Delete forever",
         deleteAccountDialogDismiss = "Keep my account",
         deleteAccountError = "Couldn't delete your account. Please try again.",
-        deleteAccountRequiresRecentLogin =
-            "For security, log out and sign in again before deleting.",
+        logoutError = "Couldn't log out. Please try again.",
+        deleteAccountPasswordTitle = "Confirm your password",
+        deleteAccountPasswordBody = "For security, enter your account password to delete it.",
+        deleteAccountPasswordLabel = "Password",
+        deleteAccountPasswordConfirm = "Confirm and delete",
+        deleteAccountWrongPassword = "Wrong password. Check it and try again.",
+        showPassword = "Show password",
+        hidePassword = "Hide password",
     )

@@ -10,6 +10,7 @@ import com.walcker.games.fake.game
 import com.walcker.games.fake.testGamesPreferences
 import com.walcker.games.features.data.home.preferences.GamesPreferences
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCaseImpl
+import com.walcker.games.features.domain.shared.error.GamesError
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
@@ -123,6 +124,17 @@ class GameListStepModelTest {
         }
 
     @Test
+    fun `a connection failure says there is no connection`() =
+        runTest(testDispatcher) {
+            val repository = FakeGameRepository(refreshResult = Result.failure(GamesError.Network()))
+            val model = buildModel(repository)
+
+            advanceUntilIdle()
+
+            assertEquals(PtBrGamesStrings.errors.noConnection, model.state.value.errorMessage)
+        }
+
+    @Test
     fun `a refresh failure surfaces an error message`() =
         runTest(testDispatcher) {
             val repository = FakeGameRepository(refreshResult = Result.failure(IllegalStateException("offline")))
@@ -130,7 +142,7 @@ class GameListStepModelTest {
 
             advanceUntilIdle()
 
-            assertEquals("offline", model.state.value.errorMessage)
+            assertEquals(PtBrGamesStrings.gameList.loadErrorMessage, model.state.value.errorMessage)
             assertTrue(!model.state.value.isLoading)
         }
 

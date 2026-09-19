@@ -30,6 +30,7 @@ import com.walcker.match.cedar.components.RatingStars
 import com.walcker.match.cedar.tokens.CedarTokens
 
 private val RateActionSize = 48.dp
+private const val DISABLED_ICON_ALPHA = 0.38f
 
 @Composable
 internal fun ParticipantRow(
@@ -48,6 +49,7 @@ internal fun ParticipantRow(
     isVip: Boolean = false,
     vipLabel: String? = null,
     onToggleVip: ((userId: String, displayName: String, currentlyVip: Boolean) -> Unit)? = null,
+    vipEnabled: Boolean = true,
 ) {
     Row(
         modifier =
@@ -119,11 +121,16 @@ internal fun ParticipantRow(
 
         if (onToggleVip != null && vipLabel != null) {
             Box(modifier = Modifier.size(RateActionSize), contentAlignment = Alignment.Center) {
-                IconButton(onClick = { onToggleVip(participant.userId, participant.displayName, isVip) }) {
+                IconButton(
+                    onClick = { onToggleVip(participant.userId, participant.displayName, isVip) },
+                    enabled = vipEnabled,
+                ) {
                     Icon(
                         imageVector = CedarIcons.Crown,
                         contentDescription = vipLabel,
-                        tint = if (isVip) CedarTokens.colors.vip else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint =
+                            (if (isVip) CedarTokens.colors.vip else MaterialTheme.colorScheme.onSurfaceVariant)
+                                .copy(alpha = if (vipEnabled) 1f else DISABLED_ICON_ALPHA),
                     )
                 }
             }

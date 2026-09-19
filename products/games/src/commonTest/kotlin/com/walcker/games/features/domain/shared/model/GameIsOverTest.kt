@@ -57,6 +57,29 @@ class GameIsOverTest {
         assertTrue(instant.isOver(nowSeconds = start))
         assertFalse(instant.isOver(nowSeconds = start - 1))
     }
+
+    @Test
+    fun `em andamento a partir do primeiro segundo`() {
+        assertTrue(sixtyMin.isInProgress(nowSeconds = start))
+    }
+
+    @Test
+    fun `em andamento ate um segundo antes do fim`() {
+        assertTrue(sixtyMin.isInProgress(nowSeconds = end - 1))
+    }
+
+    @Test
+    fun `nao esta em andamento antes de comecar nem depois de acabar`() {
+        assertFalse(sixtyMin.isInProgress(nowSeconds = start - 1))
+        assertFalse(sixtyMin.isInProgress(nowSeconds = end))
+    }
+
+    @Test
+    fun `partida cancelada nunca esta em andamento`() {
+        val cancelled = sixtyMin.copy(status = MatchStatus.CANCELLED)
+
+        assertFalse(cancelled.isInProgress(nowSeconds = start + 60))
+    }
 }
 
 class GameCanBeRatedByParticipantTest {
@@ -186,5 +209,23 @@ class GameCanRateOrganizerTest {
         val cancelled = match(status = MatchStatus.CANCELLED)
 
         assertFalse(cancelled.canRateOrganizer(userId = participant))
+    }
+}
+
+class GameSupportsTeamShuffleTest {
+    private val sixtyMin = game(startsAtSeconds = 1_000_000L, durationMin = 60)
+
+    @Test
+    fun `esportes de time permitem sortear times`() {
+        for (sport in TEAM_SPORTS) {
+            assertTrue(sixtyMin.copy(sport = sport).supportsTeamShuffle(), "$sport deveria permitir sorteio")
+        }
+    }
+
+    @Test
+    fun `esportes individuais ou de dupla nao permitem sortear times`() {
+        for (sport in Sport.entries - TEAM_SPORTS) {
+            assertFalse(sixtyMin.copy(sport = sport).supportsTeamShuffle(), "$sport nao deveria permitir sorteio")
+        }
     }
 }

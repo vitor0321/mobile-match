@@ -46,6 +46,25 @@ class PlayerProfileStepTest {
     fun content_darkMode() = snapshot(loadedState, darkTheme = true)
 
     @Test
+    fun deleteAccountPassword_lightMode() =
+        snapshot(
+            loadedState.copy(showDeleteAccountDialog = true, isDeleteAccountPasswordRequired = true, deleteAccountPassword = "s3cret"),
+            darkTheme = false,
+        )
+
+    @Test
+    fun deleteAccountWrongPassword_darkMode() =
+        snapshot(
+            loadedState.copy(
+                showDeleteAccountDialog = true,
+                isDeleteAccountPasswordRequired = true,
+                deleteAccountPassword = "nope",
+                deleteAccountPasswordError = PtBrGamesStrings.playerProfile.deleteAccountWrongPassword,
+            ),
+            darkTheme = true,
+        )
+
+    @Test
     fun visitor_lightMode() = snapshot(PlayerProfileState(), darkTheme = false)
 
     @Test

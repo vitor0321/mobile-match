@@ -2,10 +2,10 @@ package com.walcker.games.features.ui.myMatches
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import com.walcker.games.features.domain.shared.error.GamesError
 import com.walcker.games.features.domain.shared.usecase.CancelMatchUseCase
 import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.shared.usecase.LeaveMatchUseCase
+import com.walcker.games.features.ui.shared.common.userMessage
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
@@ -77,7 +77,7 @@ internal class MyMatchesStepModel(
                     }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().myMatches.loadError, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(isLoading = false, errorMessage = message) }
                 }
         }
@@ -100,9 +100,7 @@ internal class MyMatchesStepModel(
                     refresh()
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message =
-                        (error as? GamesError)?.message
-                            ?: stringsHolder.resolveStringsOrDefault().myMatches.cancelError
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().myMatches.cancelError, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(errorMessage = message) }
                 }
             _state.update { it.copy(processingMatchId = null) }
@@ -119,9 +117,7 @@ internal class MyMatchesStepModel(
                     refresh()
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message =
-                        (error as? GamesError)?.message
-                            ?: stringsHolder.resolveStringsOrDefault().myMatches.leaveError
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().myMatches.leaveError, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(errorMessage = message) }
                 }
             _state.update { it.copy(processingMatchId = null) }

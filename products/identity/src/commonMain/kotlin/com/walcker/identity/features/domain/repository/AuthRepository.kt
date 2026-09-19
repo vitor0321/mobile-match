@@ -23,6 +23,14 @@ internal interface AuthRepository {
 
     suspend fun deleteAccount(): Result<Unit>
 
+    suspend fun signInProvider(): Result<String?>
+
+    suspend fun reauthenticateWithPassword(password: String): Result<Unit>
+
+    suspend fun reauthenticateWithGoogle(): Result<Unit>
+
+    suspend fun reauthenticateWithApple(): Result<Unit>
+
     suspend fun signOut(): Result<Unit>
 
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>

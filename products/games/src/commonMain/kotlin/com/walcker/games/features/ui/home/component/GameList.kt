@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.strings.GameListStrings
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarSecondaryButton
 import com.walcker.match.cedar.components.LocalBottomBarInset
@@ -76,7 +77,7 @@ internal fun GameList(
             MatchCard(
                 venueName = game.venueName,
                 startsAtSeconds = game.startsAtSeconds,
-                metaLabel = "${game.sport.label} · ${game.neighborhood}",
+                metaLabel = "${sportName(game.sport)} · ${game.neighborhood}",
                 priceLabel = game.pricePerPlayer?.let { strings.perPlayer(it) },
                 slotsLabel = strings.slotsBadge(game.openSlots),
                 openSlots = game.openSlots,

@@ -476,7 +476,8 @@ internal class MatchDetailStepModel(
                     append(
                         _state.value.match
                             ?.sport
-                            ?.label ?: strings.unknownMatchTitle,
+                            ?.let(stringsHolder.resolveStringsOrDefault().sports.name)
+                            ?: strings.unknownMatchTitle,
                     )
                     append(" · ")
                     append(_state.value.match?.venueName ?: "")

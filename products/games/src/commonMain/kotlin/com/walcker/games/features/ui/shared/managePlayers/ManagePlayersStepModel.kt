@@ -330,10 +330,11 @@ internal class ManagePlayersStepModel(
         displayName: String,
         currentlyVip: Boolean,
     ) {
+        if (_state.value.isUpdatingVip) return
         val strings = stringsHolder.resolveStringsOrDefault().manageMatch
         val newIsVip = !currentlyVip
+        _state.update { it.copy(isUpdatingVip = true, actionErrorMessage = null) }
         screenModelScope.launch {
-            _state.update { it.copy(isUpdatingVip = true, actionErrorMessage = null) }
             setVipStatus(matchId, userId, newIsVip)
                 .onSuccess {
                     val message = if (newIsVip) strings.vipSuccessMessage(displayName) else strings.vipRemovedMessage(displayName)
@@ -349,9 +350,10 @@ internal class ManagePlayersStepModel(
         userId: String,
         displayName: String,
     ) {
+        if (_state.value.isConfirmingWaitlisted) return
         val strings = stringsHolder.resolveStringsOrDefault().manageMatch
+        _state.update { it.copy(isConfirmingWaitlisted = true, actionErrorMessage = null) }
         screenModelScope.launch {
-            _state.update { it.copy(isConfirmingWaitlisted = true, actionErrorMessage = null) }
             confirmWaitlistedPlayer(matchId, userId)
                 .onSuccess {
                     _state.update {
@@ -368,10 +370,11 @@ internal class ManagePlayersStepModel(
     }
 
     private fun banPlayerAction() {
+        if (_state.value.isBanningPlayer) return
         val (userId, displayName) = _state.value.playerPendingBan ?: return
         val strings = stringsHolder.resolveStringsOrDefault().manageMatch
+        _state.update { it.copy(isBanningPlayer = true, actionErrorMessage = null) }
         screenModelScope.launch {
-            _state.update { it.copy(isBanningPlayer = true, actionErrorMessage = null) }
             banPlayerFromMatch(matchId, userId)
                 .onSuccess {
                     _state.update {

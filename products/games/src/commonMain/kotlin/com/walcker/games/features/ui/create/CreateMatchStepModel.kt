@@ -39,8 +39,6 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.seconds
 
-private const val CENTS_PER_UNIT = 100
-
 internal class CreateMatchStepModel(
     private val createMatch: CreateMatchUseCase,
     private val updateMatch: UpdateMatchUseCase,
@@ -120,14 +118,7 @@ internal class CreateMatchStepModel(
                         LocalDateTime(localDateTime.date, LocalTime(0, 0))
                             .toInstant(TimeZone.UTC)
                             .toEpochMilliseconds()
-                    val priceText =
-                        if (game.priceCents > 0) {
-                            val reais = game.priceCents / CENTS_PER_UNIT
-                            val cents = game.priceCents % CENTS_PER_UNIT
-                            "$reais.${cents.toString().padStart(2, '0')}"
-                        } else {
-                            ""
-                        }
+                    val priceText = priceTextFromCents(game.priceCents)
 
                     _state.update {
                         it.copy(
@@ -201,7 +192,8 @@ internal class CreateMatchStepModel(
                 _state.update { it.copy(recurrence = event.recurrence) }
             }
             is CreateMatchEvents.PriceChanged -> {
-                _state.update { it.copy(pricePerPlayer = event.price, priceError = null) }
+                val priceError = if (parsePriceCents(event.price) == null) strings.priceInvalid else null
+                _state.update { it.copy(pricePerPlayer = event.price, priceError = priceError) }
             }
             is CreateMatchEvents.Submit -> submitForm()
         }
@@ -269,7 +261,7 @@ internal class CreateMatchStepModel(
                         durationMin = currentState.durationMin,
                         totalPlayers = currentState.totalPlayers,
                         recurrence = currentState.recurrence,
-                        pricePerPlayer = currentState.pricePerPlayer.takeIf { it.isNotBlank() },
+                        pricePerPlayer = parsePriceCents(currentState.pricePerPlayer)?.takeIf { it > 0 }?.let(::priceTextFromCents),
                     )
 
                 val matchId = editingMatchId

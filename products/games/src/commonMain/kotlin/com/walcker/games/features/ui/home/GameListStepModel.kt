@@ -8,6 +8,7 @@ import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.model.isDiscoverable
 import com.walcker.games.features.domain.shared.repository.GameRepository
+import com.walcker.games.features.ui.shared.common.userMessage
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.SessionHolder
@@ -171,7 +172,7 @@ internal class GameListStepModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: strings.loadErrorMessage,
+                            errorMessage = error.userMessage(fallback = strings.loadErrorMessage, errors = stringsHolder.resolveStringsOrDefault().errors),
                         )
                     }
                     homeViewCoordinator.markHomeDataReady()
@@ -207,7 +208,7 @@ internal class GameListStepModel(
                     _state.update {
                         it.copy(
                             isLoadingMore = false,
-                            errorMessage = error.message ?: strings.loadErrorMessage,
+                            errorMessage = error.userMessage(fallback = strings.loadErrorMessage, errors = stringsHolder.resolveStringsOrDefault().errors),
                         )
                     }
                 }

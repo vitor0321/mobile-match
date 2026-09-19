@@ -5,17 +5,19 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.playerProfile.usecase.ObserveAvailabilityUseCase
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailabilityUseCase
 import com.walcker.games.features.domain.playerProfile.usecase.SetAvailableSportsUseCase
-import com.walcker.games.features.domain.shared.error.GamesError
 import com.walcker.games.features.domain.shared.model.MatchRole
 import com.walcker.games.features.domain.shared.model.Sport
 import com.walcker.games.features.domain.shared.repository.PlayerRepository
 import com.walcker.games.features.domain.shared.usecase.GetMyMatchesUseCase
 import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
+import com.walcker.games.features.ui.shared.common.userMessage
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.identity.api.AccountDeletionOutcome
 import com.walcker.identity.api.AccountDeletionService
 import com.walcker.identity.api.LogoutService
+import com.walcker.identity.api.ReauthenticationMethod
+import com.walcker.identity.api.ReauthenticationOutcome
 import com.walcker.identity.api.SessionHolder
 import com.walcker.identity.api.formattedPhoneNumber
 import com.walcker.match.core.analytics.AnalyticsEvent
@@ -222,47 +224,74 @@ internal class PlayerProfileStepModel(
             }
             PlayerProfileEvent.DeleteAccountRequested ->
                 _state.update { it.copy(showDeleteAccountDialog = true, errorMessage = null) }
-            PlayerProfileEvent.CancelDeleteAccount ->
-                _state.update { it.copy(showDeleteAccountDialog = false) }
+            PlayerProfileEvent.CancelDeleteAccount -> _state.update { it.withDeleteDialogClosed() }
             PlayerProfileEvent.ConfirmDeleteAccount -> deleteAccount()
+            is PlayerProfileEvent.DeleteAccountPasswordChanged ->
+                _state.update { it.copy(deleteAccountPassword = event.value, deleteAccountPasswordError = null) }
+            PlayerProfileEvent.ConfirmDeleteAccountWithPassword -> confirmPasswordAndDelete()
         }
     }
 
     private fun deleteAccount() {
-        val strings = stringsHolder.resolveStringsOrDefault().playerProfile
-
         screenModelScope.launch {
             _state.update { it.copy(isDeletingAccount = true, errorMessage = null) }
-
-            when (val outcome = accountDeletionService.deleteAccount()) {
-                AccountDeletionOutcome.Success -> {
-                    analytics.track(AnalyticsEvent.SignedOut())
-                    _state.update {
-                        it.copy(isDeletingAccount = false, showDeleteAccountDialog = false)
-                    }
-                    _effects.send(PlayerProfileEffect.RequireLogin)
-                }
-                AccountDeletionOutcome.RequiresRecentLogin ->
-                    _state.update {
-                        it.copy(
-                            isDeletingAccount = false,
-                            showDeleteAccountDialog = false,
-                            errorMessage = strings.deleteAccountRequiresRecentLogin,
-                        )
-                    }
-                is AccountDeletionOutcome.Failure -> {
-                    crashReporter.recordException(outcome.cause)
-                    _state.update {
-                        it.copy(
-                            isDeletingAccount = false,
-                            showDeleteAccountDialog = false,
-                            errorMessage = strings.deleteAccountError,
-                        )
-                    }
-                }
-            }
+            runDeletion(afterReauthentication = false)
         }
     }
+
+    private fun confirmPasswordAndDelete() {
+        val current = _state.value
+        if (current.deleteAccountPassword.isBlank() || current.isDeletingAccount) return
+        screenModelScope.launch {
+            _state.update { it.copy(isDeletingAccount = true, deleteAccountPasswordError = null) }
+            handleReauthentication(accountDeletionService.reauthenticateWithPassword(current.deleteAccountPassword))
+        }
+    }
+
+    private suspend fun runDeletion(afterReauthentication: Boolean) {
+        when (val outcome = accountDeletionService.deleteAccount()) {
+            AccountDeletionOutcome.Success -> {
+                analytics.track(AnalyticsEvent.SignedOut())
+                _state.update { it.withDeleteDialogClosed() }
+                _effects.send(PlayerProfileEffect.RequireLogin)
+            }
+            is AccountDeletionOutcome.RequiresReauthentication ->
+                when {
+                    afterReauthentication -> failDeletion(IllegalStateException("Deletion still requires reauthentication"))
+                    outcome.method == ReauthenticationMethod.Password ->
+                        _state.update { it.copy(isDeletingAccount = false, isDeleteAccountPasswordRequired = true) }
+                    else -> handleReauthentication(accountDeletionService.reauthenticateWithProvider())
+                }
+            is AccountDeletionOutcome.Failure -> failDeletion(outcome.cause)
+        }
+    }
+
+    private suspend fun handleReauthentication(outcome: ReauthenticationOutcome) {
+        when (outcome) {
+            ReauthenticationOutcome.Success -> runDeletion(afterReauthentication = true)
+            ReauthenticationOutcome.WrongPassword -> {
+                val strings = stringsHolder.resolveStringsOrDefault().playerProfile
+                _state.update { it.copy(isDeletingAccount = false, deleteAccountPasswordError = strings.deleteAccountWrongPassword) }
+            }
+            ReauthenticationOutcome.Cancelled -> _state.update { it.withDeleteDialogClosed() }
+            is ReauthenticationOutcome.Failure -> failDeletion(outcome.cause)
+        }
+    }
+
+    private fun failDeletion(cause: Throwable) {
+        crashReporter.recordException(cause)
+        val strings = stringsHolder.resolveStringsOrDefault().playerProfile
+        _state.update { it.withDeleteDialogClosed().copy(errorMessage = strings.deleteAccountError) }
+    }
+
+    private fun PlayerProfileState.withDeleteDialogClosed(): PlayerProfileState =
+        copy(
+            showDeleteAccountDialog = false,
+            isDeletingAccount = false,
+            isDeleteAccountPasswordRequired = false,
+            deleteAccountPassword = "",
+            deleteAccountPasswordError = null,
+        )
 
     private fun logout() {
         screenModelScope.launch {
@@ -272,7 +301,7 @@ internal class PlayerProfileStepModel(
                     analytics.track(AnalyticsEvent.SignedOut())
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message = error.message ?: "Erro ao fazer logout"
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().playerProfile.logoutError, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(errorMessage = message) }
                 }
         }
@@ -318,7 +347,7 @@ internal class PlayerProfileStepModel(
                             }
                         }.onFailure { error ->
                             crashReporter.recordException(error)
-                            val message = (error as? GamesError)?.message ?: error.message ?: "Erro ao carregar avaliações"
+                            val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().playerProfile.loadingError, errors = stringsHolder.resolveStringsOrDefault().errors)
                             _state.update {
                                 it.copy(
                                     isLoading = false,
@@ -333,7 +362,7 @@ internal class PlayerProfileStepModel(
                         }
                 }.onFailure { error ->
                     crashReporter.recordException(error)
-                    val message = (error as? GamesError)?.message ?: error.message ?: "Erro"
+                    val message = error.userMessage(fallback = stringsHolder.resolveStringsOrDefault().playerProfile.loadingError, errors = stringsHolder.resolveStringsOrDefault().errors)
                     _state.update { it.copy(isLoading = false, errorMessage = message) }
                 }
         }

@@ -112,7 +112,7 @@ internal class FirestoreRatingSource(
         cursor: String?,
     ): Result<RatingsPage> =
         runCatching {
-            val ratings =
+            val snapshots =
                 firestore
                     .collection("profiles/$userId/ratings")
                     .query()
@@ -121,15 +121,19 @@ internal class FirestoreRatingSource(
                     .limit(limit)
                     .get()
                     .getOrThrow()
-                    .mapNotNull { snapshot -> snapshot.toRating() }
+            val last = snapshots.lastOrNull()
 
             RatingsPage(
-                ratings = ratings,
+                ratings = snapshots.mapNotNull { snapshot -> snapshot.toRating() },
                 nextCursor =
-                    if (ratings.size < limit) {
+                    if (snapshots.size < limit || last == null) {
                         null
                     } else {
-                        RatingCursor.encode(ratings.last(), sort)
+                        RatingCursor.encode(
+                            stars = last.getLong("rating")?.toInt() ?: 0,
+                            createdAtMs = last.createdAtMs(),
+                            sort = sort,
+                        )
                     },
             )
         }
@@ -189,14 +193,16 @@ internal class FirestoreRatingSource(
                 raterUserId = getString("raterUserId") ?: return null,
                 rating = getLong("rating")?.toInt() ?: return null,
                 comment = getString("comment") ?: "",
-                createdAtMs =
-                    getLong(RATING_FIELD_CREATED_AT_MS)
-                        ?: getTimestamp(LEGACY_CREATED_AT_FIELD)
-                        ?: 0L,
+                createdAtMs = createdAtMs(),
             )
         } catch (e: Exception) {
             null
         }
+
+    private fun DocumentSnapshot.createdAtMs(): Long =
+        getLong(RATING_FIELD_CREATED_AT_MS)
+            ?: getTimestamp(LEGACY_CREATED_AT_FIELD)
+            ?: 0L
 
     private companion object {
         const val SUBMIT_RATING_FUNCTION = "submitPlayerRating"

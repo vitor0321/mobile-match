@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.walcker.games.features.domain.shared.model.PlayerSearchResult
+import com.walcker.games.strings.LocalGamesStrings
 import com.walcker.match.cedar.components.PlayerAvatar
 import com.walcker.match.cedar.components.PlayerAvatarSize
 import com.walcker.match.cedar.components.RatingStars
@@ -82,11 +83,12 @@ internal fun PlayerSearchResultCard(
                 }
 
                 if (player.favoriteSports.isNotEmpty()) {
+                    val sportNames = LocalGamesStrings.current.sports
                     Text(
                         text =
                             player.favoriteSports
                                 .take(MAX_SPORTS_ON_CARD)
-                                .joinToString(separator = " · ") { it.label },
+                                .joinToString(separator = " · ") { sportNames.name(it) },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

@@ -48,10 +48,6 @@ function seed(work: (firestore: ReturnType<typeof asAnonymous>) => Promise<void>
   );
 }
 
-function inHours(hours: number) {
-  return Timestamp.fromDate(new Date(Date.now() + hours * 3_600_000));
-}
-
 function publicProfile(overrides: Record<string, unknown> = {}) {
   return {
     fullName: "Jogador Teste",
@@ -62,41 +58,12 @@ function publicProfile(overrides: Record<string, unknown> = {}) {
     sports: ["futsal"],
     city: "São Paulo",
     neighborhood: "União dos Cegos",
-    rating: 5,
+    rating: 0,
     ratingCount: 0,
     matchesPlayed: 0,
     isBanned: false,
     // As regras exigem createdAt == request.time; o sentinel do servidor é o
     // único valor que satisfaz isso vindo do cliente.
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    ...overrides,
-  };
-}
-
-function matchPayload(overrides: Record<string, unknown> = {}) {
-  return {
-    organizerId: ORGANIZER,
-    organizerName: "Organizador",
-    sport: "futsal",
-    title: "Futsal no Green Ball",
-    venue: "Green Ball",
-    address: "Rua das Quadras, 100",
-    neighborhood: "União dos Cegos",
-    lat: -23.5505,
-    lng: -46.6333,
-    geohash: "6gyf4bf8m",
-    startsAt: inHours(6),
-    durationMin: 60,
-    totalSlots: 14,
-    confirmedCount: 0,
-    waitlistCount: 0,
-    priceCents: 2000,
-    platformFeeCents: 0,
-    level: "Livre",
-    rules: ["Chuteira society", "Chegar 10 min antes"],
-    pixKey: null,
-    status: "open",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     ...overrides,
@@ -211,23 +178,23 @@ function validMatchPayload(overrides: Record<string, unknown> = {}) {
 
 describe("matches", () => {
   it("o organizador cria a própria partida", async () => {
-    await assertSucceeds(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), matchPayload()));
+    await assertSucceeds(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
   });
 
   it("nega criar partida em nome de outro organizador", async () => {
     await assertFails(
-      setDoc(doc(asUser(PLAYER), "matches", MATCH_ID), matchPayload()),
+      setDoc(doc(asUser(PLAYER), "matches", MATCH_ID), validMatchPayload()),
     );
   });
 
   it("nega partida no passado, lotação fora da faixa e contadores adiantados", async () => {
     const matchRef = doc(asUser(ORGANIZER), "matches", MATCH_ID);
 
-    await assertFails(setDoc(matchRef, matchPayload({startsAt: inHours(-2)})));
-    await assertFails(setDoc(matchRef, matchPayload({totalSlots: 1})));
-    await assertFails(setDoc(matchRef, matchPayload({totalSlots: 500})));
-    await assertFails(setDoc(matchRef, matchPayload({confirmedCount: 12})));
-    await assertFails(setDoc(matchRef, matchPayload({status: "full"})));
+    await assertFails(setDoc(matchRef, validMatchPayload({startsAtSeconds: Math.floor(Date.now() / 1_000) - 2 * 3_600})));
+    await assertFails(setDoc(matchRef, validMatchPayload({totalSlots: 0})));
+    await assertFails(setDoc(matchRef, validMatchPayload({totalSlots: 500})));
+    await assertFails(setDoc(matchRef, validMatchPayload({confirmedCount: 12})));
+    await assertFails(setDoc(matchRef, validMatchPayload({status: "FULL"})));
   });
 
   it("nega usuário banido criar partida", async () => {
@@ -235,33 +202,33 @@ describe("matches", () => {
       await setDoc(doc(database, "profiles", ORGANIZER), publicProfile({isBanned: true}));
     });
 
-    await assertFails(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), matchPayload()));
+    await assertFails(setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID), validMatchPayload()));
   });
 
   it("o organizador edita os dados da partida, mas não os contadores", async () => {
     await seed(async (database) => {
-      await setDoc(doc(database, "matches", MATCH_ID), matchPayload({confirmedCount: 10}));
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload({confirmedCount: 10}));
     });
 
     const matchRef = doc(asUser(ORGANIZER), "matches", MATCH_ID);
 
-    await assertSucceeds(updateDoc(matchRef, {venue: "Arena Central", updatedAt: Timestamp.now()}));
-    await assertSucceeds(updateDoc(matchRef, {status: "cancelled", updatedAt: Timestamp.now()}));
+    await assertSucceeds(updateDoc(matchRef, {venueName: "Arena Central"}));
+    await assertSucceeds(updateDoc(matchRef, {status: "CANCELLED"}));
 
     // Contadores são a fonte da verdade da lotação: só as callables escrevem.
     await assertFails(updateDoc(matchRef, {confirmedCount: 0}));
     await assertFails(updateDoc(matchRef, {waitlistCount: 0}));
-    await assertFails(updateDoc(matchRef, {status: "finished"}));
+    await assertFails(updateDoc(matchRef, {status: "FINISHED"}));
     // Encolher a partida abaixo de quem já está confirmado deixaria gente fora.
     await assertFails(updateDoc(matchRef, {totalSlots: 6}));
   });
 
   it("nega um terceiro editar a partida", async () => {
     await seed(async (database) => {
-      await setDoc(doc(database, "matches", MATCH_ID), matchPayload());
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload());
     });
 
-    await assertFails(updateDoc(doc(asUser(PLAYER), "matches", MATCH_ID), {venue: "Sequestrada"}));
+    await assertFails(updateDoc(doc(asUser(PLAYER), "matches", MATCH_ID), {venueName: "Sequestrada"}));
   });
 
   it("o organizador grava teamCount e teamAssignments na própria partida", async () => {
@@ -372,8 +339,8 @@ describe("matches", () => {
 
   it("apaga partida vazia, mas exige cancelamento quando já tem gente", async () => {
     await seed(async (database) => {
-      await setDoc(doc(database, "matches", "vazia"), matchPayload());
-      await setDoc(doc(database, "matches", "cheia"), matchPayload({confirmedCount: 4}));
+      await setDoc(doc(database, "matches", "vazia"), validMatchPayload());
+      await setDoc(doc(database, "matches", "cheia"), validMatchPayload({confirmedCount: 4}));
     });
 
     await assertSucceeds(deleteDoc(doc(asUser(ORGANIZER), "matches", "vazia")));
@@ -386,7 +353,7 @@ describe("matches/{matchId}/bannedUsers/{userId}", () => {
 
   async function seedMatchAndBan() {
     await seed(async (firestore) => {
-      await setDoc(doc(firestore, "matches", MATCH_ID), matchPayload());
+      await setDoc(doc(firestore, "matches", MATCH_ID), validMatchPayload());
       await setDoc(doc(firestore, "matches", MATCH_ID, "bannedUsers", BANNED), {
         bannedAt: serverTimestamp(),
         bannedBy: ORGANIZER,
@@ -407,7 +374,7 @@ describe("matches/{matchId}/bannedUsers/{userId}", () => {
 
   it("blocks every client write, organizer included", async () => {
     await seed(async (firestore) => {
-      await setDoc(doc(firestore, "matches", MATCH_ID), matchPayload());
+      await setDoc(doc(firestore, "matches", MATCH_ID), validMatchPayload());
     });
     await assertFails(
       setDoc(doc(asUser(ORGANIZER), "matches", MATCH_ID, "bannedUsers", BANNED), {
@@ -439,7 +406,7 @@ describe("matchSeries/{seriesId}/vipPlayers/{userId}", () => {
 describe("matches/participants — a trava contra overbooking", () => {
   it("qualquer autenticado lê a lista, ninguém escreve pelo cliente", async () => {
     await seed(async (database) => {
-      await setDoc(doc(database, "matches", MATCH_ID), matchPayload());
+      await setDoc(doc(database, "matches", MATCH_ID), validMatchPayload());
       await setDoc(doc(database, "matches", MATCH_ID, "participants", PLAYER), {
         userId: PLAYER,
         status: "confirmed",
@@ -584,7 +551,7 @@ describe("moderação e denúncias", () => {
   it("suspensão ativa impede criar partida; expirada não", async () => {
     const inADay = Date.now() + 24 * 60 * 60 * 1_000;
     const yesterday = Date.now() - 24 * 60 * 60 * 1_000;
-    const asPlayer = matchPayload({organizerId: PLAYER});
+    const asPlayer = validMatchPayload({organizerId: PLAYER});
 
     await seed(async (database) => {
       await setDoc(doc(database, "moderation", PLAYER), {level: "suspended", untilMs: inADay});
@@ -605,7 +572,7 @@ describe("moderação e denúncias", () => {
     });
 
     await assertFails(
-      setDoc(doc(asUser(PLAYER), "matches", "m-banido"), matchPayload({organizerId: PLAYER})),
+      setDoc(doc(asUser(PLAYER), "matches", "m-banido"), validMatchPayload({organizerId: PLAYER})),
     );
   });
 

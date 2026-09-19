@@ -321,5 +321,4 @@ private fun fakeParticipantsSummaryFor(userIds: List<String>): ParticipantsSumma
             },
         waitlist = emptyList(),
         confirmedCount = userIds.size,
-        totalSlots = 10,
     )

@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.walcker.games.features.domain.shared.model.Game
 import com.walcker.games.strings.ManageMatchStrings
+import com.walcker.games.strings.sportName
 import com.walcker.match.cedar.components.CedarTag
 import com.walcker.match.cedar.components.CedarTagTone
 import com.walcker.match.cedar.tokens.CedarTokens
@@ -77,7 +78,7 @@ internal fun MatchHeaderCard(
                 )
             }
 
-            CedarTag(label = match.sport.label.uppercase(), tone = CedarTagTone.Info)
+            CedarTag(label = sportName(match.sport).uppercase(), tone = CedarTagTone.Info)
 
             IconButton(
                 onClick = onEditMatch,

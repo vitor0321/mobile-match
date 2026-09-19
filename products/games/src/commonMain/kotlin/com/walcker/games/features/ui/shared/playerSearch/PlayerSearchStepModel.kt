@@ -4,6 +4,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.walcker.games.features.domain.shared.model.PlayerSearchFilters
 import com.walcker.games.features.domain.shared.usecase.SearchPlayersUseCase
+import com.walcker.games.features.ui.shared.common.userMessage
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.resolveStringsOrDefault
 import com.walcker.match.core.analytics.AnalyticsEvent
@@ -126,7 +127,7 @@ internal class PlayerSearchStepModel(
                         }
                     }.onFailure { error ->
                         crashReporter.recordException(error)
-                        val message = error.message ?: strings.errorLoading
+                        val message = error.userMessage(fallback = strings.errorLoading, errors = stringsHolder.resolveStringsOrDefault().errors)
                         _state.update { it.copy(isLoading = false, errorMessage = message) }
                         _effects.send(PlayerSearchEffect.ShowMessage(message))
                     }

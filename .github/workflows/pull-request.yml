@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
@@ -45,6 +45,9 @@ jobs:
           --no-configuration-cache
           --stacktrace
           --console=plain
+
+      - name: Verify unit test coverage floor
+        run: ./gradlew :koverVerify --no-configuration-cache --console=plain
 
       - name: Upload Firebase emulator logs
         if: failure()

@@ -45,13 +45,13 @@ class DeleteAccountUseCaseTest {
 
             assertEquals(DeleteAccountResult.Success, result)
             assertEquals(1, fakes.accountDeletionRepository.callCount)
-            assertEquals(1, fakes.authRepository.deleteAccountCallCount)
+            assertEquals(1, fakes.authRepository.signOutCallCount)
             assertEquals(1, fakes.billingClient.logOutCallCount)
             assertEquals(listOf("uid-1"), fakes.proStateCache.clearedUids)
         }
 
     @Test
-    fun `a RequiresRecentLoginException from deleteRemoteData stops the flow immediately`() =
+    fun `a server refusal for an old login stops the flow and asks for a recent login`() =
         runTest {
             val accountDeletionRepository = FakeAccountDeletionRepository(result = Result.failure(RequiresRecentLoginException()))
             val (useCase, fakes) = buildUseCase(accountDeletionRepository = accountDeletionRepository)
@@ -59,9 +59,20 @@ class DeleteAccountUseCaseTest {
             val result = useCase()
 
             assertEquals(DeleteAccountResult.RequiresRecentLogin, result)
-            assertEquals(0, fakes.authRepository.deleteAccountCallCount)
+            assertEquals(0, fakes.authRepository.signOutCallCount)
             assertEquals(0, fakes.billingClient.logOutCallCount)
             assertTrue(fakes.proStateCache.clearedUids.isEmpty())
+        }
+
+    @Test
+    fun `the auth account is removed by the server so the device only signs out`() =
+        runTest {
+            val (useCase, fakes) = buildUseCase()
+
+            useCase()
+
+            assertEquals(0, fakes.authRepository.deleteAccountCallCount)
+            assertEquals(1, fakes.authRepository.signOutCallCount)
         }
 
     @Test
@@ -75,12 +86,12 @@ class DeleteAccountUseCaseTest {
 
             val failure = assertIs<DeleteAccountResult.RemoteDataFailure>(result)
             assertEquals(cause, failure.cause)
-            assertEquals(0, fakes.authRepository.deleteAccountCallCount)
+            assertEquals(0, fakes.authRepository.signOutCallCount)
             assertEquals(0, fakes.billingClient.logOutCallCount)
         }
 
     @Test
-    fun `no authenticated user stops the flow before touching auth deletion`() =
+    fun `no authenticated user stops the flow before signing out`() =
         runTest {
             val authRepository = FakeAuthRepository(initialUser = null)
             val (useCase, fakes) = buildUseCase(authRepository = authRepository)
@@ -89,34 +100,20 @@ class DeleteAccountUseCaseTest {
 
             val failure = assertIs<DeleteAccountResult.AuthDeletionFailure>(result)
             assertIs<IllegalStateException>(failure.cause)
-            assertEquals(0, fakes.authRepository.deleteAccountCallCount)
+            assertEquals(0, fakes.authRepository.signOutCallCount)
             assertEquals(0, fakes.billingClient.logOutCallCount)
         }
 
     @Test
-    fun `a RequiresRecentLoginException from deleteAccount stops before billing cleanup`() =
+    fun `a failure signing out surfaces as LocalCleanupFailure and stops before billing cleanup`() =
         runTest {
-            val authRepository =
-                FakeAuthRepository(initialUser = session, deleteAccountResult = Result.failure(RequiresRecentLoginException()))
+            val cause = IllegalStateException("sign out failed")
+            val authRepository = FakeAuthRepository(initialUser = session, signOutResult = Result.failure(cause))
             val (useCase, fakes) = buildUseCase(authRepository = authRepository)
 
             val result = useCase()
 
-            assertEquals(DeleteAccountResult.RequiresRecentLogin, result)
-            assertEquals(0, fakes.billingClient.logOutCallCount)
-            assertTrue(fakes.proStateCache.clearedUids.isEmpty())
-        }
-
-    @Test
-    fun `a generic failure from deleteAccount surfaces as AuthDeletionFailure and stops before billing cleanup`() =
-        runTest {
-            val cause = IllegalStateException("auth service unavailable")
-            val authRepository = FakeAuthRepository(initialUser = session, deleteAccountResult = Result.failure(cause))
-            val (useCase, fakes) = buildUseCase(authRepository = authRepository)
-
-            val result = useCase()
-
-            val failure = assertIs<DeleteAccountResult.AuthDeletionFailure>(result)
+            val failure = assertIs<DeleteAccountResult.LocalCleanupFailure>(result)
             assertEquals(cause, failure.cause)
             assertEquals(0, fakes.billingClient.logOutCallCount)
         }

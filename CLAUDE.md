@@ -25,22 +25,14 @@ comentário para ficar clara, o problema é o nome ou a estrutura, não a falta 
 - Sem `java.*`, sem `Math.`, sem `System.currentTimeMillis()`. Use `kotlin.math`, `kotlinx.datetime`.
 - Alvos: `androidTarget`, `iosArm64`, `iosSimulatorArm64`.
 
-**Nenhum job de CI compila iOS num PR.** `ios-release.yml` só dispara em tag `v*`. Duas quebras de
-`commonMain` já passaram por esse buraco sem ninguém ver: `Math.toRadians` no `NearbyMatch` e
-`System.currentTimeMillis` no perfil. Antes de dar qualquer coisa por pronta:
+O job `ios-compile` do `pull-request.yml` compila os dois produtos para iOS em todo PR — antes disso
+duas quebras de `commonMain` passaram sem ninguém ver (`Math.toRadians` no `NearbyMatch` e
+`System.currentTimeMillis` no perfil). Rode localmente antes de abrir o PR:
 
 ```bash
 ./gradlew :products:games:compileKotlinIosSimulatorArm64
 ./gradlew :products:identity:compileKotlinIosSimulatorArm64
 ```
-
-### CI quebrado, para conserto
-
-`.github/workflows/pull-request.yml` roda `:products:bible:testDebugUnitTest` e
-`:products:bible:compileDebugKotlinAndroid`. **`:products:bible` não existe** — saiu quando o projeto
-foi derivado do mobile-lexis. E `:products:games`, que é o produto, não é compilado nem testado em
-nenhum job. Trocar aqueles dois alvos por `:products:games` e acrescentar um compile de iOS é o
-conserto de maior valor no repositório inteiro.
 
 ---
 
@@ -83,7 +75,8 @@ o `*Strings.kt` dela: já aconteceu de uma tela inteira ignorar o arquivo traduz
 e escrever tudo em pt-BR no código.
 
 Nunca mostre id de documento do Firestore, `error.message` de exceção ou nome de enum (`FUTEBOL`) para
-o usuário. Enum tem `.label`.
+o usuário. Nome de esporte vem traduzido de `strings.sports.name(sport)` — `sportName(sport)` dentro de
+composable; o enum `Sport` não carrega texto.
 
 ## Armadilhas de Compose já encontradas neste repositório
 
@@ -137,7 +130,10 @@ Firebase/Firestore com acesso via expect/actual e SDK nativo; Firebase Functions
 ./gradlew build
 ./gradlew :products:identity:screenshotTests:recordPaparazziDebug   # olhe os diffs antes de aceitar
 ./gradlew :products:games:compileKotlinIosSimulatorArm64
+./gradlew :koverHtmlReport   # cobertura da lógica (sem @Composable) → build/reports/kover/html/index.html
 ```
+
+`./gradlew :koverVerify` falha se a cobertura de linhas cair abaixo de 70% — o CI do PR roda esse piso.
 
 Os goldens do Paparazzi cobrem as 3 telas de `products/identity` (Login, Cadastro, Esqueci a senha —
 Perfil/Configurações de conta e Paywall foram removidos). São a revisão visual mais barata que existe

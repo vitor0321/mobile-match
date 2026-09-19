@@ -39,7 +39,7 @@ internal data class CreateMatchState(
                 selectedTime != null &&
                 totalPlayers >= MIN_PLAYERS &&
                 totalPlayers <= MAX_PLAYERS &&
-                (pricePerPlayer.isEmpty() || pricePerPlayer.toDoubleOrNull() != null)
+                parsePriceCents(pricePerPlayer) != null
 
     companion object {
         const val DEFAULT_DURATION_MIN = 90

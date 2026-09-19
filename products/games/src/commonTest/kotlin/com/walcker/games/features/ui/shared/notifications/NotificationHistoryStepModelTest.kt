@@ -95,7 +95,7 @@ class NotificationHistoryStepModelTest {
 
             advanceUntilIdle()
 
-            assertEquals("offline", model.state.value.errorMessage)
+            assertEquals(PtBrGamesStrings.notificationHistory.error, model.state.value.errorMessage)
         }
 
     @Test

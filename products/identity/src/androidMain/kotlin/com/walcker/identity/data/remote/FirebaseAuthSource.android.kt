@@ -1,10 +1,14 @@
 package com.walcker.identity.features.data.remote
 
 import android.util.Log
+import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.walcker.identity.api.UserSession
+import com.walcker.identity.features.domain.error.IdentityError
 import com.walcker.identity.features.domain.error.VerificationError
 import com.walcker.identity.features.domain.usecase.RequiresRecentLoginException
 import com.walcker.identity.strings.IdentityStringsHolder
@@ -106,6 +110,22 @@ internal class AndroidFirebaseAuthSource(
         }
     }
 
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw IdentityError.Unknown
+            val email = user.email ?: throw IdentityError.Unknown
+            user.reauthenticate(EmailAuthProvider.getCredential(email, password)).await()
+            user.getIdToken(true).await()
+            Unit
+        }.onFailure { error -> if (error is CancellationException) throw error }
+            .recoverCatching { error -> throw error.toReauthenticationError() }
+
+    override suspend fun signInProvider(): Result<String?> =
+        runCatching {
+            val user = firebaseAuth.currentUser ?: throw IdentityError.Unknown
+            user.getIdToken(false).await().signInProvider
+        }.onFailure { error -> if (error is CancellationException) throw error }
+
     override suspend fun sendPasswordResetEmail(email: String): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
             firebaseAuth
@@ -140,3 +160,11 @@ internal class AndroidFirebaseAuthSource(
         }.onFailure { error -> if (error is CancellationException) throw error }
             .recoverCatching { error -> throw error.toVerificationError() }
 }
+
+private fun Throwable.toReauthenticationError(): Throwable =
+    when (this) {
+        is IdentityError -> this
+        is FirebaseAuthInvalidCredentialsException -> IdentityError.InvalidCredentials
+        is FirebaseNetworkException -> IdentityError.Network
+        else -> this
+    }

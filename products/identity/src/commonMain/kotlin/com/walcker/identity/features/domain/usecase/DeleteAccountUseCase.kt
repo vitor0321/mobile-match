@@ -30,14 +30,8 @@ internal class DeleteAccountUseCaseImpl(
             authRepository.currentUser.first()?.uid
                 ?: return DeleteAccountResult.AuthDeletionFailure(IllegalStateException("No authenticated user"))
         authRepository
-            .deleteAccount()
-            .onFailure { cause ->
-                return if (cause is RequiresRecentLoginException) {
-                    DeleteAccountResult.RequiresRecentLogin
-                } else {
-                    DeleteAccountResult.AuthDeletionFailure(cause)
-                }
-            }
+            .signOut()
+            .onFailure { return DeleteAccountResult.LocalCleanupFailure(it) }
         billingClient
             .logOut()
             .onFailure { return DeleteAccountResult.LocalCleanupFailure(it) }

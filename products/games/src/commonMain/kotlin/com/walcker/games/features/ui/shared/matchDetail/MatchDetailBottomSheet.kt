@@ -15,7 +15,6 @@ public fun MatchDetailBottomSheet() {
     val navigatorHolder = koinInject<NavigatorHolder>()
     val currentMatchId by coordinator.selectedMatchId.collectAsState()
     val matchId = currentMatchId
-    println("DEEPLINK_DEBUG MatchDetailBottomSheet recomposed, coordinator=$coordinator matchId=$matchId")
 
     if (matchId != null) {
         CedarFloatingDialog(onDismiss = { coordinator.close() }, scrollable = false) {

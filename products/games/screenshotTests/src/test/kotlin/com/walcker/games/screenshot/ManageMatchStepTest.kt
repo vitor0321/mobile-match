@@ -11,6 +11,8 @@ import com.walcker.games.strings.PtBrGamesStrings
 import org.junit.Rule
 import org.junit.Test
 
+private const val FIXED_NOW_SECONDS = 1_760_000_000L
+
 class ManageMatchStepTest {
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
@@ -25,10 +27,11 @@ class ManageMatchStepTest {
     private fun snapshot(
         state: ManageMatchState,
         darkTheme: Boolean = false,
+        nowSeconds: Long = FIXED_NOW_SECONDS,
     ) {
         paparazzi.snapshot {
             GamesSnapshotTheme(darkTheme = darkTheme) {
-                ManageMatchContent(state = state, strings = PtBrGamesStrings, onEvent = {})
+                ManageMatchContent(state = state, strings = PtBrGamesStrings, onEvent = {}, nowSeconds = nowSeconds)
             }
         }
     }
@@ -69,10 +72,7 @@ class ManageMatchStepTest {
             loadedState.copy(
                 match =
                     loadedState.match?.copy(
-                        startsAtSeconds =
-                            kotlin.time.Clock.System
-                                .now()
-                                .epochSeconds - 600,
+                        startsAtSeconds = FIXED_NOW_SECONDS - 600,
                         durationMin = 60,
                     ),
             ),

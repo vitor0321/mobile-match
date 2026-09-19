@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.walcker.match.app.deeplink.matchIdFromDeepLink
 import com.walcker.match.app.notifications.EXTRA_MATCH_ID
 import com.walcker.match.app.notifications.NotificationPermissionRequester
 import com.walcker.match.app.notifications.NotificationPermissionRequesterHolder
@@ -87,8 +88,7 @@ internal class MainActivity :
     private fun handleIncomingIntent(intent: Intent?) {
         val matchId =
             intent?.getStringExtra(EXTRA_MATCH_ID)
-                ?: intent?.data?.getQueryParameter("id")
-                ?: intent?.data?.lastPathSegment
+                ?: matchIdFromDeepLink(intent?.dataString)
                 ?: return
         deepLinkCoordinator.navigate(DeepLink.OpenMatch(matchId))
     }

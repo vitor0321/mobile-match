@@ -25,9 +25,12 @@ import com.walcker.games.features.domain.shared.usecase.GetUserRatingsUseCase
 import com.walcker.games.strings.GamesStringsHolder
 import com.walcker.games.strings.PtBrGamesStrings
 import com.walcker.identity.api.AccountDeletionOutcome
+import com.walcker.identity.api.ReauthenticationMethod
+import com.walcker.identity.api.ReauthenticationOutcome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -214,7 +217,7 @@ class PlayerProfileStepModelTest {
             model.onEvent(PlayerProfileEvent.LogoutRequested)
             advanceUntilIdle()
 
-            assertEquals("offline", model.state.value.errorMessage)
+            assertEquals(stringsHolder.strings.playerProfile.logoutError, model.state.value.errorMessage)
         }
 
     @Test
@@ -363,22 +366,172 @@ class PlayerProfileStepModelTest {
             assertFalse(model.state.value.showDeleteAccountDialog)
         }
 
+    private fun passwordAccount() =
+        FakeAccountDeletionService(
+            outcome = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Password),
+        )
+
+    private fun TestScope.modelWaitingForPassword(accountDeletionService: FakeAccountDeletionService): PlayerProfileStepModel {
+        val model = buildModel(accountDeletionService = accountDeletionService)
+        advanceUntilIdle()
+        model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
+        model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+        advanceUntilIdle()
+        return model
+    }
+
     @Test
-    fun `a deletion needing a recent login asks the user to sign in again`() =
+    fun `an old password login asks for the password inside the dialog`() =
+        runTest(testDispatcher) {
+            val model = modelWaitingForPassword(passwordAccount())
+
+            val state = model.state.value
+            assertTrue(state.showDeleteAccountDialog)
+            assertTrue(state.isDeleteAccountPasswordRequired)
+            assertFalse(state.isDeletingAccount)
+            assertNull(state.errorMessage)
+        }
+
+    @Test
+    fun `the right password deletes the account and sends the user back to login`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount()
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("s3cret"))
+                model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+                advanceUntilIdle()
+
+                assertIs<PlayerProfileEffect.RequireLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals("s3cret", accountDeletionService.lastPassword)
+            assertEquals(2, accountDeletionService.deleteCallCount)
+            assertFalse(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `a wrong password keeps the dialog open with an inline error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount().apply { passwordOutcome = ReauthenticationOutcome.WrongPassword }
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("nope"))
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertTrue(state.showDeleteAccountDialog)
+            assertTrue(state.isDeleteAccountPasswordRequired)
+            assertFalse(state.isDeletingAccount)
+            assertEquals(stringsHolder.strings.playerProfile.deleteAccountWrongPassword, state.deleteAccountPasswordError)
+            assertEquals(1, accountDeletionService.deleteCallCount)
+        }
+
+    @Test
+    fun `typing again clears the wrong password error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount().apply { passwordOutcome = ReauthenticationOutcome.WrongPassword }
+            val model = modelWaitingForPassword(accountDeletionService)
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("nope"))
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("nope2"))
+
+            assertNull(model.state.value.deleteAccountPasswordError)
+        }
+
+    @Test
+    fun `an empty password is not sent`() =
+        runTest(testDispatcher) {
+            val accountDeletionService = passwordAccount()
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            assertNull(accountDeletionService.lastPassword)
+            assertTrue(model.state.value.isDeleteAccountPasswordRequired)
+        }
+
+    @Test
+    fun `an old google login confirms with google and then deletes`() =
         runTest(testDispatcher) {
             val accountDeletionService =
-                FakeAccountDeletionService(outcome = AccountDeletionOutcome.RequiresRecentLogin)
+                FakeAccountDeletionService(
+                    outcome = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Google),
+                )
             val model = buildModel(accountDeletionService = accountDeletionService)
             advanceUntilIdle()
+
+            model.effects.test {
+                model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
+                advanceUntilIdle()
+
+                assertIs<PlayerProfileEffect.RequireLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, accountDeletionService.providerCallCount)
+            assertEquals(2, accountDeletionService.deleteCallCount)
+            assertFalse(model.state.value.isDeleteAccountPasswordRequired)
+        }
+
+    @Test
+    fun `closing the google sheet keeps the account and shows no error`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                FakeAccountDeletionService(
+                    outcome = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Apple),
+                    providerOutcome = ReauthenticationOutcome.Cancelled,
+                )
+            val model = buildModel(accountDeletionService = accountDeletionService)
+            advanceUntilIdle()
+            model.onEvent(PlayerProfileEvent.DeleteAccountRequested)
 
             model.onEvent(PlayerProfileEvent.ConfirmDeleteAccount)
             advanceUntilIdle()
 
-            assertEquals(
-                stringsHolder.strings.playerProfile.deleteAccountRequiresRecentLogin,
-                model.state.value.errorMessage,
-            )
+            val state = model.state.value
+            assertEquals(1, accountDeletionService.deleteCallCount)
+            assertFalse(state.showDeleteAccountDialog)
+            assertFalse(state.isDeletingAccount)
+            assertNull(state.errorMessage)
+        }
+
+    @Test
+    fun `a server that still refuses after confirming does not loop`() =
+        runTest(testDispatcher) {
+            val accountDeletionService =
+                passwordAccount().apply {
+                    outcomeAfterReauthentication = AccountDeletionOutcome.RequiresReauthentication(ReauthenticationMethod.Password)
+                }
+            val model = modelWaitingForPassword(accountDeletionService)
+
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("s3cret"))
+            model.onEvent(PlayerProfileEvent.ConfirmDeleteAccountWithPassword)
+            advanceUntilIdle()
+
+            assertEquals(2, accountDeletionService.deleteCallCount)
+            assertEquals(stringsHolder.strings.playerProfile.deleteAccountError, model.state.value.errorMessage)
             assertFalse(model.state.value.showDeleteAccountDialog)
+        }
+
+    @Test
+    fun `cancelling the password step forgets what was typed`() =
+        runTest(testDispatcher) {
+            val model = modelWaitingForPassword(passwordAccount())
+            model.onEvent(PlayerProfileEvent.DeleteAccountPasswordChanged("s3cret"))
+
+            model.onEvent(PlayerProfileEvent.CancelDeleteAccount)
+
+            val state = model.state.value
+            assertFalse(state.showDeleteAccountDialog)
+            assertFalse(state.isDeleteAccountPasswordRequired)
+            assertEquals("", state.deleteAccountPassword)
         }
 
     @Test

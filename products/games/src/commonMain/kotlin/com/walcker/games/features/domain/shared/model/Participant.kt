@@ -15,9 +15,6 @@ internal data class ParticipantsSummary(
     val confirmed: List<Participant>,
     val waitlist: List<Participant>,
     val confirmedCount: Int,
-    val totalSlots: Int,
 ) {
     val waitlistCount: Int get() = waitlist.size
-    val hasOpenSlots: Boolean get() = confirmedCount < totalSlots
-    val openSlots: Int get() = (totalSlots - confirmedCount).coerceAtLeast(0)
 }

@@ -23,4 +23,6 @@ internal val PtBrGamesStrings =
         map = mapStringsPt,
         loginRequired = loginRequiredStringsPt,
         about = aboutStringsPt,
+        sports = sportStringsPt,
+        errors = errorStringsPt,
     )

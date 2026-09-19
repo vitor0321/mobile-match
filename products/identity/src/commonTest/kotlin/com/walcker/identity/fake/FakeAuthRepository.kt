@@ -62,6 +62,31 @@ internal class FakeAuthRepository(
         return deleteAccountResult
     }
 
+    var signInProviderResult: Result<String?> = Result.success("password")
+    var reauthenticateWithPasswordResult: Result<Unit> = Result.success(Unit)
+    var reauthenticateWithGoogleResult: Result<Unit> = Result.success(Unit)
+    var reauthenticateWithAppleResult: Result<Unit> = Result.success(Unit)
+    var lastReauthenticationPassword: String? = null
+    var reauthenticateWithGoogleCallCount: Int = 0
+    var reauthenticateWithAppleCallCount: Int = 0
+
+    override suspend fun signInProvider(): Result<String?> = signInProviderResult
+
+    override suspend fun reauthenticateWithPassword(password: String): Result<Unit> {
+        lastReauthenticationPassword = password
+        return reauthenticateWithPasswordResult
+    }
+
+    override suspend fun reauthenticateWithGoogle(): Result<Unit> {
+        reauthenticateWithGoogleCallCount++
+        return reauthenticateWithGoogleResult
+    }
+
+    override suspend fun reauthenticateWithApple(): Result<Unit> {
+        reauthenticateWithAppleCallCount++
+        return reauthenticateWithAppleResult
+    }
+
     override suspend fun signOut(): Result<Unit> {
         signOutCallCount++
         return signOutResult

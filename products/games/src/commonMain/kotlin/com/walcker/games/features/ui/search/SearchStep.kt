@@ -37,6 +37,7 @@ import com.walcker.games.features.ui.home.map.mapper.toMapPin
 import com.walcker.games.features.ui.home.map.model.MatchPreview
 import com.walcker.games.features.ui.search.component.SearchFiltersPanel
 import com.walcker.games.features.ui.shared.matchDetail.component.Banner
+import com.walcker.games.strings.LocalGamesStrings
 import com.walcker.match.cedar.components.CedarFloatingDialog
 import com.walcker.match.cedar.components.CedarLoading
 import com.walcker.match.cedar.components.CedarScreenTitle
@@ -81,7 +82,7 @@ internal class SearchStep : Screen {
             mapBody = { bodyModifier ->
                 Box(modifier = bodyModifier) {
                     MatchMapView(
-                        pins = state.mapResults.map { it.toMapPin() },
+                        pins = LocalGamesStrings.current.let { strings -> state.mapResults.map { it.toMapPin(strings.sports, strings.map.freePrice) } },
                         camera = state.mapCamera,
                         onPinClick = { matchId -> stepModel.onEvent(SearchEvents.PinSelected(matchId)) },
                         onNearbyTap = {},

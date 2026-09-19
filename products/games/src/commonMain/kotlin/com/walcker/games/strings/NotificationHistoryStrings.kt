@@ -8,6 +8,7 @@ internal interface NotificationHistoryStrings {
     val youWereAdded: String
     val refreshing: String
     val error: String
+    val actionError: String
 
     val closeContentDescription: String
     val markAsReadContentDescription: String
@@ -30,6 +31,7 @@ internal data class PtBrNotificationHistoryStrings(
     override val youWereAdded: String = "Você foi adicionado",
     override val refreshing: String = "Atualizando...",
     override val error: String = "Erro ao carregar notificações",
+    override val actionError: String = "Não foi possível atualizar a notificação. Tente de novo.",
     override val closeContentDescription: String = "Fechar",
     override val markAsReadContentDescription: String = "Marcar como lida",
     override val deleteContentDescription: String = "Apagar notificação",
@@ -58,6 +60,7 @@ internal data class EnNotificationHistoryStrings(
     override val youWereAdded: String = "You were added",
     override val refreshing: String = "Refreshing...",
     override val error: String = "Error loading notifications",
+    override val actionError: String = "Couldn't update the notification. Please try again.",
     override val closeContentDescription: String = "Close",
     override val markAsReadContentDescription: String = "Mark as read",
     override val deleteContentDescription: String = "Delete notification",

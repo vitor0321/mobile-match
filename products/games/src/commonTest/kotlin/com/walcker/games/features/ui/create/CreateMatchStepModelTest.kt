@@ -35,6 +35,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -215,6 +216,64 @@ class CreateMatchStepModelTest {
                 assertEquals(MainTab.MyMatches, awaitItem())
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    @Test
+    fun `a price typed with a comma keeps the form valid and is sent in the right cents`() =
+        runTest(testDispatcher) {
+            val gameRepository = FakeGameRepository(createMatchResult = Result.success("new-match"))
+            val model = buildModel(gameRepository = gameRepository)
+            advanceUntilIdle()
+            fillValidForm(model)
+
+            model.onEvent(CreateMatchEvents.PriceChanged("12,50"))
+
+            assertTrue(model.state.value.isFormValid)
+            assertNull(model.state.value.priceError)
+
+            model.onEvent(CreateMatchEvents.Submit)
+            advanceUntilIdle()
+
+            assertEquals("12.50", gameRepository.createMatchCalls.single().pricePerPlayer)
+        }
+
+    @Test
+    fun `a price the rules would refuse explains itself and blocks the form`() =
+        runTest(testDispatcher) {
+            val gameRepository = FakeGameRepository()
+            val model = buildModel(gameRepository = gameRepository)
+            advanceUntilIdle()
+            fillValidForm(model)
+
+            model.onEvent(CreateMatchEvents.PriceChanged("1500"))
+
+            assertEquals(stringsHolder.strings.createMatch.priceInvalid, model.state.value.priceError)
+            assertFalse(model.state.value.isFormValid)
+
+            model.onEvent(CreateMatchEvents.Submit)
+            advanceUntilIdle()
+
+            assertTrue(gameRepository.createMatchCalls.isEmpty())
+        }
+
+    @Test
+    fun `clearing the price makes the match free again`() =
+        runTest(testDispatcher) {
+            val gameRepository = FakeGameRepository(createMatchResult = Result.success("new-match"))
+            val model = buildModel(gameRepository = gameRepository)
+            advanceUntilIdle()
+            fillValidForm(model)
+            model.onEvent(CreateMatchEvents.PriceChanged("abc"))
+
+            model.onEvent(CreateMatchEvents.PriceChanged(""))
+
+            assertNull(model.state.value.priceError)
+            assertTrue(model.state.value.isFormValid)
+
+            model.onEvent(CreateMatchEvents.Submit)
+            advanceUntilIdle()
+
+            assertNull(gameRepository.createMatchCalls.single().pricePerPlayer)
         }
 
     @Test

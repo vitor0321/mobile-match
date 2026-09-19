@@ -27,6 +27,9 @@ internal data class PlayerProfileState(
     val sportsErrorMessage: String? = null,
     val showDeleteAccountDialog: Boolean = false,
     val isDeletingAccount: Boolean = false,
+    val isDeleteAccountPasswordRequired: Boolean = false,
+    val deleteAccountPassword: String = "",
+    val deleteAccountPasswordError: String? = null,
 )
 
 internal sealed interface PlayerProfileEvent {
@@ -61,6 +64,12 @@ internal sealed interface PlayerProfileEvent {
     data object ConfirmDeleteAccount : PlayerProfileEvent
 
     data object CancelDeleteAccount : PlayerProfileEvent
+
+    data class DeleteAccountPasswordChanged(
+        val value: String,
+    ) : PlayerProfileEvent
+
+    data object ConfirmDeleteAccountWithPassword : PlayerProfileEvent
 }
 
 internal sealed interface PlayerProfileEffect {

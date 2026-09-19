@@ -1,6 +1,7 @@
 package com.walcker.identity.features.data.remote
 
 import cocoapods.FirebaseAuth.FIRAuth
+import cocoapods.FirebaseAuth.FIRAuthCredential
 import cocoapods.FirebaseAuth.FIROAuthProvider
 import com.walcker.identity.api.UserSession
 import com.walcker.identity.features.domain.error.IdentityError
@@ -50,6 +51,36 @@ internal class IosAppleAuthSource(
 ) : FeatureAppleAuthSource {
     override suspend fun signIn(): Result<UserSession> {
         val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+        val credential = appleCredential().getOrElse { return Result.failure(it) }
+        return suspendCancellableCoroutine { continuation ->
+            auth.signInWithCredential(credential) { authResult, authError ->
+                if (authError != null) {
+                    continuation.resume(Result.failure(authError.toThrowable(strings.firebaseAppleAuthFailed)))
+                    return@signInWithCredential
+                }
+                val session = authResult?.user()?.toUserSession()
+                continuation.resume(
+                    if (session != null) {
+                        Result.success(session)
+                    } else {
+                        Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterAppleSignIn))
+                    },
+                )
+            }
+        }
+    }
+
+    override suspend fun reauthenticate(): Result<Unit> {
+        val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
+        val user =
+            auth.currentUser()
+                ?: return Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterAppleSignIn))
+        val credential = appleCredential().getOrElse { return Result.failure(it) }
+        return user.reauthenticate(credential, strings.firebaseAppleAuthFailed)
+    }
+
+    private suspend fun appleCredential(): Result<FIRAuthCredential> {
+        val strings = stringsHolder.resolveStringsOrDefault().nativeAuth
         val anchor =
             currentPresentationAnchor()
                 ?: return Result.failure(IllegalStateException(strings.missingPresentationAnchor))
@@ -74,31 +105,19 @@ internal class IosAppleAuthSource(
                                 @OptIn(BetaInteropApi::class)
                                 NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString()
                             }
-                        if (identityToken.isNullOrBlank()) {
-                            continuation.resume(Result.failure(IllegalStateException(strings.invalidAppleIdToken)))
-                            return@AppleSignInDelegate
-                        }
-
-                        val firCredential =
-                            FIROAuthProvider.credentialWithProviderID(
-                                providerID = "apple.com",
-                                IDToken = identityToken,
-                                rawNonce = rawNonce,
-                            )
-                        auth.signInWithCredential(firCredential) { authResult, authError ->
-                            if (authError != null) {
-                                continuation.resume(Result.failure(authError.toThrowable(strings.firebaseAppleAuthFailed)))
-                                return@signInWithCredential
-                            }
-                            val session = authResult?.user()?.toUserSession()
-                            continuation.resume(
-                                if (session != null) {
-                                    Result.success(session)
-                                } else {
-                                    Result.failure(IllegalStateException(strings.missingAuthenticatedUserAfterAppleSignIn))
-                                },
-                            )
-                        }
+                        continuation.resume(
+                            if (identityToken.isNullOrBlank()) {
+                                Result.failure(IllegalStateException(strings.invalidAppleIdToken))
+                            } else {
+                                Result.success(
+                                    FIROAuthProvider.credentialWithProviderID(
+                                        providerID = "apple.com",
+                                        IDToken = identityToken,
+                                        rawNonce = rawNonce,
+                                    ),
+                                )
+                            },
+                        )
                     },
                     onError = { error ->
                         continuation.resume(Result.failure(error.toAppleSignInError()))
