@@ -46,6 +46,37 @@ jobs:
           --stacktrace
           --console=plain
 
+      - name: Create placeholder google-services.json
+        run: |
+          if [ -f app/google-services.json ]; then exit 0; fi
+          client() {
+            cat <<EOF
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:$2",
+                  "android_client_info": { "package_name": "$1" }
+                },
+                "oauth_client": [],
+                "api_key": [{ "current_key": "ci-placeholder-key" }],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+          EOF
+          }
+          cat > app/google-services.json <<EOF
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "ci-placeholder",
+              "storage_bucket": "ci-placeholder.appspot.com"
+            },
+            "client": [
+              $(client com.walcker.match.app 0000000000000000),
+              $(client com.walcker.match.app.dev 0000000000000001)
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
       - name: Verify unit test coverage floor
         run: ./gradlew :koverVerify --no-configuration-cache --console=plain
 
@@ -62,10 +93,13 @@ jobs:
   # NearbyMatch, `System.currentTimeMillis` no perfil e `Clock.System` no
   # InMemoryPlayerCache. Nenhuma delas aparece no build Android.
   ios-compile:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
       - uses: actions/setup-java@v4
         with:
