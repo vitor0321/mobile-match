@@ -39,6 +39,7 @@ exports.VERIFICATION_EXEMPT_CALLABLES = [
     "exportUserData",
     "leaveMatch",
     "syncVerificationStatus",
+    "ensureUserProvisioned",
 ];
 /**
  * Ferramenta da equipe, não ação entre usuários: quem barra é a custom claim

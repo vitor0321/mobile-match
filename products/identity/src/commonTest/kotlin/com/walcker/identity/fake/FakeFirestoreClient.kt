@@ -20,10 +20,16 @@ internal class FakeFirestoreClient(
 
     override suspend fun <T> runTransaction(block: suspend (FirestoreTransaction) -> T): Result<T> = error("not used in this fake")
 
+    val functionCalls = mutableListOf<String>()
+    var functionResult: Result<Map<String, Any?>> = Result.success(emptyMap())
+
     override suspend fun callFunction(
         name: String,
         data: Map<String, Any?>,
-    ): Result<Map<String, Any?>> = error("not used in this fake")
+    ): Result<Map<String, Any?>> {
+        functionCalls += name
+        return functionResult
+    }
 
     private class FakeDocumentReference(
         override val path: String,

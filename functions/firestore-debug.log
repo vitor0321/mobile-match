@@ -1,4 +1,4 @@
-Sep 18, 2026 8:50:12 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+Sep 19, 2026 9:49:52 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
 INFO: Started WebSocket server on ws://127.0.0.1:9150
 
 API endpoint: http://127.0.0.1:8080
@@ -16,387 +16,393 @@ If you are running a Firestore in Datastore Mode project, run:
 Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
 Dev App Server is now running.
 
-Sep 18, 2026 8:50:17 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:00 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
-Sep 18, 2026 8:50:17 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:01 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:17 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:01 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
-Sep 18, 2026 8:50:18 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:03 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
-Sep 18, 2026 8:50:18 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:05 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:19 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:06 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:19 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:06 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:19 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:06 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:19 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:08 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:08 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:08 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:09 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:09 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:09 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:09 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:10 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:11 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:11 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:12 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:13 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:13 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:13 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:14 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:15 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:16 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:17 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:17 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:22 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:17 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:18 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:18 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:18 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:18 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:23 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:19 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:21 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:21 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:24 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:22 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:25 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:26 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:26 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:23 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:25 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:25 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:25 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:26 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:26 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:26 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:28 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:27 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:29 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:28 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:30 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:31 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:29 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected HTTP/2 connection.
+Sep 19, 2026 9:50:30 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected HTTP/2 connection.
+Sep 19, 2026 9:50:30 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected HTTP/2 connection.
+Sep 19, 2026 9:50:30 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
-Sep 18, 2026 8:50:31 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:30 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:31 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Sep 19, 2026 9:50:30 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:30 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L133, false for 'create' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'create' @ L133, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -427,7 +433,7 @@ false for 'create' @ L133, false for 'create' @ L499, false for 'update' @ L143,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:30 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L133:24 for 'create' @ L133, false for 'create' @ L499, evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'create' @ L133, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -458,7 +464,7 @@ evaluation error at L133:24 for 'create' @ L133, false for 'create' @ L499, eval
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:30 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -521,7 +527,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:30 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -584,7 +590,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:30 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -647,7 +653,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:30 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L168, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -678,7 +684,7 @@ false for 'update' @ L168, false for 'update' @ L499
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -709,7 +715,7 @@ false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:2
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -740,38 +746,7 @@ false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:2
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
-WARNING: Operation failed: 
-false for 'create' @ L288, false for 'create' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
-com.google.cloud.datastore.core.exception.DatastoreException: 
-false for 'create' @ L288, false for 'create' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
-	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.internalCommit(CloudFirestoreV1.java:1336)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.write(CloudFirestoreV1.java:1321)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.handleRequest(CloudFirestoreV1WriteStream.java:222)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.write(CloudFirestoreV1WriteStream.java:144)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:99)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:27)
-	at io.grpc.stub.ServerCalls$StreamingServerCallHandler$StreamingServerCallListener.onMessage(ServerCalls.java:262)
-	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
-	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
-	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailableInternal(ServerCallImpl.java:334)
-	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailable(ServerCallImpl.java:319)
-	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1MessagesAvailable.runInContext(ServerImpl.java:852)
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-	at java.base/java.lang.Thread.run(Thread.java:1583)
-
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L288, false for 'create' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -802,7 +777,38 @@ false for 'create' @ L288, false for 'create' @ L499, false for 'update' @ L301,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+WARNING: Operation failed: 
+false for 'create' @ L288, false for 'create' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
+com.google.cloud.datastore.core.exception.DatastoreException: 
+false for 'create' @ L288, false for 'create' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
+	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.internalCommit(CloudFirestoreV1.java:1336)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.write(CloudFirestoreV1.java:1321)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.handleRequest(CloudFirestoreV1WriteStream.java:222)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.write(CloudFirestoreV1WriteStream.java:144)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:99)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:27)
+	at io.grpc.stub.ServerCalls$StreamingServerCallHandler$StreamingServerCallListener.onMessage(ServerCalls.java:262)
+	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
+	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
+	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailableInternal(ServerCallImpl.java:334)
+	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailable(ServerCallImpl.java:319)
+	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1MessagesAvailable.runInContext(ServerImpl.java:852)
+	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
+	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -833,7 +839,7 @@ false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:2
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -864,7 +870,7 @@ false for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:2
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -895,7 +901,7 @@ evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, eval
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -958,7 +964,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1021,7 +1027,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1084,7 +1090,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1147,7 +1153,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1210,7 +1216,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1273,7 +1279,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, Property currencyCode is undefined on object. for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1336,7 +1342,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L316:24 for 'delete' @ L316, Property admin is undefined on object. for 'delete' @ L320, false for 'delete' @ L499, false for 'delete' @ L316, Property admin is undefined on object. for 'delete' @ L320, false for 'delete' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1399,7 +1405,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L340, false for 'create' @ L499, false for 'update' @ L340, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1430,7 +1436,7 @@ false for 'create' @ L340, false for 'create' @ L499, false for 'update' @ L340,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L403, false for 'create' @ L499, false for 'update' @ L403, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1461,7 +1467,7 @@ false for 'create' @ L403, false for 'create' @ L499, false for 'update' @ L403,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L331, false for 'create' @ L499, false for 'update' @ L331, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1492,7 +1498,7 @@ false for 'create' @ L331, false for 'create' @ L499, false for 'update' @ L331,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L331, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1523,7 +1529,7 @@ false for 'update' @ L331, false for 'update' @ L499
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L331, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1554,7 +1560,7 @@ false for 'update' @ L331, false for 'update' @ L499
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:31 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L350, false for 'create' @ L499, false for 'update' @ L350, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1585,7 +1591,7 @@ false for 'create' @ L350, false for 'create' @ L499, false for 'update' @ L350,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L419:26 for 'update' @ L419, false for 'update' @ L499, false for 'update' @ L419, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1616,7 +1622,7 @@ evaluation error at L419:26 for 'update' @ L419, false for 'update' @ L499, fals
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L418, false for 'create' @ L499, evaluation error at L419:26 for 'update' @ L419, false for 'update' @ L499, false for 'create' @ L418, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1647,7 +1653,7 @@ false for 'create' @ L418, false for 'create' @ L499, evaluation error at L419:2
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L431:26 for 'update' @ L431, false for 'update' @ L499, false for 'update' @ L431, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1678,7 +1684,7 @@ evaluation error at L431:26 for 'update' @ L431, false for 'update' @ L499, fals
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L430, false for 'create' @ L499, evaluation error at L431:26 for 'update' @ L431, false for 'update' @ L499, false for 'create' @ L430, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1709,7 +1715,7 @@ false for 'create' @ L430, false for 'create' @ L499, evaluation error at L431:2
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L441, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1740,7 +1746,7 @@ false for 'update' @ L441, false for 'update' @ L499
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L448, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1771,7 +1777,7 @@ false for 'update' @ L448, false for 'update' @ L499
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L454, false for 'create' @ L499, false for 'update' @ L454, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1802,7 +1808,7 @@ false for 'create' @ L454, false for 'create' @ L499, false for 'update' @ L454,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L471, false for 'create' @ L499, false for 'update' @ L471, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1833,7 +1839,7 @@ false for 'create' @ L471, false for 'create' @ L499, false for 'update' @ L471,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1864,7 +1870,7 @@ evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, eval
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1895,7 +1901,7 @@ evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, eval
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L482, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1926,7 +1932,7 @@ false for 'update' @ L482, false for 'update' @ L499
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L183, false for 'create' @ L499, false for 'update' @ L183, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1957,7 +1963,7 @@ false for 'create' @ L183, false for 'create' @ L499, false for 'update' @ L183,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L183, false for 'create' @ L499, false for 'update' @ L183, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -1988,70 +1994,7 @@ false for 'create' @ L183, false for 'create' @ L499, false for 'update' @ L183,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
-WARNING: Operation failed: 
-evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
-com.google.cloud.datastore.core.exception.DatastoreException: 
-evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
-	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.internalCommit(CloudFirestoreV1.java:1336)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.write(CloudFirestoreV1.java:1321)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.handleRequest(CloudFirestoreV1WriteStream.java:222)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.write(CloudFirestoreV1WriteStream.java:144)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:99)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:27)
-	at io.grpc.stub.ServerCalls$StreamingServerCallHandler$StreamingServerCallListener.onMessage(ServerCalls.java:262)
-	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
-	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
-	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailableInternal(ServerCallImpl.java:334)
-	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailable(ServerCallImpl.java:319)
-	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1MessagesAvailable.runInContext(ServerImpl.java:852)
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-	at java.base/java.lang.Thread.run(Thread.java:1583)
-Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error:  line [32], column [30]. Property admin is undefined on object.
-	at com.google.firebase.rules.runtime.impl.DefaultEvaluator$TransformEvaluationException.apply(DefaultEvaluator.java:275)
-	at com.google.firebase.rules.runtime.impl.DefaultEvaluator$TransformEvaluationException.apply(DefaultEvaluator.java:261)
-	at com.google.common.util.concurrent.AbstractCatchingFuture$AsyncCatchingFuture.doFallback(AbstractCatchingFuture.java:207)
-	at com.google.common.util.concurrent.AbstractCatchingFuture$AsyncCatchingFuture.doFallback(AbstractCatchingFuture.java:194)
-	at com.google.common.util.concurrent.AbstractCatchingFuture.run(AbstractCatchingFuture.java:136)
-	at com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)
-	at com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1045)
-	at com.google.common.util.concurrent.AbstractFuture.addListener(AbstractFuture.java:492)
-	at com.google.common.util.concurrent.FluentFuture$TrustedFuture.addListener(FluentFuture.java:122)
-	at com.google.common.util.concurrent.AbstractCatchingFuture.createAsync(AbstractCatchingFuture.java:58)
-	at com.google.common.util.concurrent.Futures.catchingAsync(Futures.java:411)
-	at com.google.firebase.rules.runtime.impl.DefaultEvaluator.evaluate(DefaultEvaluator.java:177)
-	at com.google.cloud.datastore.emulator.impl.rules.EmulatorRuleClient$EmulatorRuleEvaluator.evaluate(EmulatorRuleClient.java:88)
-	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer.lambda$fullEvaluate$0(AsyncTwoPhaseRulesAuthorizer.java:993)
-	at com.google.cloud.datastore.computation.Computation.tryCatch(Computation.java:472)
-	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer.fullEvaluate(AsyncTwoPhaseRulesAuthorizer.java:992)
-	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer$WriteAuthorizerImpl.lambda$checkWrite$0(AsyncTwoPhaseRulesAuthorizer.java:1227)
-	at com.google.cloud.datastore.computation.Computation.lambda$tryClose$1(Computation.java:741)
-	at com.google.cloud.datastore.computation.Computation.tryCatch(Computation.java:472)
-	at com.google.cloud.datastore.computation.Computation.tryFinally(Computation.java:708)
-	at com.google.cloud.datastore.computation.Computation.tryFinally(Computation.java:714)
-	at com.google.cloud.datastore.computation.Computation.tryClose(Computation.java:741)
-	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer$WriteAuthorizerImpl.checkWrite(AsyncTwoPhaseRulesAuthorizer.java:1199)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.lambda$checkCommit$2(DefaultEmulatorRulesAuthorizer.java:124)
-	at com.google.cloud.datastore.computation.Computation.run(Computation.java:82)
-	at com.google.cloud.datastore.computation.Computation$Terminated.toFuture(Computation.java:950)
-	at com.google.cloud.datastore.computation.Computation.toFuture(Computation.java:93)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.finish(DefaultEmulatorRulesAuthorizer.java:308)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.lambda$checkCommit$0(DefaultEmulatorRulesAuthorizer.java:122)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
-	... 22 more
-
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2114,7 +2057,70 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+WARNING: Operation failed: 
+evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
+com.google.cloud.datastore.core.exception.DatastoreException: 
+evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
+	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.internalCommit(CloudFirestoreV1.java:1336)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.write(CloudFirestoreV1.java:1321)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.handleRequest(CloudFirestoreV1WriteStream.java:222)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.write(CloudFirestoreV1WriteStream.java:144)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:99)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1WriteStream.onNext(CloudFirestoreV1WriteStream.java:27)
+	at io.grpc.stub.ServerCalls$StreamingServerCallHandler$StreamingServerCallListener.onMessage(ServerCalls.java:262)
+	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
+	at io.grpc.ForwardingServerCallListener.onMessage(ForwardingServerCallListener.java:33)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onMessage(Contexts.java:76)
+	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailableInternal(ServerCallImpl.java:334)
+	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.messagesAvailable(ServerCallImpl.java:319)
+	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1MessagesAvailable.runInContext(ServerImpl.java:852)
+	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
+	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error:  line [32], column [30]. Property admin is undefined on object.
+	at com.google.firebase.rules.runtime.impl.DefaultEvaluator$TransformEvaluationException.apply(DefaultEvaluator.java:275)
+	at com.google.firebase.rules.runtime.impl.DefaultEvaluator$TransformEvaluationException.apply(DefaultEvaluator.java:261)
+	at com.google.common.util.concurrent.AbstractCatchingFuture$AsyncCatchingFuture.doFallback(AbstractCatchingFuture.java:207)
+	at com.google.common.util.concurrent.AbstractCatchingFuture$AsyncCatchingFuture.doFallback(AbstractCatchingFuture.java:194)
+	at com.google.common.util.concurrent.AbstractCatchingFuture.run(AbstractCatchingFuture.java:136)
+	at com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)
+	at com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1045)
+	at com.google.common.util.concurrent.AbstractFuture.addListener(AbstractFuture.java:492)
+	at com.google.common.util.concurrent.FluentFuture$TrustedFuture.addListener(FluentFuture.java:122)
+	at com.google.common.util.concurrent.AbstractCatchingFuture.createAsync(AbstractCatchingFuture.java:58)
+	at com.google.common.util.concurrent.Futures.catchingAsync(Futures.java:411)
+	at com.google.firebase.rules.runtime.impl.DefaultEvaluator.evaluate(DefaultEvaluator.java:177)
+	at com.google.cloud.datastore.emulator.impl.rules.EmulatorRuleClient$EmulatorRuleEvaluator.evaluate(EmulatorRuleClient.java:88)
+	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer.lambda$fullEvaluate$0(AsyncTwoPhaseRulesAuthorizer.java:993)
+	at com.google.cloud.datastore.computation.Computation.tryCatch(Computation.java:472)
+	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer.fullEvaluate(AsyncTwoPhaseRulesAuthorizer.java:992)
+	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer$WriteAuthorizerImpl.lambda$checkWrite$0(AsyncTwoPhaseRulesAuthorizer.java:1227)
+	at com.google.cloud.datastore.computation.Computation.lambda$tryClose$1(Computation.java:741)
+	at com.google.cloud.datastore.computation.Computation.tryCatch(Computation.java:472)
+	at com.google.cloud.datastore.computation.Computation.tryFinally(Computation.java:708)
+	at com.google.cloud.datastore.computation.Computation.tryFinally(Computation.java:714)
+	at com.google.cloud.datastore.computation.Computation.tryClose(Computation.java:741)
+	at com.google.cloud.datastore.core.auth.rules.AsyncTwoPhaseRulesAuthorizer$WriteAuthorizerImpl.checkWrite(AsyncTwoPhaseRulesAuthorizer.java:1199)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.lambda$checkCommit$2(DefaultEmulatorRulesAuthorizer.java:124)
+	at com.google.cloud.datastore.computation.Computation.run(Computation.java:82)
+	at com.google.cloud.datastore.computation.Computation$Terminated.toFuture(Computation.java:950)
+	at com.google.cloud.datastore.computation.Computation.toFuture(Computation.java:93)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.finish(DefaultEmulatorRulesAuthorizer.java:308)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.lambda$checkCommit$0(DefaultEmulatorRulesAuthorizer.java:122)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
+	... 22 more
+
+Sep 19, 2026 9:50:31 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L198, false for 'create' @ L499, false for 'update' @ L198, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2145,7 +2151,7 @@ false for 'create' @ L198, false for 'create' @ L499, false for 'update' @ L198,
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2208,7 +2214,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2271,7 +2277,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L499, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2302,7 +2308,7 @@ false for 'create' @ L499, false for 'update' @ L499
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2365,7 +2371,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L143:24 for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499, false for 'update' @ L143, Property admin is undefined on object. for 'update' @ L148, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2428,7 +2434,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2491,7 +2497,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:321)
 	... 22 more
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, evaluation error at L301:24 for 'update' @ L301, Property admin is undefined on object. for 'update' @ L313, false for 'update' @ L499, false for 'create' @ L288, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2522,7 +2528,7 @@ evaluation error at L288:24 for 'create' @ L288, false for 'create' @ L499, eval
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 evaluation error at L168:26 for 'update' @ L168, false for 'update' @ L499, false for 'update' @ L168, false for 'update' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -2553,7 +2559,7 @@ evaluation error at L168:26 for 'update' @ L168, false for 'update' @ L499, fals
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Sep 18, 2026 8:50:32 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Sep 19, 2026 9:50:32 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L166, false for 'create' @ L499, evaluation error at L168:26 for 'update' @ L168, false for 'update' @ L499, false for 'create' @ L166, false for 'create' @ L499
 com.google.cloud.datastore.core.exception.DatastoreException: 

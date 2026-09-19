@@ -30,6 +30,7 @@ import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import com.walcker.games.features.ui.shared.matchDetail.MatchDetailBottomSheet
 import com.walcker.games.features.ui.shared.notifications.rememberHasUnreadNotifications
+import com.walcker.identity.api.AccountProvisioning
 import com.walcker.identity.api.SessionHolder
 import com.walcker.identity.api.UserSession
 import com.walcker.identity.api.VerificationSync
@@ -104,6 +105,7 @@ private fun AuthenticatedShell() {
     val navigatorHolder = koinInject<NavigatorHolder>()
     val sessionHolder = koinInject<SessionHolder>()
     val deviceTokenRegistrar = koinInject<DeviceTokenRegistrar>()
+    val accountProvisioning = koinInject<AccountProvisioning>()
     val verificationSync = koinInject<VerificationSync>()
     val bottomBarVisibility = koinInject<BottomBarVisibilityCoordinator>()
     val isBottomBarVisible by bottomBarVisibility.isVisible.collectAsState()
@@ -124,6 +126,10 @@ private fun AuthenticatedShell() {
 
     LaunchedEffect(deviceTokenRegistrar) {
         deviceTokenRegistrar.start()
+    }
+
+    LaunchedEffect(accountProvisioning) {
+        accountProvisioning.start()
     }
 
     LaunchedEffect(verificationSync) {
@@ -167,20 +173,10 @@ private fun AuthenticatedShell() {
                     Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
-                        .let { base ->
-                            // Só consome o inset do sistema quando a MatchBottomBar está de fato
-                            // na tela para absorvê-lo — ela mesma aplica o padding equivalente.
-                            // Uma tela que esconde a barra (BottomBarVisibilityCoordinator) e
-                            // aplica seu próprio .navigationBarsPadding() precisa do inset intacto
-                            // aqui, senão o consumo acontece antes de chegar nela e o padding local
-                            // vira um no-op — foi o caso do botão de sortear times cortado pela
-                            // barra de gestos do Android.
-                            if (isBottomBarVisible) {
-                                base.consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Bottom))
-                            } else {
-                                base
-                            }
-                        }.hazeSource(state = hazeState),
+                        .consumeBottomSystemInsetOnlyWhenBottomBarAbsorbsIt(
+                            bottomSystemInset = WindowInsets.systemBars.only(WindowInsetsSides.Bottom),
+                            isBottomBarVisible = isBottomBarVisible,
+                        ).hazeSource(state = hazeState),
             ) {
                 if (isSessionResolved && !needsVerification) {
                     val tabScreen =
@@ -258,3 +254,13 @@ private fun AuthenticatedShell() {
         }
     }
 }
+
+private fun Modifier.consumeBottomSystemInsetOnlyWhenBottomBarAbsorbsIt(
+    bottomSystemInset: WindowInsets,
+    isBottomBarVisible: Boolean,
+): Modifier =
+    if (isBottomBarVisible) {
+        consumeWindowInsets(bottomSystemInset)
+    } else {
+        this
+    }

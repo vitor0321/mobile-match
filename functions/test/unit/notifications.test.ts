@@ -8,6 +8,7 @@ import {
   isWaitlistPromotion,
   parseCandidate,
   selectRecipients,
+  staleTokenIndexes,
 } from "../../src/notifications.js";
 
 // Porto Alegre, mais ou menos no centro.
@@ -323,5 +324,31 @@ describe("isWaitlistPromotion", () => {
   it("campo ausente ou de outro tipo não conta", () => {
     expect(isWaitlistPromotion({}, {isConfirmed: true})).toBe(false);
     expect(isWaitlistPromotion({isConfirmed: 0}, {isConfirmed: 1})).toBe(false);
+  });
+});
+
+describe("staleTokenIndexes", () => {
+  it("marks the tokens FCM says no longer exist", () => {
+    const responses = [
+      {success: true},
+      {success: false, error: {code: "messaging/registration-token-not-registered"}},
+      {success: false, error: {code: "messaging/invalid-registration-token"}},
+    ];
+
+    expect(staleTokenIndexes(responses)).toEqual([1, 2]);
+  });
+
+  it("keeps a token that failed for a passing reason", () => {
+    const responses = [
+      {success: false, error: {code: "messaging/internal-error"}},
+      {success: false, error: {code: "messaging/server-unavailable"}},
+      {success: false},
+    ];
+
+    expect(staleTokenIndexes(responses)).toEqual([]);
+  });
+
+  it("keeps every token when all were delivered", () => {
+    expect(staleTokenIndexes([{success: true}, {success: true}])).toEqual([]);
   });
 });

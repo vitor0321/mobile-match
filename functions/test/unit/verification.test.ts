@@ -104,7 +104,7 @@ describe("callables exigidas e isentas", () => {
 
   it("excluir, exportar, sair e sincronizar continuam isentas", () => {
     expect([...VERIFICATION_EXEMPT_CALLABLES].sort()).toEqual(
-      ["deleteAccount", "exportUserData", "leaveMatch", "syncVerificationStatus"].sort(),
+      ["deleteAccount", "ensureUserProvisioned", "exportUserData", "leaveMatch", "syncVerificationStatus"].sort(),
     );
   });
 

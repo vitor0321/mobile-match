@@ -42,6 +42,7 @@ export const VERIFICATION_EXEMPT_CALLABLES = [
   "exportUserData",
   "leaveMatch",
   "syncVerificationStatus",
+  "ensureUserProvisioned",
 ] as const;
 
 /**

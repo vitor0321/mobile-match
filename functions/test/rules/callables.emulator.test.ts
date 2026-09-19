@@ -53,12 +53,19 @@ afterAll(async () => {
   await testEnvironment.cleanup();
 });
 
-describe("onUserCreate", () => {
-  it("provisions the public profile, the private doc and a free subscription", {timeout: 20_000}, async () => {
+describe("ensureUserProvisioned", {timeout: 20_000}, () => {
+  it("rejects unauthenticated requests", async () => {
+    const response = await call("ensureUserProvisioned", {}, null);
+    expect(response.status).toBe(401);
+  });
+
+  it("provisions the public profile, the private doc, a free subscription and the default claims", async () => {
+    expect((await call("ensureUserProvisioned", {})).ok).toBe(true);
+
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
 
-      const profile = await waitForDoc(() => getDoc(doc(database, "profiles", uid)));
+      const profile = await getDoc(doc(database, "profiles", uid));
       expect(profile.data()).toMatchObject({
         rating: 0,
         ratingCount: 0,
@@ -67,17 +74,44 @@ describe("onUserCreate", () => {
       });
 
       const privateData = await getDoc(doc(database, "profiles", uid, "private", "data"));
-      expect(privateData.exists()).toBe(true);
-      // Nasce disponível: o filtro de notificação (regra B5) consulta este
-      // campo, e `false` no cadastro calaria o produto para quem nunca abre o
-      // perfil. Ver o comentário em onUserCreate.
       expect(privateData.data()).toMatchObject({isAvailable: true, availableUntil: null});
 
       const subscription = await getDoc(doc(database, "users", uid, "subscription", "current"));
       expect(subscription.data()).toMatchObject({plan: "free", status: "active"});
     });
+
+    expect(await customClaims()).toMatchObject({role: "user", plan: "free"});
+  });
+
+  it("fills only what is missing, keeps existing data and stays idempotent", async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "profiles", uid), {rating: 4.5, ratingCount: 8, emailVerified: true});
+    });
+
+    const first = await call("ensureUserProvisioned", {});
+    const second = await call("ensureUserProvisioned", {});
+
+    expect(await first.json()).toEqual({result: {provisioned: true}});
+    expect(await second.json()).toEqual({result: {provisioned: false}});
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const profile = (await getDoc(doc(context.firestore(), "profiles", uid))).data();
+      expect(profile).toMatchObject({rating: 4.5, ratingCount: 8, emailVerified: true, isBanned: false, matchesPlayed: 0});
+    });
   });
 });
+
+async function customClaims(): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:lookup?key=fake-api-key",
+    {
+      method: "POST",
+      headers: {"content-type": "application/json", authorization: "Bearer owner"},
+      body: JSON.stringify({localId: [uid]}),
+    },
+  );
+  const {users} = (await response.json()) as {users?: {customAttributes?: string}[]};
+  return JSON.parse(users?.[0]?.customAttributes ?? "{}") as Record<string, unknown>;
+}
 
 describe("deleteAccount", () => {
   it("rejects unauthenticated requests", async () => {
@@ -1503,7 +1537,7 @@ describe("adminSetModeration", {timeout: 20_000}, () => {
    * função.
    */
   async function becomeAdmin(): Promise<string> {
-    await waitForProvisionedClaims();
+    expect((await call("ensureUserProvisioned", {})).ok).toBe(true);
     await fetch(
       `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:update?key=fake-api-key`,
       {
@@ -1526,23 +1560,6 @@ describe("adminSetModeration", {timeout: 20_000}, () => {
       },
     );
     return ((await response.json()) as {idToken: string}).idToken;
-  }
-
-  async function waitForProvisionedClaims(): Promise<void> {
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const response = await fetch(
-        "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:lookup?key=fake-api-key",
-        {
-          method: "POST",
-          headers: {"content-type": "application/json", authorization: "Bearer owner"},
-          body: JSON.stringify({localId: [uid]}),
-        },
-      );
-      const {users} = (await response.json()) as {users?: {customAttributes?: string}[]};
-      if (users?.[0]?.customAttributes?.includes('"role"')) return;
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
-    throw new Error("onUserCreate did not set the default claims within the timeout.");
   }
 
   async function seedTarget() {

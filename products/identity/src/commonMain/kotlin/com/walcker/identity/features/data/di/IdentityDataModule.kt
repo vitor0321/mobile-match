@@ -1,6 +1,7 @@
 package com.walcker.identity.features.data.di
 
 import com.walcker.identity.api.AccountDeletionService
+import com.walcker.identity.api.AccountProvisioning
 import com.walcker.identity.api.LogoutService
 import com.walcker.identity.api.ProStateHolder
 import com.walcker.identity.api.SessionHolder
@@ -12,6 +13,7 @@ import com.walcker.identity.features.data.platform.IdentityPlatformServices
 import com.walcker.identity.features.data.pro.DataStoreProStateCache
 import com.walcker.identity.features.data.pro.ProStateCache
 import com.walcker.identity.features.data.pro.ProStateHolderImpl
+import com.walcker.identity.features.data.provisioning.AccountProvisioner
 import com.walcker.identity.features.data.remote.PhoneAuthSource
 import com.walcker.identity.features.data.remote.createAccountDeletionCallableSource
 import com.walcker.identity.features.data.remote.createAppleAuthSource
@@ -83,7 +85,7 @@ internal val identityDataModule =
             )
         }
         factory<SignUseCase> { SignUseCaseImpl(authRepository = get()) }
-        single<LogoutService> { LogoutServiceImpl(signUseCase = get()) }
+        single<LogoutService> { LogoutServiceImpl(signUseCase = get(), cleanups = getAll()) }
         single<AccountDeletionService> { AccountDeletionServiceImpl(deleteAccountUseCase = get(), authRepository = get()) }
         factory<ProfileAccountUseCase> {
             ProfileAccountUseCaseImpl(
@@ -97,6 +99,13 @@ internal val identityDataModule =
                 authRepository = get(),
                 billingClient = get(),
                 proStateCache = get(),
+            )
+        }
+        single<AccountProvisioning> {
+            AccountProvisioner(
+                sessionHolder = get(),
+                firestore = get(),
+                crashReporter = get(),
             )
         }
         single { createVerificationSyncCallableSource() }

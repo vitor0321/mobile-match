@@ -1,7 +1,6 @@
 import {initializeApp} from "firebase-admin/app";
 import {getAuth} from "firebase-admin/auth";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
-import * as functionsV1 from "firebase-functions/v1";
 import {getMessaging} from "firebase-admin/messaging";
 import {onDocumentCreated, onDocumentWritten} from "firebase-functions/v2/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
@@ -9,11 +8,20 @@ import * as logger from "firebase-functions/logger";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {boundsForRadius} from "./geo.js";
 import {
+  DEFAULT_RADIUS_KM,
+  defaultPrivateData,
+  defaultProfile,
+  defaultSubscription,
+  missingFields,
+  provisionedClaims,
+} from "./provisioning.js";
+import {
   MAX_NOTIFY_RADIUS_KM,
   type NotificationCandidate,
   isWaitlistPromotion,
   parseCandidate,
   selectRecipients,
+  staleTokenIndexes,
 } from "./notifications.js";
 import {
   FULL_VERIFICATION,
@@ -45,80 +53,40 @@ initializeApp();
 const db = getFirestore();
 const REGION = "southamerica-east1";
 const RECENT_AUTH_WINDOW_MILLIS = 5 * 60 * 1_000;
-const DEFAULT_RADIUS_KM = 15;
 
-// ---------------------------------------------------------------------------
-// onUserCreate — Auth trigger (substitui handle_new_user() do Postgres)
-//
-// No cadastro de qualquer usuário: cria o perfil público, o documento privado
-// isolado (telefone, Pix, geo, disponibilidade), o espelho de assinatura free e
-// a Custom Claim `role: user` que a regra isAdmin() e os produtos leem.
-// ---------------------------------------------------------------------------
+export const ensureUserProvisioned = onCall(
+  {region: REGION},
+  async (request): Promise<{provisioned: boolean}> => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    requireEmptyPayload(request.data);
 
-export const onUserCreate = functionsV1
-  .region(REGION)
-  .auth.user()
-  .onCreate(async (user) => {
+    const user = await getAuth().getUser(uid);
     const now = FieldValue.serverTimestamp();
+    const documents = [
+      {ref: db.doc(`profiles/${uid}`), defaults: defaultProfile(user, now)},
+      {ref: db.doc(`profiles/${uid}/private/data`), defaults: defaultPrivateData(user, now)},
+      {ref: db.doc(`users/${uid}/subscription/current`), defaults: defaultSubscription(now)},
+    ];
 
-    const profile = {
-      fullName: user.displayName ?? "",
-      nickname: null,
-      avatarUrl: user.photoURL ?? null,
-      position: null,
-      level: "Livre",
-      sports: [] as string[],
-      city: null,
-      neighborhood: null,
-      rating: 0,
-      ratingCount: 0,
-      matchesPlayed: 0,
-      isBanned: false,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const wroteDocuments = await db.runTransaction(async (txn) => {
+      const snapshots = await Promise.all(documents.map(({ref}) => txn.get(ref)));
+      let wrote = false;
+      snapshots.forEach((snapshot, index) => {
+        const missing = missingFields(snapshot.data(), documents[index].defaults);
+        if (missing === null) return;
+        txn.set(documents[index].ref, missing, {merge: true});
+        wrote = true;
+      });
+      return wrote;
+    });
 
-    const privateData = {
-      email: user.email ?? null,
-      phone: user.phoneNumber ?? null,
-      pixKey: null,
-      lat: null,
-      lng: null,
-      geohash: null,
-      radiusKm: DEFAULT_RADIUS_KM,
-      // Nasce disponível de propósito. `selectRecipients` filtra por este campo
-      // (regra B5), então `false` no cadastro significaria que quem se inscreve
-      // e nunca abre o perfil não recebe aviso de partida nenhuma — o produto
-      // vive de avisar sobre vaga, e um padrão que cala é pior do que um que
-      // incomoda. Desligar é um toque no switch do perfil.
-      //
-      // `availableUntil: null` é "até eu desligar"; sem coordenada ninguém é
-      // notificado de qualquer jeito (parseCandidate descarta), então isto não
-      // dispara nada antes da pessoa permitir localização.
-      isAvailable: true,
-      availableUntil: null,
-      availableSports: [] as string[],
-      updatedAt: now,
-    };
+    const claims = provisionedClaims(user.customClaims);
+    if (claims !== null) await getAuth().setCustomUserClaims(uid, claims);
 
-    const subscription = {
-      plan: "free",
-      status: "active",
-      currentPeriodEnd: null,
-      source: "default",
-      updatedAt: now,
-    };
-
-    const batch = db.batch();
-    batch.set(db.doc(`profiles/${user.uid}`), profile);
-    batch.set(db.doc(`profiles/${user.uid}/private/data`), privateData);
-    batch.set(db.doc(`users/${user.uid}/subscription/current`), subscription);
-    await batch.commit();
-
-    // Substitui has_role('user') do Postgres. plan é espelhado pelo webhook do
-    // RevenueCat quando o organizador assina (Fase 5).
-    await getAuth().setCustomUserClaims(user.uid, {role: "user", plan: "free"});
-  });
+    return {provisioned: wroteDocuments || claims !== null};
+  },
+);
 
 // ---------------------------------------------------------------------------
 // deleteAccount — Callable (invocada por products/identity)
@@ -1144,12 +1112,12 @@ export const submitSkillRating = onCall(
         throw new HttpsError("failed-precondition", "The rated user did not play this match.");
       }
 
-      // Contas antigas podem ter ficado sem profiles/{uid} (onUserCreate nunca
+      // Contas antigas podem ter ficado sem profiles/{uid} (ensureUserProvisioned nunca
       // rodou ou falhou silenciosamente pra elas) — a pessoa consegue se
       // autenticar e organizar partidas normalmente porque nada mais no app
       // exige esse documento, mas a nota de habilidade precisa dele pra
       // guardar a média. Em vez de travar, recria o perfil com o mesmo
-      // formato do onUserCreate a partir do registro real de Auth.
+      // formato do ensureUserProvisioned a partir do registro real de Auth.
       let ratedProfile = ratedProfileSnap.data();
       if (ratedProfile === undefined) {
         logger.warn("submitSkillRating: rated player profile missing, backfilling from Auth", {
@@ -2264,19 +2232,23 @@ async function sendPush(userIds: string[], payload: NotificationPayload): Promis
     userIds.map((userId) => db.collection(`users/${userId}/devices`).get()),
   );
 
-  const tokens = tokenSnapshots
-    .flatMap((snapshot) => snapshot.docs.map((document) => document.id))
-    .filter((token) => token.length > 0);
+  const devices = tokenSnapshots
+    .flatMap((snapshot) => snapshot.docs)
+    .filter((document) => document.id.length > 0);
+  const tokens = devices.map((document) => document.id);
 
   if (tokens.length === 0) return;
 
   try {
-    await getMessaging().sendEachForMulticast({
+    const result = await getMessaging().sendEachForMulticast({
       tokens,
       notification: {title: payload.title, body: payload.body},
       // Só strings: o FCM recusa qualquer outro tipo no data payload.
       data: {type: payload.type, matchId: payload.matchId},
     });
+    await Promise.all(
+      staleTokenIndexes(result.responses).map((index) => devices[index].ref.delete()),
+    );
   } catch (error) {
     // Notificação é acessório. Uma falha de entrega não pode propagar para o
     // trigger e provocar retentativa da escrita já feita.

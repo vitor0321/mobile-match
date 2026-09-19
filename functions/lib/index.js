@@ -33,19 +33,19 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendMatchReminders = exports.generateRecurringMatches = exports.cancelMatchSeries = exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitMatchRating = exports.banPlayerFromMatch = exports.confirmWaitlistedPlayer = exports.setVipStatus = exports.submitSkillRating = exports.submitOrganizerRating = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.onUserCreate = void 0;
+exports.sendMatchReminders = exports.generateRecurringMatches = exports.cancelMatchSeries = exports.onParticipantChanged = exports.onMatchCreated = exports.submitReport = exports.submitMatchRating = exports.banPlayerFromMatch = exports.confirmWaitlistedPlayer = exports.setVipStatus = exports.submitSkillRating = exports.submitOrganizerRating = exports.submitPlayerRating = exports.cancelMatch = exports.leaveMatch = exports.joinMatch = exports.exportUserData = exports.syncVerificationStatus = exports.adminSetModeration = exports.deleteAccount = exports.ensureUserProvisioned = void 0;
 exports.requireEmptyPayload = requireEmptyPayload;
 exports.shouldCancelOnOrganizerDeletion = shouldCancelOnOrganizerDeletion;
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
 const firestore_1 = require("firebase-admin/firestore");
-const functionsV1 = __importStar(require("firebase-functions/v1"));
 const messaging_1 = require("firebase-admin/messaging");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const geo_js_1 = require("./geo.js");
+const provisioning_js_1 = require("./provisioning.js");
 const notifications_js_1 = require("./notifications.js");
 const verification_js_1 = require("./verification.js");
 const moderation_js_1 = require("./moderation.js");
@@ -53,72 +53,33 @@ const moderation_js_1 = require("./moderation.js");
 const db = (0, firestore_1.getFirestore)();
 const REGION = "southamerica-east1";
 const RECENT_AUTH_WINDOW_MILLIS = 5 * 60 * 1_000;
-const DEFAULT_RADIUS_KM = 15;
-// ---------------------------------------------------------------------------
-// onUserCreate — Auth trigger (substitui handle_new_user() do Postgres)
-//
-// No cadastro de qualquer usuário: cria o perfil público, o documento privado
-// isolado (telefone, Pix, geo, disponibilidade), o espelho de assinatura free e
-// a Custom Claim `role: user` que a regra isAdmin() e os produtos leem.
-// ---------------------------------------------------------------------------
-exports.onUserCreate = functionsV1
-    .region(REGION)
-    .auth.user()
-    .onCreate(async (user) => {
+exports.ensureUserProvisioned = (0, https_1.onCall)({ region: REGION }, async (request) => {
+    const uid = request.auth?.uid;
+    requireAuthentication(uid);
+    requireEmptyPayload(request.data);
+    const user = await (0, auth_1.getAuth)().getUser(uid);
     const now = firestore_1.FieldValue.serverTimestamp();
-    const profile = {
-        fullName: user.displayName ?? "",
-        nickname: null,
-        avatarUrl: user.photoURL ?? null,
-        position: null,
-        level: "Livre",
-        sports: [],
-        city: null,
-        neighborhood: null,
-        rating: 0,
-        ratingCount: 0,
-        matchesPlayed: 0,
-        isBanned: false,
-        createdAt: now,
-        updatedAt: now,
-    };
-    const privateData = {
-        email: user.email ?? null,
-        phone: user.phoneNumber ?? null,
-        pixKey: null,
-        lat: null,
-        lng: null,
-        geohash: null,
-        radiusKm: DEFAULT_RADIUS_KM,
-        // Nasce disponível de propósito. `selectRecipients` filtra por este campo
-        // (regra B5), então `false` no cadastro significaria que quem se inscreve
-        // e nunca abre o perfil não recebe aviso de partida nenhuma — o produto
-        // vive de avisar sobre vaga, e um padrão que cala é pior do que um que
-        // incomoda. Desligar é um toque no switch do perfil.
-        //
-        // `availableUntil: null` é "até eu desligar"; sem coordenada ninguém é
-        // notificado de qualquer jeito (parseCandidate descarta), então isto não
-        // dispara nada antes da pessoa permitir localização.
-        isAvailable: true,
-        availableUntil: null,
-        availableSports: [],
-        updatedAt: now,
-    };
-    const subscription = {
-        plan: "free",
-        status: "active",
-        currentPeriodEnd: null,
-        source: "default",
-        updatedAt: now,
-    };
-    const batch = db.batch();
-    batch.set(db.doc(`profiles/${user.uid}`), profile);
-    batch.set(db.doc(`profiles/${user.uid}/private/data`), privateData);
-    batch.set(db.doc(`users/${user.uid}/subscription/current`), subscription);
-    await batch.commit();
-    // Substitui has_role('user') do Postgres. plan é espelhado pelo webhook do
-    // RevenueCat quando o organizador assina (Fase 5).
-    await (0, auth_1.getAuth)().setCustomUserClaims(user.uid, { role: "user", plan: "free" });
+    const documents = [
+        { ref: db.doc(`profiles/${uid}`), defaults: (0, provisioning_js_1.defaultProfile)(user, now) },
+        { ref: db.doc(`profiles/${uid}/private/data`), defaults: (0, provisioning_js_1.defaultPrivateData)(user, now) },
+        { ref: db.doc(`users/${uid}/subscription/current`), defaults: (0, provisioning_js_1.defaultSubscription)(now) },
+    ];
+    const wroteDocuments = await db.runTransaction(async (txn) => {
+        const snapshots = await Promise.all(documents.map(({ ref }) => txn.get(ref)));
+        let wrote = false;
+        snapshots.forEach((snapshot, index) => {
+            const missing = (0, provisioning_js_1.missingFields)(snapshot.data(), documents[index].defaults);
+            if (missing === null)
+                return;
+            txn.set(documents[index].ref, missing, { merge: true });
+            wrote = true;
+        });
+        return wrote;
+    });
+    const claims = (0, provisioning_js_1.provisionedClaims)(user.customClaims);
+    if (claims !== null)
+        await (0, auth_1.getAuth)().setCustomUserClaims(uid, claims);
+    return { provisioned: wroteDocuments || claims !== null };
 });
 // ---------------------------------------------------------------------------
 // deleteAccount — Callable (invocada por products/identity)
@@ -858,12 +819,12 @@ exports.submitSkillRating = (0, https_1.onCall)({ region: REGION }, async (reque
             });
             throw new https_1.HttpsError("failed-precondition", "The rated user did not play this match.");
         }
-        // Contas antigas podem ter ficado sem profiles/{uid} (onUserCreate nunca
+        // Contas antigas podem ter ficado sem profiles/{uid} (ensureUserProvisioned nunca
         // rodou ou falhou silenciosamente pra elas) — a pessoa consegue se
         // autenticar e organizar partidas normalmente porque nada mais no app
         // exige esse documento, mas a nota de habilidade precisa dele pra
         // guardar a média. Em vez de travar, recria o perfil com o mesmo
-        // formato do onUserCreate a partir do registro real de Auth.
+        // formato do ensureUserProvisioned a partir do registro real de Auth.
         let ratedProfile = ratedProfileSnap.data();
         if (ratedProfile === undefined) {
             logger.warn("submitSkillRating: rated player profile missing, backfilling from Auth", {
@@ -1639,7 +1600,7 @@ async function findNearbyCandidates(center) {
             const userId = document.ref.parent.parent?.id;
             if (!userId)
                 continue;
-            const candidate = (0, notifications_js_1.parseCandidate)(userId, document.data(), DEFAULT_RADIUS_KM);
+            const candidate = (0, notifications_js_1.parseCandidate)(userId, document.data(), provisioning_js_1.DEFAULT_RADIUS_KM);
             // Faixas de geohash podem se sobrepor; o Map deduplica.
             if (candidate)
                 byUserId.set(userId, candidate);
@@ -1673,18 +1634,20 @@ async function writeNotifications(userIds, payload) {
 }
 async function sendPush(userIds, payload) {
     const tokenSnapshots = await Promise.all(userIds.map((userId) => db.collection(`users/${userId}/devices`).get()));
-    const tokens = tokenSnapshots
-        .flatMap((snapshot) => snapshot.docs.map((document) => document.id))
-        .filter((token) => token.length > 0);
+    const devices = tokenSnapshots
+        .flatMap((snapshot) => snapshot.docs)
+        .filter((document) => document.id.length > 0);
+    const tokens = devices.map((document) => document.id);
     if (tokens.length === 0)
         return;
     try {
-        await (0, messaging_1.getMessaging)().sendEachForMulticast({
+        const result = await (0, messaging_1.getMessaging)().sendEachForMulticast({
             tokens,
             notification: { title: payload.title, body: payload.body },
             // Só strings: o FCM recusa qualquer outro tipo no data payload.
             data: { type: payload.type, matchId: payload.matchId },
         });
+        await Promise.all((0, notifications_js_1.staleTokenIndexes)(result.responses).map((index) => devices[index].ref.delete()));
     }
     catch (error) {
         // Notificação é acessório. Uma falha de entrega não pode propagar para o

@@ -128,6 +128,8 @@ Firebase/Firestore com acesso via expect/actual e SDK nativo; Firebase Functions
 
 ```bash
 ./gradlew build
+./gradlew :products:games:screenshotTests:verifyPaparazziDebug :products:identity:screenshotTests:verifyPaparazziDebug
+./gradlew :products:games:screenshotTests:recordPaparazziDebug      # olhe os diffs antes de aceitar
 ./gradlew :products:identity:screenshotTests:recordPaparazziDebug   # olhe os diffs antes de aceitar
 ./gradlew :products:games:compileKotlinIosSimulatorArm64
 ./gradlew :koverHtmlReport   # cobertura da lógica (sem @Composable) → build/reports/kover/html/index.html
@@ -135,9 +137,12 @@ Firebase/Firestore com acesso via expect/actual e SDK nativo; Firebase Functions
 
 `./gradlew :koverVerify` falha se a cobertura de linhas cair abaixo de 70% — o CI do PR roda esse piso.
 
-Os goldens do Paparazzi cobrem as 3 telas de `products/identity` (Login, Cadastro, Esqueci a senha —
-Perfil/Configurações de conta e Paywall foram removidos). São a revisão visual mais barata que existe
-aqui — regravar sem olhar o diff joga fora o único sinal.
+Os goldens do Paparazzi ficam em dois módulos: `products/identity/screenshotTests` cobre as 3 telas de
+identity (Login, Cadastro, Esqueci a senha — Perfil/Configurações de conta e Paywall foram removidos) e
+`products/games/screenshotTests` cobre as telas e componentes de games (lista, busca, detalhe da
+partida, perfil e detalhes de jogador, gerenciar jogadores, sorteio de times, notificações, seletor de
+local…). São a revisão visual mais barata que existe aqui — regravar sem olhar o diff joga fora o
+único sinal.
 
 ## Contexto
 

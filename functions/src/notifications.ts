@@ -74,12 +74,12 @@ export function effectiveRadiusKm(candidateRadiusKm: unknown): number {
  *
  * Agora filtra por `isAvailable` (regra B5): o toggle existe no app, então o
  * campo finalmente quer dizer alguma coisa. Antes o filtro estava desligado
- * porque `isAvailable` nascia `false` em onUserCreate e nada o ligava —
+ * porque `isAvailable` nascia `false` no cadastro e nada o ligava —
  * aplicá-lo teria zerado todas as notificações.
  *
- * Cuidado que sobra: `onUserCreate` continua criando o documento privado com
+ * Cuidado que sobra: `defaultPrivateData` continua criando o documento privado com
  * `isAvailable: false`. Quem se cadastra e nunca abre o perfil não recebe aviso
- * nenhum. Se isso for indesejável, o lugar de mudar é o padrão em onUserCreate,
+ * nenhum. Se isso for indesejável, o lugar de mudar é o padrão em `defaultPrivateData` (provisioning.ts),
  * não aqui.
  *
  * @param nowMs relógio para a janela de disponibilidade; injetado para o teste
@@ -196,4 +196,17 @@ export function isWaitlistPromotion(
 ): boolean {
   if (!before || !after) return false;
   return before.isConfirmed === false && after.isConfirmed === true;
+}
+
+const STALE_TOKEN_ERRORS = new Set([
+  "messaging/registration-token-not-registered",
+  "messaging/invalid-registration-token",
+]);
+
+export type DeliveryResult = {success: boolean; error?: {code: string}};
+
+export function staleTokenIndexes(responses: DeliveryResult[]): number[] {
+  return responses.flatMap((response, index) =>
+    !response.success && response.error && STALE_TOKEN_ERRORS.has(response.error.code) ? [index] : [],
+  );
 }
